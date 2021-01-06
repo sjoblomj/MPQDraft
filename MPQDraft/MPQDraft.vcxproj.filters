@@ -1,0 +1,198 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{26e0ea3b-11f8-4088-ad96-6c79fad598ba}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{f6b5aba0-98e6-4577-b657-289ef66551ce}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{17995cac-2ef0-4222-91af-2b4daeb88d54}</UniqueIdentifier>
+      <Extensions>ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BitmapDialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Common.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CommonPages.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dib256.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dibpal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MainMenu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MPQDraft.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="patchwizard.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ProgressWnd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Common\QDebug.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Common\QInjectDLL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Common\QResource.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SEMPQWizard.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="StdAfx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="BitmapDialog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CommonPages.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dib256.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dibpal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MainMenu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MPQDraft.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\MPQDraftPlugin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="patchwizard.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ProgressWnd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\QDebug.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\QResource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SEMPQWizard.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="StdAfx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\Diablo.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\Diablo2.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\DLL.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\hellfire.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\lomse.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\MainMenu.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\MinButtonDown.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\MinButtonUp.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\MPQ.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\MPQDraft.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\PatchButtonDown.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\PatchButtonUp.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\SEMPQButtonDown.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\SEMPQButtonUp.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\Starcraft.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\StarEdit.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\War2BNE.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\War2Edit.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\War3.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\War3Edit.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\War3Head.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\War3x.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\Wizard.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\XButtonDown.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\XButtonUp.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="MPQDraft.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="MPQDraftDLL.dll">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="MPQStub.exe">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
+</Project>

@@ -1,14 +1,12 @@
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MPQDraft", "MPQDraft.vcproj", "{49EBF0D9-0D65-44D5-8E37-67B7F3F3B054}"
-	ProjectSection(ProjectDependencies) = postProject
-		{77D73E31-6D14-45C9-87DD-32A519213FF6} = {77D73E31-6D14-45C9-87DD-32A519213FF6}
-		{C7E295B1-0AA2-4B15-927F-89E725474860} = {C7E295B1-0AA2-4B15-927F-89E725474860}
-	EndProjectSection
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30804.86
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MPQDraft", "MPQDraft.vcxproj", "{49EBF0D9-0D65-44D5-8E37-67B7F3F3B054}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MPQDraftDLL", "DLL\MPQDraftDLL.vcproj", "{77D73E31-6D14-45C9-87DD-32A519213FF6}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MPQDraftDLL", "DLL\MPQDraftDLL.vcxproj", "{77D73E31-6D14-45C9-87DD-32A519213FF6}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MPQStub", "Stub\MPQStub.vcproj", "{C7E295B1-0AA2-4B15-927F-89E725474860}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MPQStub", "Stub\MPQStub.vcxproj", "{C7E295B1-0AA2-4B15-927F-89E725474860}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,5 +29,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4E7F202E-5E73-4A57-9D76-8DFED8304465}
 	EndGlobalSection
 EndGlobal
