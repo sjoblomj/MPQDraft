@@ -10,8 +10,8 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-#define _WIN32_WINDOWS 0x0500
-#define WINVER 0x0500
+#define _WIN32_WINNT 0x0A00
+#define WINVER 0x0A00
 #define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
 
 #include <windows.h>

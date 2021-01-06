@@ -10,7 +10,8 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-#define _WIN32_WINNT 0x400
+#define _WIN32_WINNT 0x0A00
+#define WINVER 0x0A00
 #define _WIN32_IE 0x500
 #define VC_EXTRALEAN		// Exclude rarely-used stuff from Windows headers
 
