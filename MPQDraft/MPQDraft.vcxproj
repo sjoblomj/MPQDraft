@@ -49,6 +49,7 @@
     <OutDir>.\Debug\</OutDir>
     <IntDir>.\Debug\</IntDir>
     <LinkIncremental>true</LinkIncremental>
+    <TargetName>$(ProjectName)D</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>.\Release\</OutDir>
