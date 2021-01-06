@@ -17,3 +17,4 @@ Required Visual Studio components:
 
 ## Credits
 [Quantam, creator of MPQDraft](http://qstuff.blogspot.com/2010/01/bibliography-programming.html)
+Licensed under CDDL 
