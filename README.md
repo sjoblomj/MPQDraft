@@ -11,9 +11,9 @@ Required Visual Studio components:
 * C++ MFC for v141 build tools
 
 ### Building
-- Open MPQDraft/MPQDraft.sln in Visual Studio 2019
-- Press Build
-- MPQDraftD
+- Open MPQDraft\MPQDraft.sln in Visual Studio 2019
+- Build->Build Solution
+- Open Debug\MPQDraftD.exe
 
 ## Credits
 [Quantam, creator of MPQDraft](http://qstuff.blogspot.com/2010/01/bibliography-programming.html)
