@@ -120,3 +120,12 @@ BOOL _cdecl QDebugWriteEntryFn(LPCSTR lpszFormat, va_list params)
 
 	return WriteFile(g_hLogFile, szLogBuffer, dwStringOffset, &dwBytesWritten, NULL);
 }
+
+void WINAPIV QDebugOut(const TCHAR* fmt, ...) {
+	TCHAR s[1025];
+	va_list args;
+	va_start(args, fmt);
+	wvsprintf(s, fmt, args);
+	va_end(args);
+	OutputDebugString(strcat(s, "\n"));
+}

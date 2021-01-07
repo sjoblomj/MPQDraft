@@ -20,6 +20,8 @@ BOOL WINAPI QDebugCloseDeleteLogFileFn();
 
 BOOL _cdecl QDebugWriteEntryFn(LPCSTR lpszFormat, va_list params);
 
+void WINAPIV QDebugOut(const TCHAR* fmt, ...);
+
 /*
 	* QDebugWriteEntry *
 	Writes a log entry to the currently open log. Entry will be on a line of its own, and will have a time and date stamp. Log entries use sprintf, so any sprintf format specification is valid. Function fails if a log file is not open, but does not assert.
