@@ -21,6 +21,7 @@
 #endif
 
 #include "Common.h"
+#include "MPQDraftCommandParser.h"
 
 // A couple of functions to derive hash keys from CStrings. No idea why these 
 // functions aren't built into MFC.
@@ -103,6 +104,8 @@ public:
 		return index;
 	}
 
+	void ParseCommandLineArguments(CStringArray& params,CStringArray& switches);
+
 	// Gets the initial startup directory
 	inline const CString &GetStartupPath()
 	{ return m_strStartupPath; }
@@ -120,6 +123,9 @@ public:
 
 // Implementation
 protected:
+	virtual BOOL InitUI();
+	virtual BOOL InitConsole();
+
 	// Maps an icon's resource ID to its index in the icon image list
 	typedef CMap<DWORD, DWORD, int, int> TIconIdMap;
 
@@ -150,6 +156,9 @@ protected:
 		// NOTE - the ClassWizard will add and remove member functions here.
 		//    DO NOT EDIT what you see in these blocks of generated code !
 	//}}AFX_MSG
+private:
+	MPQDraftCommandParser m_cmdParser;
+
 	DECLARE_MESSAGE_MAP()
 };
 

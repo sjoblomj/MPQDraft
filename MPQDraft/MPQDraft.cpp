@@ -9,10 +9,15 @@
 // MPQDraft.cpp : Defines the class behaviors for the application.
 //
 
+
 #include "stdafx.h"
 #include "MPQDraft.h"
 #include "resource.h"
 #include "MainMenu.h"
+#include <debugapi.h>
+#include "MPQDraftPlugin.h"
+#include "CommonPages.h"
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -81,7 +86,7 @@ const PROGRAMENTRY SupportApps[] =
 	NULL
 };
 
-void SanitizeFilePath(LPCSTR lpszFilePath, CString &strSanitizedFilePath)
+void SanitizeFilePath(LPCSTR lpszFilePath, CString& strSanitizedFilePath)
 {
 	ASSERT(lpszFilePath);
 
@@ -168,6 +173,156 @@ BOOL CMPQDraft::InitInstance()
 		return FALSE;
 	}
 
+	ParseCommandLine(m_cmdParser);
+	CStringArray params, switches;
+	m_cmdParser.GetParams(params);
+	m_cmdParser.GetSwitches(switches);
+	if (switches.GetCount() > 0 && params.GetCount() > 0) {
+		return InitConsole();
+	}
+	else {
+		return InitUI();
+	}
+}
+
+BOOL CMPQDraft::InitConsole()
+{
+	QDebugOut("MPQDraft console");
+
+	ParseCommandLine(m_cmdParser);
+	CStringArray params, switches;
+	m_cmdParser.GetParams(params);
+	m_cmdParser.GetSwitches(switches);
+	if (switches.GetCount() < 1 || params.GetCount() < 3) {
+		QDebugOut("Usage: mpqdraft.exe -launch <scExePath> <mpqFiles> <qdpFiles>");
+		return FALSE;
+	}
+
+	CString action = switches.GetAt(0);
+	CString scExePathArg = params.GetAt(0);
+	CString mpqArg = params.GetAt(1);
+	CString qdpArg = params.GetAt(2);
+
+	QDebugOut("action = %s", action);
+	QDebugOut("scExePathArg = %s", scExePathArg);
+	QDebugOut("mpqArg = %s", mpqArg);
+	QDebugOut("qdpArg = %s", qdpArg);
+
+	int index;
+	CString field;
+
+	CArray<CString, CString> mpqPaths;
+	index = 0;
+	while (AfxExtractSubString(field, mpqArg, index, _T(',')))
+	{
+		mpqPaths.Add(field.Trim());
+		++index;
+	}
+
+	CArray<CString, CString> qdpPaths;
+	index = 0;
+	while (AfxExtractSubString(field, qdpArg, index, _T(',')))
+	{
+		qdpPaths.Add(field.Trim());
+		++index;
+	}
+
+	// Get patcher DLL path
+	CString* lpstrPatcherDLL = theApp.GetPatcherDLLPath();
+	if (!lpstrPatcherDLL)
+		return NULL;
+
+	// Load it
+	HMODULE hDLL = GetModuleHandle(*lpstrPatcherDLL);
+	if (!hDLL)
+	{
+		hDLL = LoadLibrary(*lpstrPatcherDLL);
+		if (!hDLL)
+			return NULL;
+	}
+
+	// Get the program to patch and the command line parameters
+	CString strProgramPath, strSpawnPath, strParameters;
+	strProgramPath = scExePathArg;
+	strSpawnPath = scExePathArg;
+	strParameters = "";
+
+	// Compile the flags
+	DWORD dwFlags = 0;
+	dwFlags |= MPQD_EXTENDED_REDIR;
+
+	// Get the MPQs to use for patching
+	CArray<LPCSTR> MPQs;
+	for (int i = 0; i < mpqPaths.GetSize(); i++)
+	{
+		MPQs.Add(mpqPaths.GetAt(i));
+	}
+
+	CArray<MPQDRAFTPLUGINMODULE> modules;
+	for (int i = 0; i < qdpPaths.GetSize(); i++)
+	{
+		try
+		{
+			CPluginPage::PLUGINENTRY* lpPluginEntry = new CPluginPage::PLUGINENTRY(qdpPaths.GetAt(i), FALSE);
+			MPQDRAFTPLUGINMODULE m;
+			m.dwComponentID = lpPluginEntry->dwPluginID;
+			m.dwModuleID = 0;
+			m.bExecute = TRUE;
+			strcpy(m.szModuleFileName, lpPluginEntry->strFileName);
+			modules.Add(m);
+			QDebugOut("Loaded module: <%s>", qdpPaths.GetAt(i));
+			delete lpPluginEntry;
+		}
+		catch (...) {
+			QDebugOut("ERROR: Unable to load module: <%s>", qdpPaths.GetAt(i));
+		}
+	}
+
+	BOOL bPatchSuccess = FALSE;
+
+	// Build the command line from the program and parameters
+	char szCommandLine[MAX_PATH * 2], szCurDir[MAX_PATH + 1],
+		szStartDir[MAX_PATH + 1];
+
+	strcpy(szStartDir, strProgramPath);
+	PathRemoveFileSpec(szStartDir);
+
+	GetModuleFileName(NULL, szCurDir, MAX_PATH);
+	PathRemoveFileSpec(szCurDir);
+
+	wsprintf(szCommandLine, "\"%s\" %s", strProgramPath, strParameters);
+
+	// Use the same environment as for MPQDraft
+	STARTUPINFO si;
+	GetStartupInfo(&si);
+
+	// Get the pointer to the patcher
+	MPQDraftPatcherPtr MPQDraftPatcher = (MPQDraftPatcherPtr)GetProcAddress(hDLL, "MPQDraftPatcher");
+
+	if (!MPQDraftPatcher)
+	{
+		QDebugOut("IDS_PATCHFAILED");
+
+		return FALSE;
+	}
+	bPatchSuccess = MPQDraftPatcher(strProgramPath, szCommandLine, NULL,
+		NULL, FALSE, 0, NULL, szStartDir, &si, dwFlags, szCurDir,
+		strSpawnPath, 0, MPQs.GetSize(), modules.GetSize(),
+		MPQs.GetData(), modules.GetData());
+
+	// TODO
+	//m_secondPage.FreeSelectedMPQs(MPQs);
+
+	if (!bPatchSuccess)
+	{
+		QDebugOut("MPQDraftPatcher failed");
+	}
+
+	return FALSE;
+}
+
+BOOL CMPQDraft::InitUI()
+{
 	// Run the main menu, which is the entire program
 	CMainMenu dlg;
 
@@ -180,7 +335,7 @@ BOOL CMPQDraft::InitInstance()
 }
 
 
-int CMPQDraft::ExitInstance() 
+int CMPQDraft::ExitInstance()
 {
 	// Clean up QResource and any files we may have extracted
 	DeleteTemporaryFiles();
@@ -189,7 +344,12 @@ int CMPQDraft::ExitInstance()
 	return CWinApp::ExitInstance();
 }
 
-CString *CMPQDraft::GetPatcherDLLPath()
+void CMPQDraft::ParseCommandLineArguments(CStringArray& params, CStringArray& switches)
+{
+
+}
+
+CString* CMPQDraft::GetPatcherDLLPath()
 {
 	if (m_strPatcherPath.GetLength())
 		return &m_strPatcherPath;	// Already loaded
@@ -242,7 +402,7 @@ BOOL CMPQDraft::CreateImageLists()
 
 	// Scan through the list of supported programs and files, looking for 
 	// needed icons
-	for (const PROGRAMENTRY *lpProgram = SupportApps; 
+	for (const PROGRAMENTRY* lpProgram = SupportApps;
 		lpProgram->szProgramName != NULL; lpProgram++)
 	{
 		if (!AddImageListIcon(lpProgram->iIcon))
@@ -250,7 +410,7 @@ BOOL CMPQDraft::CreateImageLists()
 
 		ASSERT(lpProgram->files);
 
-		for (const PROGRAMFILEENTRY *lpFile = lpProgram->files; 
+		for (const PROGRAMFILEENTRY* lpFile = lpProgram->files;
 			lpFile->szComponentName != NULL; lpFile++)
 		{
 			if (!AddImageListIcon(lpFile->iIcon))
