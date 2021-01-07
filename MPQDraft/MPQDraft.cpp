@@ -194,7 +194,7 @@ BOOL CMPQDraft::InitConsole()
 	m_cmdParser.GetParams(params);
 	m_cmdParser.GetSwitches(switches);
 	if (switches.GetCount() < 1 || params.GetCount() < 3) {
-		QDebugOut("Usage: mpqdraft.exe -launch <scExePath> <mpqFiles> <qdpFiles>");
+		QDebugOut("Usage: MPQDraft.exe -launch <scExePath> <mpqFiles> <qdpFiles>");
 		return FALSE;
 	}
 
