@@ -152,6 +152,7 @@
     <ClCompile Include="dibpal.cpp" />
     <ClCompile Include="MainMenu.cpp" />
     <ClCompile Include="MPQDraft.cpp" />
+    <ClCompile Include="MPQDraftCommandParser.cpp" />
     <ClCompile Include="patchwizard.cpp" />
     <ClCompile Include="ProgressWnd.cpp" />
     <ClCompile Include="SEMPQWizard.cpp" />
@@ -168,6 +169,7 @@
     <ClInclude Include="dibpal.h" />
     <ClInclude Include="MainMenu.h" />
     <ClInclude Include="MPQDraft.h" />
+    <ClInclude Include="MPQDraftCommandParser.h" />
     <ClInclude Include="patchwizard.h" />
     <ClInclude Include="ProgressWnd.h" />
     <ClInclude Include="resource.h" />
