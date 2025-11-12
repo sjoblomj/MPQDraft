@@ -157,7 +157,7 @@
     </ClCompile>
     <ClCompile Include="Patcher.cpp" />
     <ClCompile Include="PluginServer.cpp" />
-    <ClCompile Include="StdAfx.cpp" />
+    <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="MPQDraftDLL.rc" />
@@ -170,7 +170,7 @@
     <ClInclude Include="..\Common.h" />
     <ClInclude Include="MPQDraftDLL.h" />
     <ClInclude Include="Patcher.h" />
-    <ClInclude Include="StdAfx.h" />
+    <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

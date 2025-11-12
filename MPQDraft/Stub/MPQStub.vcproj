@@ -222,7 +222,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\StdAfx.cpp"
+				RelativePath=".\stdafx.cpp"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -267,7 +267,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\StdAfx.h"
+				RelativePath=".\stdafx.h"
 				>
 			</File>
 		</Filter>

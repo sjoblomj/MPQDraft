@@ -54,7 +54,7 @@
     <ClCompile Include="SEMPQWizard.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="StdAfx.cpp">
+    <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MPQDraftCommandParser.cpp">
@@ -104,7 +104,7 @@
     <ClInclude Include="SEMPQWizard.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="StdAfx.h">
+    <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MPQDraftCommandParser.h">

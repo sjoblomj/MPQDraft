@@ -156,7 +156,7 @@
     <ClCompile Include="patchwizard.cpp" />
     <ClCompile Include="ProgressWnd.cpp" />
     <ClCompile Include="SEMPQWizard.cpp" />
-    <ClCompile Include="StdAfx.cpp" />
+    <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\MPQDraftPlugin.h" />
@@ -174,7 +174,7 @@
     <ClInclude Include="ProgressWnd.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="SEMPQWizard.h" />
-    <ClInclude Include="StdAfx.h" />
+    <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\Diablo.ico" />

@@ -8,7 +8,7 @@
 
 #include "stdafx.h"
 #include "Patcher.h"
-#include "..\\Common.h"
+#include "../Common.h"
 #include <QInjectDLL.h>
 
 // The maximum length of a patch context name

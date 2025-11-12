@@ -8,7 +8,7 @@
 
 #include "stdafx.h"
 #include "resource.h"
-#include "..\\common.h"
+#include "../Common.h"
 
 // Get the stub data in fully usable in-memory form
 BOOL FindStubData(OUT STUBDATA *lpStubData, OUT LPDWORD lpdwDataSize)

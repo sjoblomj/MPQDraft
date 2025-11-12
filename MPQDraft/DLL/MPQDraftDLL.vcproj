@@ -257,7 +257,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\StdAfx.cpp"
+				RelativePath=".\stdafx.cpp"
 				>
 			</File>
 		</Filter>
@@ -294,7 +294,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\StdAfx.h"
+				RelativePath=".\stdafx.h"
 				>
 			</File>
 		</Filter>
