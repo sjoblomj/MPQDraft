@@ -1,0 +1,49 @@
+name: Build MPQDraft Windows binary
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1
+
+      - name: Build MPQDraft solution
+        run: |
+          msbuild MPQDraft/MPQDraft.sln /p:Configuration=Release /m
+
+      - name: Set artifact name
+        shell: pwsh
+        run: |
+          # For pull_request events the branch is in GITHUB_HEAD_REF; otherwise extract from GITHUB_REF
+          if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
+            $branch = $env:GITHUB_HEAD_REF
+          } else {
+            $ref = $env:GITHUB_REF
+            $branch = $ref -replace 'refs/heads/', ''
+          }
+
+          # sanitize branch name (no slashes)
+          $branch = $branch -replace '/', '-'
+
+          if ($branch -eq 'main') {
+            $date = (Get-Date).ToString('yyyy-MM-dd')
+            Add-Content -Path $env:GITHUB_ENV -Value "ARTIFACT_NAME=MPQDraft-release-$date"
+          } else {
+            Add-Content -Path $env:GITHUB_ENV -Value "ARTIFACT_NAME=MPQDraft-beta-$branch"
+          }
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: |
+            MPQDraft/**/Release/**
