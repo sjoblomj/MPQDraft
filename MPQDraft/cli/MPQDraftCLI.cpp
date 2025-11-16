@@ -45,17 +45,22 @@ BOOL CMPQDraftCLI::Execute(
 {
 	QDebugOut("MPQDraft console");
 
-	// Validate arguments
-	if (switches.GetCount() < 1 || params.GetCount() < 3)
+	// Validate arguments - need at least switch and 2 params (exe and mpq)
+	// Plugin parameter is optional
+	if (switches.GetCount() < 1 || params.GetCount() < 2)
 	{
-		QDebugOut("Usage: MPQDraft.exe -launch <scExePath> <mpqFiles> <qdpFiles>");
+		printf("Usage: MPQDraft.exe -launch <scExePath> <mpqFiles> [qdpFiles]\n");
+		printf("  scExePath: Path to the game executable\n");
+		printf("  mpqFiles: Comma-separated list of MPQ files to load\n");
+		printf("  qdpFiles: (Optional) Comma-separated list of plugin files to load\n");
+		QDebugOut("Usage: MPQDraft.exe -launch <scExePath> <mpqFiles> [qdpFiles]");
 		return FALSE;
 	}
 
 	CString action = switches.GetAt(0);
 	CString scExePathArg = params.GetAt(0);
 	CString mpqArg = params.GetAt(1);
-	CString qdpArg = params.GetAt(2);
+	CString qdpArg = (params.GetCount() >= 3) ? params.GetAt(2) : "";
 
 	QDebugOut("action = %s", action);
 	QDebugOut("scExePathArg = %s", scExePathArg);
@@ -68,14 +73,24 @@ BOOL CMPQDraftCLI::Execute(
 
 	// Parse comma-separated QDP (plugin) paths
 	CArray<CString, CString> qdpPaths;
-	ParseCommaSeparatedValues(qdpArg, qdpPaths);
-
-	// Load plugin modules
 	CArray<MPQDRAFTPLUGINMODULE> modules;
-	if (!LoadPluginModules(qdpPaths, modules))
+
+	if (qdpArg.GetLength() > 0)
 	{
-		QDebugOut("Failed to load plugin modules");
-		return FALSE;
+		ParseCommaSeparatedValues(qdpArg, qdpPaths);
+
+		// Load plugin modules
+		if (!LoadPluginModules(qdpPaths, modules))
+		{
+			printf("Failed to load plugin modules\n");
+			QDebugOut("Failed to load plugin modules");
+			return FALSE;
+		}
+	}
+	else
+	{
+		QDebugOut("No plugins specified");
+		printf("No plugins specified\n");
 	}
 
 	// Convert MPQ paths to LPCSTR array
