@@ -77,10 +77,11 @@ jobs:
           $branch = $branch -replace '/', '-'
 
           if ($branch -eq 'main') {
-            $date = (Get-Date).ToString('yyyy-MM-dd')
-            Add-Content -Path $env:GITHUB_ENV -Value "ARTIFACT_NAME=MPQDraft-release-$date"
+            $timestamp = (Get-Date).ToString('yyyy-MM-dd')
+            Add-Content -Path $env:GITHUB_ENV -Value "ARTIFACT_NAME=MPQDraft-release-$timestamp"
           } else {
-            Add-Content -Path $env:GITHUB_ENV -Value "ARTIFACT_NAME=MPQDraft-beta-$branch"
+            $timestamp = (Get-Date).ToString('yyyy-MM-dd-HH-mm-ss')
+            Add-Content -Path $env:GITHUB_ENV -Value "ARTIFACT_NAME=MPQDraft-beta-$branch-$timestamp"
           }
 
       - name: Upload artifacts
