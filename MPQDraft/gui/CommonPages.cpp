@@ -6,8 +6,8 @@
 	The Initial Developer of the Original Code is Justin Olbrantz. The Original Code Copyright (C) 2008 Justin Olbrantz. All Rights Reserved.
 */
 
-#include "stdafx.h"
-#include "MPQDraft.h"
+#include "../stdafx.h"
+#include "../MPQDraft.h"
 #include "resource.h"
 #include "CommonPages.h"
 

@@ -1,5 +1,5 @@
 /////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 1998 by Jörg König
+// Copyright (C) 1998 by Jï¿½rg Kï¿½nig
 // All rights reserved
 //
 // This file is part of the completely free tetris clone "CGTetris".
@@ -23,7 +23,7 @@
 // BitmapDialog.cpp
 //
 
-#include "stdafx.h"
+#include "../stdafx.h"
 #include "BitmapDialog.h"
 
 #ifdef _DEBUG

@@ -1,6 +1,6 @@
 // Microsoft Visual C++ generated resource script.
 //
-#include "resource.h"
+#include "gui/resource.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -27,9 +27,9 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 // TEXTINCLUDE
 //
 
-1 TEXTINCLUDE 
+1 TEXTINCLUDE
 BEGIN
-    "resource.h\0"
+    "gui/resource.h\0"
 END
 
 2 TEXTINCLUDE 
@@ -50,7 +50,7 @@ BEGIN
     "LANGUAGE 9, 1\r\n"
     "#pragma code_page(1252)\r\n"
     "#endif //_WIN32\r\n"
-    "#include ""res\\MPQDraft.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""gui\\res\\MPQDraft.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
     "#include ""afxres.rc""         // Standard components\r\n"
     "#endif\r\n"
     "\0"
@@ -66,21 +66,21 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDR_MAINFRAME           ICON                    "res\\MPQDraft.ico"
-IDI_DIABLO              ICON                    "res\\Diablo.ico"
-IDI_DIABLO2             ICON                    "res\\Diablo2.ico"
-IDI_STARCRAFT           ICON                    "res\\Starcraft.ico"
-IDI_STAREDIT            ICON                    "res\\StarEdit.ico"
-IDI_WAR2BNE             ICON                    "res\\War2BNE.ico"
-IDI_WAR2EDIT            ICON                    "res\\War2Edit.ico"
-IDI_PLUGIN              ICON                    "res\\DLL.ico"
-IDI_MPQ                 ICON                    "res\\MPQ.ico"
-IDI_WARCRAFT3           ICON                    "res\\War3.ico"
-IDI_LOMSE               ICON                    "res\\lomse.ico"
-IDI_HELLFIRE            ICON                    "res\\hellfire.ico"
-IDI_WAR3HEADER          ICON                    "res\\War3Head.ico"
-IDI_WAR3EDIT            ICON                    "res\\War3Edit.ico"
-IDI_WAR3X               ICON                    "res\\War3x.ico"
+IDR_MAINFRAME           ICON                    "gui\\res\\MPQDraft.ico"
+IDI_DIABLO              ICON                    "gui\\res\\Diablo.ico"
+IDI_DIABLO2             ICON                    "gui\\res\\Diablo2.ico"
+IDI_STARCRAFT           ICON                    "gui\\res\\Starcraft.ico"
+IDI_STAREDIT            ICON                    "gui\\res\\StarEdit.ico"
+IDI_WAR2BNE             ICON                    "gui\\res\\War2BNE.ico"
+IDI_WAR2EDIT            ICON                    "gui\\res\\War2Edit.ico"
+IDI_PLUGIN              ICON                    "gui\\res\\DLL.ico"
+IDI_MPQ                 ICON                    "gui\\res\\MPQ.ico"
+IDI_WARCRAFT3           ICON                    "gui\\res\\War3.ico"
+IDI_LOMSE               ICON                    "gui\\res\\lomse.ico"
+IDI_HELLFIRE            ICON                    "gui\\res\\hellfire.ico"
+IDI_WAR3HEADER          ICON                    "gui\\res\\War3Head.ico"
+IDI_WAR3EDIT            ICON                    "gui\\res\\War3Edit.ico"
+IDI_WAR3X               ICON                    "gui\\res\\War3x.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -220,7 +220,7 @@ BEGIN
             VALUE "FileDescription", "MPQDraft for Windows"
             VALUE "FileVersion", "2009, 9, 13, 1"
             VALUE "InternalName", "MPQDraft"
-            VALUE "LegalCopyright", "Copyright © 2009 Justin Olbrantz(Quantam)"
+            VALUE "LegalCopyright", "Copyright ï¿½ 2009 Justin Olbrantz(Quantam)"
             VALUE "OriginalFilename", "MPQDraft.exe"
             VALUE "ProductName", "MPQDraft for Windows"
             VALUE "ProductVersion", "2009, 9, 13, 1"
@@ -238,16 +238,16 @@ END
 // Bitmap
 //
 
-IDB_MAINMENU            BITMAP                  "res\\MainMenu.bmp"
-IDB_SEMPQBUTTONUP       BITMAP                  "res\\SEMPQButtonUp.bmp"
-IDB_SEMPQBUTTONDOWN     BITMAP                  "res\\SEMPQButtonDown.bmp"
-IDB_PATCHBUTTONUP       BITMAP                  "res\\PatchButtonUp.bmp"
-IDB_PATCHBUTTONDOWN     BITMAP                  "res\\PatchButtonDown.bmp"
-IDB_XBUTTONUP           BITMAP                  "res\\XButtonUp.bmp"
-IDB_MINBUTTONUP         BITMAP                  "res\\MinButtonUp.bmp"
-IDB_XBUTTONDOWN         BITMAP                  "res\\XButtonDown.bmp"
-IDB_MINBUTTONDOWN       BITMAP                  "res\\MinButtonDown.bmp"
-IDB_WIZARD              BITMAP                  "res\\Wizard.bmp"
+IDB_MAINMENU            BITMAP                  "gui\\res\\MainMenu.bmp"
+IDB_SEMPQBUTTONUP       BITMAP                  "gui\\res\\SEMPQButtonUp.bmp"
+IDB_SEMPQBUTTONDOWN     BITMAP                  "gui\\res\\SEMPQButtonDown.bmp"
+IDB_PATCHBUTTONUP       BITMAP                  "gui\\res\\PatchButtonUp.bmp"
+IDB_PATCHBUTTONDOWN     BITMAP                  "gui\\res\\PatchButtonDown.bmp"
+IDB_XBUTTONUP           BITMAP                  "gui\\res\\XButtonUp.bmp"
+IDB_MINBUTTONUP         BITMAP                  "gui\\res\\MinButtonUp.bmp"
+IDB_XBUTTONDOWN         BITMAP                  "gui\\res\\XButtonDown.bmp"
+IDB_MINBUTTONDOWN       BITMAP                  "gui\\res\\MinButtonDown.bmp"
+IDB_WIZARD              BITMAP                  "gui\\res\\Wizard.bmp"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -390,7 +390,7 @@ END
 LANGUAGE 9, 1
 #pragma code_page(1252)
 #endif //_WIN32
-#include "res\MPQDraft.rc2"  // non-Microsoft Visual C++ edited resources
+#include "gui\res\MPQDraft.rc2"  // non-Microsoft Visual C++ edited resources
 #include "afxres.rc"         // Standard components
 #endif
 

@@ -16,7 +16,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-#include "BitmapDialog.h"
+#include "BitmapDialog.h"  // Already in gui/ directory
 
 /////////////////////////////////////////////////////////////////////////////
 /*	CMainMenu dialog

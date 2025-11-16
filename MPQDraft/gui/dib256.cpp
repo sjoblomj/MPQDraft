@@ -1,5 +1,5 @@
 /////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 1998 by Jörg König
+// Copyright (C) 1998 by Jï¿½rg Kï¿½nig
 // All rights reserved
 //
 // This file is part of the completely free tetris clone "CGTetris".
@@ -20,7 +20,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 
-#include "stdafx.h"
+#include "../stdafx.h"
 #include "dib256.h"
 #include "dibpal.h"
 

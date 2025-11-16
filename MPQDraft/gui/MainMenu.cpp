@@ -9,8 +9,8 @@
 // MainMenu.cpp : implementation file
 //
 
-#include "stdafx.h"
-#include "MPQDraft.h"
+#include "../stdafx.h"
+#include "../MPQDraft.h"
 #include "resource.h"
 #include "MainMenu.h"
 #include "PatchWizard.h"

@@ -11,10 +11,8 @@
 
 #include "../stdafx.h"
 #include "MPQDraftCLI.h"
-#include "../MPQDraft.h"
-#include "../resource.h"
 #include "../../Common/MPQDraftPlugin.h"
-#include "../CommonPages.h"
+#include "../gui/CommonPages.h"
 #include <shlwapi.h>
 
 #ifdef _DEBUG

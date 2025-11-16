@@ -12,11 +12,11 @@
 
 #include "stdafx.h"
 #include "MPQDraft.h"
-#include "resource.h"
-#include "MainMenu.h"
+#include "gui/resource.h"
+#include "gui/MainMenu.h"
 #include <debugapi.h>
 #include "MPQDraftPlugin.h"
-#include "CommonPages.h"
+#include "gui/CommonPages.h"
 #include "cli/MPQDraftCLI.h"
 
 

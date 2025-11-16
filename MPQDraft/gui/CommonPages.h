@@ -13,6 +13,9 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
+#include "../MPQDraft.h"
+#include "resource.h"
+
 /////////////////////////////////////////////////////////////////////////////
 /*	CPatchTargetPage dialog
 	The patch dialog page is the first page of the patch wizard and second
