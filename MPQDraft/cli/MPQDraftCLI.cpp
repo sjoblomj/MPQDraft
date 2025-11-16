@@ -11,8 +11,7 @@
 
 #include "../stdafx.h"
 #include "MPQDraftCLI.h"
-#include "../../Common/MPQDraftPlugin.h"
-#include "../gui/CommonPages.h"
+#include "../PluginLoader.h"
 #include <shlwapi.h>
 
 #ifdef _DEBUG
@@ -150,24 +149,30 @@ BOOL CMPQDraftCLI::LoadPluginModules(
 {
 	for (int i = 0; i < qdpPaths.GetSize(); i++)
 	{
-		try
+		CString pluginPath = qdpPaths.GetAt(i);
+
+		// Load the plugin using the shared utility
+		PluginInfo pluginInfo;
+		if (!LoadPluginInfo(pluginPath, pluginInfo))
 		{
-			CPluginPage::PLUGINENTRY* lpPluginEntry = new CPluginPage::PLUGINENTRY(qdpPaths.GetAt(i), FALSE);
-			MPQDRAFTPLUGINMODULE m;
-			m.dwComponentID = lpPluginEntry->dwPluginID;
-			m.dwModuleID = 0;
-			m.bExecute = TRUE;
-			strcpy(m.szModuleFileName, lpPluginEntry->strFileName);
-			modules.Add(m);
-			printf("Loaded module: %s\n", (LPCSTR)qdpPaths.GetAt(i));
-			QDebugOut("Loaded module: <%s>", qdpPaths.GetAt(i));
-			delete lpPluginEntry;
+			printf("ERROR: Unable to load plugin: %s\n", (LPCSTR)pluginPath);
+			QDebugOut("ERROR: Unable to load plugin: <%s>", pluginPath);
+			continue;
 		}
-		catch (...)
-		{
-			printf("ERROR: Unable to load module: %s\n", (LPCSTR)qdpPaths.GetAt(i));
-			QDebugOut("ERROR: Unable to load module: <%s>", qdpPaths.GetAt(i));
-		}
+
+		// Create the module entry
+		MPQDRAFTPLUGINMODULE m;
+		m.dwComponentID = pluginInfo.dwPluginID;
+		m.dwModuleID = 0;
+		m.bExecute = TRUE;
+		strcpy(m.szModuleFileName, pluginInfo.strFileName);
+		modules.Add(m);
+
+		printf("Loaded module: %s (ID: 0x%08X)\n", (LPCSTR)pluginPath, pluginInfo.dwPluginID);
+		QDebugOut("Loaded module: <%s> (ID: 0x%08X)", pluginPath, pluginInfo.dwPluginID);
+
+		// Note: We don't call FreeLibrary here because the DLL needs to stay loaded
+		// for the patcher to use it
 	}
 
 	return TRUE;

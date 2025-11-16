@@ -14,6 +14,7 @@
 #endif // _MSC_VER > 1000
 
 #include "../MPQDraft.h"
+#include "../PluginLoader.h"
 #include "resource.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -195,29 +196,19 @@ public:
 
 		PLUGINENTRY(LPCSTR lpszFileName, BOOL bSelected)
 		{
-			// Load the plugin's module and get the plugin's interface
-			hDLLModule = LoadLibrary(lpszFileName);
-			if (!hDLLModule)
-				throw std::exception("Unable to load library");
+			// Load the plugin using the shared utility
+			PluginInfo pluginInfo;
+			if (!LoadPluginInfo(lpszFileName, pluginInfo))
+				throw std::exception("Unable to load plugin");
 
-			GetMPQDraftPluginPtr pGetMPQDraftPlugin = (GetMPQDraftPluginPtr)
-				GetProcAddress(hDLLModule, "GetMPQDraftPlugin");
-			if (!pGetMPQDraftPlugin || !pGetMPQDraftPlugin(&pPlugin))
-			{
-				FreeLibrary(hDLLModule);
-				throw std::exception("Unable to get plugin interface");
-			}
-
-			// Simply set all the other member variables
+			// Copy the plugin information
 			this->bSelected = bSelected;
-
-			dwFileNameHash = HashKey(lpszFileName);
-			strFileName = lpszFileName;
-
-			pPlugin->Identify(&dwPluginID);
-			char szPluginName[255];
-			pPlugin->GetPluginName(szPluginName, sizeof(szPluginName));
-			strPluginName = szPluginName;
+			this->hDLLModule = pluginInfo.hDLLModule;
+			this->pPlugin = pluginInfo.pPlugin;
+			this->dwPluginID = pluginInfo.dwPluginID;
+			this->strPluginName = pluginInfo.strPluginName;
+			this->strFileName = pluginInfo.strFileName;
+			this->dwFileNameHash = HashKey(lpszFileName);
 		}
 
 		~PLUGINENTRY()

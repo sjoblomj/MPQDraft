@@ -157,6 +157,7 @@
     <ClCompile Include="gui\ProgressWnd.cpp" />
     <ClCompile Include="gui\SEMPQWizard.cpp" />
     <ClCompile Include="MPQDraft.cpp" />
+    <ClCompile Include="PluginLoader.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -176,6 +177,7 @@
     <ClInclude Include="gui\resource.h" />
     <ClInclude Include="gui\SEMPQWizard.h" />
     <ClInclude Include="MPQDraft.h" />
+    <ClInclude Include="PluginLoader.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
