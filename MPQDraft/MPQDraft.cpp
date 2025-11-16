@@ -197,6 +197,7 @@ BOOL CMPQDraft::InitConsole()
 	CString* lpstrPatcherDLL = GetPatcherDLLPath();
 	if (!lpstrPatcherDLL)
 	{
+		printf("Failed to get patcher DLL path\n");
 		QDebugOut("Failed to get patcher DLL path");
 		return FALSE;
 	}

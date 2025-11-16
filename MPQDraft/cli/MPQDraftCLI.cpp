@@ -43,7 +43,8 @@ BOOL CMPQDraftCLI::Execute(
 	IN LPCSTR lpszPatcherDLLPath
 )
 {
-	QDebugOut("MPQDraft console");
+	printf("MPQDraft CLI\n");
+	QDebugOut("MPQDraft CLI");
 
 	// Validate arguments - need at least switch and 2 params (exe and mpq)
 	// Plugin parameter is optional
@@ -62,6 +63,10 @@ BOOL CMPQDraftCLI::Execute(
 	CString mpqArg = params.GetAt(1);
 	CString qdpArg = (params.GetCount() >= 3) ? params.GetAt(2) : "";
 
+	printf("Action: %s\n", (LPCSTR)action);
+	printf("StarCraft path: %s\n", (LPCSTR)scExePathArg);
+	printf("MPQ files: %s\n", (LPCSTR)mpqArg);
+	printf("Plugin files: %s\n", (LPCSTR)qdpArg);
 	QDebugOut("action = %s", action);
 	QDebugOut("scExePathArg = %s", scExePathArg);
 	QDebugOut("mpqArg = %s", mpqArg);
@@ -105,6 +110,7 @@ BOOL CMPQDraftCLI::Execute(
 	dwFlags |= MPQD_EXTENDED_REDIR;
 
 	// Execute the patcher
+	QDebugOut("About to call ExecutePatcher with %d MPQs and %d modules", mpqs.GetSize(), modules.GetSize());
 	BOOL bSuccess = ExecutePatcher(
 		lpszPatcherDLLPath,
 		scExePathArg,
@@ -117,6 +123,7 @@ BOOL CMPQDraftCLI::Execute(
 	if (!bSuccess)
 	{
 		QDebugOut("MPQDraftPatcher failed");
+		printf("MPQDraftPatcher failed\n");
 	}
 
 	return FALSE;  // Always return FALSE to exit the application
@@ -154,11 +161,13 @@ BOOL CMPQDraftCLI::LoadPluginModules(
 			m.bExecute = TRUE;
 			strcpy(m.szModuleFileName, lpPluginEntry->strFileName);
 			modules.Add(m);
+			printf("Loaded module: %s\n", (LPCSTR)qdpPaths.GetAt(i));
 			QDebugOut("Loaded module: <%s>", qdpPaths.GetAt(i));
 			delete lpPluginEntry;
 		}
 		catch (...)
 		{
+			printf("ERROR: Unable to load module: %s\n", (LPCSTR)qdpPaths.GetAt(i));
 			QDebugOut("ERROR: Unable to load module: <%s>", qdpPaths.GetAt(i));
 		}
 	}
@@ -186,6 +195,7 @@ BOOL CMPQDraftCLI::ExecutePatcher(
 		hDLL = LoadLibrary(lpszPatcherDLLPath);
 		if (!hDLL)
 		{
+			printf("Failed to load patcher DLL: %s\n", lpszPatcherDLLPath);
 			QDebugOut("Failed to load patcher DLL: %s", lpszPatcherDLLPath);
 			return FALSE;
 		}
@@ -195,6 +205,7 @@ BOOL CMPQDraftCLI::ExecutePatcher(
 	MPQDraftPatcherPtr MPQDraftPatcher = (MPQDraftPatcherPtr)GetProcAddress(hDLL, "MPQDraftPatcher");
 	if (!MPQDraftPatcher)
 	{
+		printf("Failed to get MPQDraftPatcher function\n");
 		QDebugOut("Failed to get MPQDraftPatcher function");
 		return FALSE;
 	}
