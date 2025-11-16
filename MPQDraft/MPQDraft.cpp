@@ -17,6 +17,7 @@
 #include <debugapi.h>
 #include "MPQDraftPlugin.h"
 #include "CommonPages.h"
+#include "cli/MPQDraftCLI.h"
 
 
 #ifdef _DEBUG
@@ -187,138 +188,22 @@ BOOL CMPQDraft::InitInstance()
 
 BOOL CMPQDraft::InitConsole()
 {
-	QDebugOut("MPQDraft console");
-
-	ParseCommandLine(m_cmdParser);
+	// Get command line parameters
 	CStringArray params, switches;
 	m_cmdParser.GetParams(params);
 	m_cmdParser.GetSwitches(switches);
-	if (switches.GetCount() < 1 || params.GetCount() < 3) {
-		QDebugOut("Usage: MPQDraft.exe -launch <scExePath> <mpqFiles> <qdpFiles>");
-		return FALSE;
-	}
-
-	CString action = switches.GetAt(0);
-	CString scExePathArg = params.GetAt(0);
-	CString mpqArg = params.GetAt(1);
-	CString qdpArg = params.GetAt(2);
-
-	QDebugOut("action = %s", action);
-	QDebugOut("scExePathArg = %s", scExePathArg);
-	QDebugOut("mpqArg = %s", mpqArg);
-	QDebugOut("qdpArg = %s", qdpArg);
-
-	int index;
-	CString field;
-
-	CArray<CString, CString> mpqPaths;
-	index = 0;
-	while (AfxExtractSubString(field, mpqArg, index, _T(',')))
-	{
-		mpqPaths.Add(field.Trim());
-		++index;
-	}
-
-	CArray<CString, CString> qdpPaths;
-	index = 0;
-	while (AfxExtractSubString(field, qdpArg, index, _T(',')))
-	{
-		qdpPaths.Add(field.Trim());
-		++index;
-	}
 
 	// Get patcher DLL path
-	CString* lpstrPatcherDLL = theApp.GetPatcherDLLPath();
+	CString* lpstrPatcherDLL = GetPatcherDLLPath();
 	if (!lpstrPatcherDLL)
-		return NULL;
-
-	// Load it
-	HMODULE hDLL = GetModuleHandle(*lpstrPatcherDLL);
-	if (!hDLL)
 	{
-		hDLL = LoadLibrary(*lpstrPatcherDLL);
-		if (!hDLL)
-			return NULL;
-	}
-
-	// Get the program to patch and the command line parameters
-	CString strProgramPath, strSpawnPath, strParameters;
-	strProgramPath = scExePathArg;
-	strSpawnPath = scExePathArg;
-	strParameters = "";
-
-	// Compile the flags
-	DWORD dwFlags = 0;
-	dwFlags |= MPQD_EXTENDED_REDIR;
-
-	// Get the MPQs to use for patching
-	CArray<LPCSTR> MPQs;
-	for (int i = 0; i < mpqPaths.GetSize(); i++)
-	{
-		MPQs.Add(mpqPaths.GetAt(i));
-	}
-
-	CArray<MPQDRAFTPLUGINMODULE> modules;
-	for (int i = 0; i < qdpPaths.GetSize(); i++)
-	{
-		try
-		{
-			CPluginPage::PLUGINENTRY* lpPluginEntry = new CPluginPage::PLUGINENTRY(qdpPaths.GetAt(i), FALSE);
-			MPQDRAFTPLUGINMODULE m;
-			m.dwComponentID = lpPluginEntry->dwPluginID;
-			m.dwModuleID = 0;
-			m.bExecute = TRUE;
-			strcpy(m.szModuleFileName, lpPluginEntry->strFileName);
-			modules.Add(m);
-			QDebugOut("Loaded module: <%s>", qdpPaths.GetAt(i));
-			delete lpPluginEntry;
-		}
-		catch (...) {
-			QDebugOut("ERROR: Unable to load module: <%s>", qdpPaths.GetAt(i));
-		}
-	}
-
-	BOOL bPatchSuccess = FALSE;
-
-	// Build the command line from the program and parameters
-	char szCommandLine[MAX_PATH * 2], szCurDir[MAX_PATH + 1],
-		szStartDir[MAX_PATH + 1];
-
-	strcpy(szStartDir, strProgramPath);
-	PathRemoveFileSpec(szStartDir);
-
-	GetModuleFileName(NULL, szCurDir, MAX_PATH);
-	PathRemoveFileSpec(szCurDir);
-
-	wsprintf(szCommandLine, "\"%s\" %s", strProgramPath, strParameters);
-
-	// Use the same environment as for MPQDraft
-	STARTUPINFO si;
-	GetStartupInfo(&si);
-
-	// Get the pointer to the patcher
-	MPQDraftPatcherPtr MPQDraftPatcher = (MPQDraftPatcherPtr)GetProcAddress(hDLL, "MPQDraftPatcher");
-
-	if (!MPQDraftPatcher)
-	{
-		QDebugOut("IDS_PATCHFAILED");
-
+		QDebugOut("Failed to get patcher DLL path");
 		return FALSE;
 	}
-	bPatchSuccess = MPQDraftPatcher(strProgramPath, szCommandLine, NULL,
-		NULL, FALSE, 0, NULL, szStartDir, &si, dwFlags, szCurDir,
-		strSpawnPath, 0, MPQs.GetSize(), modules.GetSize(),
-		MPQs.GetData(), modules.GetData());
 
-	// TODO
-	//m_secondPage.FreeSelectedMPQs(MPQs);
-
-	if (!bPatchSuccess)
-	{
-		QDebugOut("MPQDraftPatcher failed");
-	}
-
-	return FALSE;
+	// Create CLI handler and execute
+	CMPQDraftCLI cli;
+	return cli.Execute(params, switches, *lpstrPatcherDLL);
 }
 
 BOOL CMPQDraft::InitUI()
@@ -342,11 +227,6 @@ int CMPQDraft::ExitInstance()
 	QResourceDestroy();
 
 	return CWinApp::ExitInstance();
-}
-
-void CMPQDraft::ParseCommandLineArguments(CStringArray& params, CStringArray& switches)
-{
-
 }
 
 CString* CMPQDraft::GetPatcherDLLPath()

@@ -13,6 +13,12 @@
       <UniqueIdentifier>{17995cac-2ef0-4222-91af-2b4daeb88d54}</UniqueIdentifier>
       <Extensions>ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe</Extensions>
     </Filter>
+    <Filter Include="Source Files\cli">
+      <UniqueIdentifier>{8a9c5d1e-3f2b-4c8a-9e7d-1b4f5a6c8d9e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\cli">
+      <UniqueIdentifier>{9b8d6e2f-4a3c-5d9b-8f6e-2c5g7b8d0f1a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BitmapDialog.cpp">
@@ -57,8 +63,11 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MPQDraftCommandParser.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="cli\MPQDraftCLI.cpp">
+      <Filter>Source Files\cli</Filter>
+    </ClCompile>
+    <ClCompile Include="cli\MPQDraftCommandParser.cpp">
+      <Filter>Source Files\cli</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -107,8 +116,11 @@
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MPQDraftCommandParser.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="cli\MPQDraftCLI.h">
+      <Filter>Header Files\cli</Filter>
+    </ClInclude>
+    <ClInclude Include="cli\MPQDraftCommandParser.h">
+      <Filter>Header Files\cli</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

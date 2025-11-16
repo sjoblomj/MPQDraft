@@ -21,7 +21,7 @@
 #endif
 
 #include "Common.h"
-#include "MPQDraftCommandParser.h"
+#include "cli/MPQDraftCommandParser.h"
 
 // A couple of functions to derive hash keys from CStrings. No idea why these 
 // functions aren't built into MFC.
@@ -103,8 +103,6 @@ public:
 		VERIFY(m_mapIconIds.Lookup(iIcon, index));
 		return index;
 	}
-
-	void ParseCommandLineArguments(CStringArray& params,CStringArray& switches);
 
 	// Gets the initial startup directory
 	inline const CString &GetStartupPath()
