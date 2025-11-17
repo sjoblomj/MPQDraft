@@ -174,11 +174,13 @@ BOOL CMPQDraft::InitInstance()
 		return FALSE;
 	}
 
-	ParseCommandLine(m_cmdParser);
-	CStringArray params, switches;
-	m_cmdParser.GetParams(params);
-	m_cmdParser.GetSwitches(switches);
-	if (switches.GetCount() > 0 && params.GetCount() > 0) {
+	// Parse command line using our custom parser
+	m_cmdParser.ParseCommandLine(GetCommandLine());
+
+	const std::vector<std::string>& params = m_cmdParser.GetParams();
+	const std::vector<std::string>& switches = m_cmdParser.GetSwitches();
+
+	if (!switches.empty() && !params.empty()) {
 		return InitConsole();
 	}
 	else {
@@ -189,9 +191,8 @@ BOOL CMPQDraft::InitInstance()
 BOOL CMPQDraft::InitConsole()
 {
 	// Get command line parameters
-	CStringArray params, switches;
-	m_cmdParser.GetParams(params);
-	m_cmdParser.GetSwitches(switches);
+	const std::vector<std::string>& params = m_cmdParser.GetParams();
+	const std::vector<std::string>& switches = m_cmdParser.GetSwitches();
 
 	// Get patcher DLL path
 	CString* lpstrPatcherDLL = GetPatcherDLLPath();

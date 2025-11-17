@@ -7,17 +7,23 @@
 */
 
 #pragma once
-#include <afxwin.h>
+#include <windows.h>
+#include <vector>
+#include <string>
 
-class MPQDraftCommandParser : public CCommandLineInfo
+class MPQDraftCommandParser
 {
 public:
-	MPQDraftCommandParser(void);
-	virtual ~MPQDraftCommandParser(void);
-	void GetParams(CStringArray& params);
-	void GetSwitches(CStringArray& switches);
+	// Parse command line arguments
+	void ParseCommandLine(int argc, char* argv[]);
+	void ParseCommandLine(const char* lpCmdLine);
+
+	// Get parsed results
+	const std::vector<std::string>& GetParams() const { return m_params; }
+	const std::vector<std::string>& GetSwitches() const { return m_switches; }
+
 private:
-	CStringArray m_params;
-	CStringArray m_switches;
-	void ParseParam(const TCHAR* param, BOOL isFlag, BOOL isLast);
+	std::vector<std::string> m_params;
+	std::vector<std::string> m_switches;
+	void ParseParam(const char* param, BOOL isFlag);
 };

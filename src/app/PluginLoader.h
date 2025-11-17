@@ -17,7 +17,7 @@
 #endif // _MSC_VER > 1000
 
 #include <windows.h>
-#include <afxwin.h>
+#include <string>
 #include "../core/Common.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -29,13 +29,13 @@
 struct PluginInfo
 {
 	// The path of the plugin
-	CString strFileName;
+	std::string strFileName;
 
 	// The plugin's ID from IMPQDraftPlugin
 	DWORD dwPluginID;
 
 	// The plugin's name from IMPQDraftPlugin
-	CString strPluginName;
+	std::string strPluginName;
 
 	// The plugin's DLL handle (caller is responsible for freeing)
 	HMODULE hDLLModule;

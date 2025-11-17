@@ -9,14 +9,16 @@
 // MPQDraftCLI.h : Command-line interface for MPQDraft
 //
 
-#if !defined(AFX_MPQDRAFTCLI_H__INCLUDED_)
-#define AFX_MPQDRAFTCLI_H__INCLUDED_
+#if !defined(MPQDRAFTCLI_H__INCLUDED_)
+#define MPQDRAFTCLI_H__INCLUDED_
 
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
 
-#include <afxwin.h>
+#include <windows.h>
+#include <vector>
+#include <string>
 #include "../../core/Common.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -34,8 +36,8 @@ public:
 	// Main entry point for CLI operations
 	// Returns FALSE to indicate the application should exit
 	BOOL Execute(
-		IN const CStringArray& params,
-		IN const CStringArray& switches,
+		IN const std::vector<std::string>& params,
+		IN const std::vector<std::string>& switches,
 		IN LPCSTR lpszPatcherDLLPath
 	);
 
@@ -43,13 +45,13 @@ private:
 	// Parse comma-separated values into an array
 	void ParseCommaSeparatedValues(
 		IN LPCSTR lpszInput,
-		OUT CArray<CString, CString>& output
+		OUT std::vector<std::string>& output
 	);
 
 	// Load plugin modules from file paths
 	BOOL LoadPluginModules(
-		IN const CArray<CString, CString>& qdpPaths,
-		OUT CArray<MPQDRAFTPLUGINMODULE>& modules
+		IN const std::vector<std::string>& qdpPaths,
+		OUT std::vector<MPQDRAFTPLUGINMODULE>& modules
 	);
 
 	// Execute the patcher with the given parameters
@@ -58,9 +60,9 @@ private:
 		IN LPCSTR lpszProgramPath,
 		IN LPCSTR lpszParameters,
 		IN DWORD dwFlags,
-		IN const CArray<LPCSTR>& mpqs,
-		IN const CArray<MPQDRAFTPLUGINMODULE>& modules
+		IN const std::vector<const char*>& mpqs,
+		IN const std::vector<MPQDRAFTPLUGINMODULE>& modules
 	);
 };
 
-#endif // !defined(AFX_MPQDRAFTCLI_H__INCLUDED_)
+#endif // !defined(MPQDRAFTCLI_H__INCLUDED_)

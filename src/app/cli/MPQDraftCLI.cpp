@@ -21,6 +21,20 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 /////////////////////////////////////////////////////////////////////////////
+// Helper functions
+
+// Trim whitespace from both ends of a string
+static std::string TrimWhitespace(const std::string& str)
+{
+	size_t first = str.find_first_not_of(" \t\r\n");
+	if (first == std::string::npos)
+		return "";
+
+	size_t last = str.find_last_not_of(" \t\r\n");
+	return str.substr(first, last - first + 1);
+}
+
+/////////////////////////////////////////////////////////////////////////////
 // CMPQDraftCLI construction/destruction
 
 CMPQDraftCLI::CMPQDraftCLI()
@@ -35,8 +49,8 @@ CMPQDraftCLI::~CMPQDraftCLI()
 // CMPQDraftCLI implementation
 
 BOOL CMPQDraftCLI::Execute(
-	IN const CStringArray& params,
-	IN const CStringArray& switches,
+	IN const std::vector<std::string>& params,
+	IN const std::vector<std::string>& switches,
 	IN LPCSTR lpszPatcherDLLPath
 )
 {
@@ -45,9 +59,9 @@ BOOL CMPQDraftCLI::Execute(
 
 	// Validate arguments - need at least switch and 2 params (exe and mpq)
 	// Plugin parameter is optional
-	if (switches.GetCount() < 1 || params.GetCount() < 2)
+	if (switches.size() < 1 || params.size() < 2)
 	{
-		printf("Usage: MPQDraft.exe -launch <scExePath> <mpqFiles> [qdpFiles]\n");
+		printf("Usage: MPQDraft.exe -launch <exePath> <mpqFiles> [qdpFiles]\n");
 		printf("  scExePath: Path to the game executable\n");
 		printf("  mpqFiles: Comma-separated list of MPQ files to load\n");
 		printf("  qdpFiles: (Optional) Comma-separated list of plugin files to load\n");
@@ -55,31 +69,29 @@ BOOL CMPQDraftCLI::Execute(
 		return FALSE;
 	}
 
-	CString action = switches.GetAt(0);
-	CString scExePathArg = params.GetAt(0);
-	CString mpqArg = params.GetAt(1);
-	CString qdpArg = (params.GetCount() >= 3) ? params.GetAt(2) : "";
+	const std::string& action = switches[0];
+	const std::string& exePathArg = params[0];
+	const std::string& mpqArg = params[1];
+	const std::string qdpArg = (params.size() >= 3) ? params[2] : "";
 
-	printf("Action: %s\n", (LPCSTR)action);
-	printf("StarCraft path: %s\n", (LPCSTR)scExePathArg);
-	printf("MPQ files: %s\n", (LPCSTR)mpqArg);
-	printf("Plugin files: %s\n", (LPCSTR)qdpArg);
-	QDebugOut("action = %s", action);
-	QDebugOut("scExePathArg = %s", scExePathArg);
-	QDebugOut("mpqArg = %s", mpqArg);
-	QDebugOut("qdpArg = %s", qdpArg);
+	printf("Application path: %s\n", exePathArg.c_str());
+	printf("MPQ files: %s\n", mpqArg.c_str());
+	printf("Plugin files: %s\n", qdpArg.c_str());
+	QDebugOut("exePathArg = %s", exePathArg.c_str());
+	QDebugOut("mpqArg = %s", mpqArg.c_str());
+	QDebugOut("qdpArg = %s", qdpArg.c_str());
 
 	// Parse comma-separated MPQ paths
-	CArray<CString, CString> mpqPaths;
-	ParseCommaSeparatedValues(mpqArg, mpqPaths);
+	std::vector<std::string> mpqPaths;
+	ParseCommaSeparatedValues(mpqArg.c_str(), mpqPaths);
 
 	// Parse comma-separated QDP (plugin) paths
-	CArray<CString, CString> qdpPaths;
-	CArray<MPQDRAFTPLUGINMODULE> modules;
+	std::vector<std::string> qdpPaths;
+	std::vector<MPQDRAFTPLUGINMODULE> modules;
 
-	if (qdpArg.GetLength() > 0)
+	if (!qdpArg.empty())
 	{
-		ParseCommaSeparatedValues(qdpArg, qdpPaths);
+		ParseCommaSeparatedValues(qdpArg.c_str(), qdpPaths);
 
 		// Load plugin modules
 		if (!LoadPluginModules(qdpPaths, modules))
@@ -96,10 +108,10 @@ BOOL CMPQDraftCLI::Execute(
 	}
 
 	// Convert MPQ paths to LPCSTR array
-	CArray<LPCSTR> mpqs;
-	for (int i = 0; i < mpqPaths.GetSize(); i++)
+	std::vector<const char*> mpqs;
+	for (size_t i = 0; i < mpqPaths.size(); i++)
 	{
-		mpqs.Add(mpqPaths.GetAt(i));
+		mpqs.push_back(mpqPaths[i].c_str());
 	}
 
 	// Compile the flags
@@ -107,10 +119,10 @@ BOOL CMPQDraftCLI::Execute(
 	dwFlags |= MPQD_EXTENDED_REDIR;
 
 	// Execute the patcher
-	QDebugOut("About to call ExecutePatcher with %d MPQs and %d modules", mpqs.GetSize(), modules.GetSize());
+	QDebugOut("About to call ExecutePatcher with %d MPQs and %d modules", (int)mpqs.size(), (int)modules.size());
 	BOOL bSuccess = ExecutePatcher(
 		lpszPatcherDLLPath,
-		scExePathArg,
+		exePathArg.c_str(),
 		"",  // No additional parameters
 		dwFlags,
 		mpqs,
@@ -128,35 +140,53 @@ BOOL CMPQDraftCLI::Execute(
 
 void CMPQDraftCLI::ParseCommaSeparatedValues(
 	IN LPCSTR lpszInput,
-	OUT CArray<CString, CString>& output
+	OUT std::vector<std::string>& output
 )
 {
-	ASSERT(lpszInput);
+	if (!lpszInput || lpszInput[0] == '\0')
+		return;
 
-	int index = 0;
-	CString field;
-	while (AfxExtractSubString(field, lpszInput, index, _T(',')))
+	std::string input = lpszInput;
+	size_t start = 0;
+	size_t end = 0;
+
+	while ((end = input.find(',', start)) != std::string::npos)
 	{
-		output.Add(field.Trim());
-		++index;
+		std::string field = input.substr(start, end - start);
+		field = TrimWhitespace(field);
+
+		if (!field.empty())
+			output.push_back(field);
+
+		start = end + 1;
+	}
+
+	// Add the last field
+	if (start < input.length())
+	{
+		std::string field = input.substr(start);
+		field = TrimWhitespace(field);
+
+		if (!field.empty())
+			output.push_back(field);
 	}
 }
 
 BOOL CMPQDraftCLI::LoadPluginModules(
-	IN const CArray<CString, CString>& qdpPaths,
-	OUT CArray<MPQDRAFTPLUGINMODULE>& modules
+	IN const std::vector<std::string>& qdpPaths,
+	OUT std::vector<MPQDRAFTPLUGINMODULE>& modules
 )
 {
-	for (int i = 0; i < qdpPaths.GetSize(); i++)
+	for (size_t i = 0; i < qdpPaths.size(); i++)
 	{
-		CString pluginPath = qdpPaths.GetAt(i);
+		const std::string& pluginPath = qdpPaths[i];
 
 		// Load the plugin using the shared utility
 		PluginInfo pluginInfo;
-		if (!LoadPluginInfo(pluginPath, pluginInfo))
+		if (!LoadPluginInfo(pluginPath.c_str(), pluginInfo))
 		{
-			printf("ERROR: Unable to load plugin: %s\n", (LPCSTR)pluginPath);
-			QDebugOut("ERROR: Unable to load plugin: <%s>", pluginPath);
+			printf("ERROR: Unable to load plugin: %s\n", pluginPath.c_str());
+			QDebugOut("ERROR: Unable to load plugin: <%s>", pluginPath.c_str());
 			continue;
 		}
 
@@ -165,11 +195,11 @@ BOOL CMPQDraftCLI::LoadPluginModules(
 		m.dwComponentID = pluginInfo.dwPluginID;
 		m.dwModuleID = 0;
 		m.bExecute = TRUE;
-		strcpy(m.szModuleFileName, pluginInfo.strFileName);
-		modules.Add(m);
+		strcpy(m.szModuleFileName, pluginInfo.strFileName.c_str());
+		modules.push_back(m);
 
-		printf("Loaded module: %s (ID: 0x%08X)\n", (LPCSTR)pluginPath, pluginInfo.dwPluginID);
-		QDebugOut("Loaded module: <%s> (ID: 0x%08X)", pluginPath, pluginInfo.dwPluginID);
+		printf("Loaded module: %s (ID: 0x%08X)\n", pluginPath.c_str(), pluginInfo.dwPluginID);
+		QDebugOut("Loaded module: <%s> (ID: 0x%08X)", pluginPath.c_str(), pluginInfo.dwPluginID);
 
 		// Note: We don't call FreeLibrary here because the DLL needs to stay loaded
 		// for the patcher to use it
@@ -183,13 +213,12 @@ BOOL CMPQDraftCLI::ExecutePatcher(
 	IN LPCSTR lpszProgramPath,
 	IN LPCSTR lpszParameters,
 	IN DWORD dwFlags,
-	IN const CArray<LPCSTR>& mpqs,
-	IN const CArray<MPQDRAFTPLUGINMODULE>& modules
+	IN const std::vector<const char*>& mpqs,
+	IN const std::vector<MPQDRAFTPLUGINMODULE>& modules
 )
 {
-	ASSERT(lpszPatcherDLLPath);
-	ASSERT(lpszProgramPath);
-	ASSERT(lpszParameters);
+	if (!lpszPatcherDLLPath || !lpszProgramPath || !lpszParameters)
+		return FALSE;
 
 	// Load the patcher DLL
 	HMODULE hDLL = GetModuleHandle(lpszPatcherDLLPath);
@@ -248,10 +277,10 @@ BOOL CMPQDraftCLI::ExecutePatcher(
 		szCurDir,                  // MPQDraft directory
 		lpszProgramPath,           // Spawn path (same as target)
 		0,                         // Shunt count
-		mpqs.GetSize(),            // Number of MPQs
-		modules.GetSize(),         // Number of modules
-		const_cast<LPCSTR*>(mpqs.GetData()),  // MPQ array
-		modules.GetData()          // Module array
+		(DWORD)mpqs.size(),        // Number of MPQs
+		(DWORD)modules.size(),     // Number of modules
+		mpqs.empty() ? NULL : const_cast<LPCSTR*>(&mpqs[0]),  // MPQ array
+		modules.empty() ? NULL : const_cast<MPQDRAFTPLUGINMODULE*>(&modules[0])  // Module array
 	);
 
 	return bPatchSuccess;

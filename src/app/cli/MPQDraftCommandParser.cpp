@@ -7,35 +7,89 @@
 */
 
 #include "MPQDraftCommandParser.h"
+#include <cstring>
 
-void MPQDraftCommandParser::ParseParam(const TCHAR* param, BOOL isFlag, BOOL isLast)
+void MPQDraftCommandParser::ParseParam(const char* param, BOOL isFlag)
 {
-	CString param_or_switch(param);
 	if (isFlag) {
-		m_switches.Add(param_or_switch);
+		m_switches.push_back(param);
 	}
 	else {
-		m_params.Add(param_or_switch);
+		m_params.push_back(param);
 	}
 }
 
-MPQDraftCommandParser::MPQDraftCommandParser(void)
+void MPQDraftCommandParser::ParseCommandLine(int argc, char* argv[])
 {
+	m_params.clear();
+	m_switches.clear();
+
+	// Skip argv[0] which is the program name
+	for (int i = 1; i < argc; i++)
+	{
+		const char* arg = argv[i];
+		BOOL isFlag = (arg[0] == '-' || arg[0] == '/');
+
+		if (isFlag) {
+			// Skip the leading - or /
+			ParseParam(arg + 1, TRUE);
+		}
+		else {
+			ParseParam(arg, FALSE);
+		}
+	}
 }
 
-MPQDraftCommandParser::~MPQDraftCommandParser(void)
+void MPQDraftCommandParser::ParseCommandLine(const char* lpCmdLine)
 {
-}
+	m_params.clear();
+	m_switches.clear();
 
-void MPQDraftCommandParser::GetParams(CStringArray& params)
-{
-	int size = m_params.GetCount();
-	for (int i = 0; i < size; i++)
-		params.Add(m_params.GetAt(i));
-}
-void MPQDraftCommandParser::GetSwitches(CStringArray& switches)
-{
-	int size = m_switches.GetCount();
-	for (int i = 0; i < size; i++)
-		switches.Add(m_switches.GetAt(i));
+	if (!lpCmdLine || lpCmdLine[0] == '\0')
+		return;
+
+	// Simple command line parser
+	// This handles quoted strings and splits on spaces
+	std::string cmdLine = lpCmdLine;
+	size_t pos = 0;
+
+	while (pos < cmdLine.length())
+	{
+		// Skip whitespace
+		while (pos < cmdLine.length() && (cmdLine[pos] == ' ' || cmdLine[pos] == '\t'))
+			pos++;
+
+		if (pos >= cmdLine.length())
+			break;
+
+		// Check if this is a flag
+		BOOL isFlag = (cmdLine[pos] == '-' || cmdLine[pos] == '/');
+		if (isFlag)
+			pos++; // Skip the flag character
+
+		// Parse the argument
+		std::string arg;
+		BOOL inQuotes = FALSE;
+
+		while (pos < cmdLine.length())
+		{
+			char c = cmdLine[pos];
+
+			if (c == '"') {
+				inQuotes = !inQuotes;
+				pos++;
+			}
+			else if (!inQuotes && (c == ' ' || c == '\t')) {
+				break;
+			}
+			else {
+				arg += c;
+				pos++;
+			}
+		}
+
+		if (!arg.empty()) {
+			ParseParam(arg.c_str(), isFlag);
+		}
+	}
 }

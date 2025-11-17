@@ -206,8 +206,8 @@ public:
 			this->hDLLModule = pluginInfo.hDLLModule;
 			this->pPlugin = pluginInfo.pPlugin;
 			this->dwPluginID = pluginInfo.dwPluginID;
-			this->strPluginName = pluginInfo.strPluginName;
-			this->strFileName = pluginInfo.strFileName;
+			this->strPluginName = pluginInfo.strPluginName.c_str();
+			this->strFileName = pluginInfo.strFileName.c_str();
 			this->dwFileNameHash = HashKey(lpszFileName);
 		}
 
