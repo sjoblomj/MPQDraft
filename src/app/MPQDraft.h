@@ -21,7 +21,7 @@
 #endif
 
 #include "../core/Common.h"
-#include "cli/MPQDraftCommandParser.h"
+#include "cli/CommandParser.h"
 
 // A couple of functions to derive hash keys from CStrings. No idea why these 
 // functions aren't built into MFC.
@@ -155,7 +155,7 @@ protected:
 		//    DO NOT EDIT what you see in these blocks of generated code !
 	//}}AFX_MSG
 private:
-	MPQDraftCommandParser m_cmdParser;
+	CommandParser m_cmdParser;
 
 	DECLARE_MESSAGE_MAP()
 };

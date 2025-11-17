@@ -11,6 +11,7 @@
 
 #include "../../stdafx.h"
 #include "MPQDraftCLI.h"
+#include "CommandParser.h"
 #include "../PluginLoader.h"
 #include <shlwapi.h>
 
@@ -49,52 +50,56 @@ CMPQDraftCLI::~CMPQDraftCLI()
 // CMPQDraftCLI implementation
 
 BOOL CMPQDraftCLI::Execute(
-	IN const std::vector<std::string>& params,
-	IN const std::vector<std::string>& switches,
+	IN LPCSTR lpszTarget,
+	IN const std::vector<std::string>& mpqs,
+	IN const std::vector<std::string>& plugins,
 	IN LPCSTR lpszPatcherDLLPath
 )
 {
 	printf("MPQDraft CLI\n");
 	QDebugOut("MPQDraft CLI");
 
-	// Validate arguments - need at least switch and 2 params (exe and mpq)
-	// Plugin parameter is optional
-	if (switches.size() < 1 || params.size() < 2)
+	// Validate arguments - need target and at least one MPQ or plugin
+	if (!lpszTarget || lpszTarget[0] == '\0' || (mpqs.empty() && plugins.empty()))
 	{
-		printf("Usage: MPQDraft.exe -launch <exePath> <mpqFiles> [qdpFiles]\n");
-		printf("  scExePath: Path to the game executable\n");
-		printf("  mpqFiles: Comma-separated list of MPQ files to load\n");
-		printf("  qdpFiles: (Optional) Comma-separated list of plugin files to load\n");
-		QDebugOut("Usage: MPQDraft.exe -launch <scExePath> <mpqFiles> [qdpFiles]");
+		if (mpqs.empty() && plugins.empty())
+		{
+			QDebugOut("Error: At least one MPQ or plugin must be specified");
+			printf("Error: At least one MPQ or plugin must be specified\n");
+		}
+		else {
+			QDebugOut("Error: No target executable specified");
+			printf("Error: No target executable specified\n");
+		}
+		printf("Usage: MPQDraft.exe --target <exePath> [--mpq <mpqFile>]... [--plugin <pluginFile>]...\n");
+		printf("  -t, --target:  Path to the game executable\n");
+		printf("  -m, --mpq:     MPQ file to load (can be specified multiple times)\n");
+		printf("  -p, --plugin:  Plugin file to load (can be specified multiple times)\n");
+		printf("\nAt least one MPQ or plugin must be specified.\n");
 		return FALSE;
 	}
 
-	const std::string& action = switches[0];
-	const std::string& exePathArg = params[0];
-	const std::string& mpqArg = params[1];
-	const std::string qdpArg = (params.size() >= 3) ? params[2] : "";
-
-	printf("Application path: %s\n", exePathArg.c_str());
-	printf("MPQ files: %s\n", mpqArg.c_str());
-	printf("Plugin files: %s\n", qdpArg.c_str());
-	QDebugOut("exePathArg = %s", exePathArg.c_str());
-	QDebugOut("mpqArg = %s", mpqArg.c_str());
-	QDebugOut("qdpArg = %s", qdpArg.c_str());
-
-	// Parse comma-separated MPQ paths
-	std::vector<std::string> mpqPaths;
-	ParseCommaSeparatedValues(mpqArg.c_str(), mpqPaths);
-
-	// Parse comma-separated QDP (plugin) paths
-	std::vector<std::string> qdpPaths;
-	std::vector<MPQDRAFTPLUGINMODULE> modules;
-
-	if (!qdpArg.empty())
+	printf("Target executable: %s\n", lpszTarget);
+	printf("MPQ files (%d):\n", (int)mpqs.size());
+	for (size_t i = 0; i < mpqs.size(); i++)
 	{
-		ParseCommaSeparatedValues(qdpArg.c_str(), qdpPaths);
+		printf("  [%d] %s\n", (int)i, mpqs[i].c_str());
+	}
+	printf("Plugin files (%d):\n", (int)plugins.size());
+	for (size_t i = 0; i < plugins.size(); i++)
+	{
+		printf("  [%d] %s\n", (int)i, plugins[i].c_str());
+	}
 
-		// Load plugin modules
-		if (!LoadPluginModules(qdpPaths, modules))
+	QDebugOut("Target = %s", lpszTarget);
+	QDebugOut("MPQs = %d", (int)mpqs.size());
+	QDebugOut("Plugins = %d", (int)plugins.size());
+
+	// Load plugin modules
+	std::vector<MPQDRAFTPLUGINMODULE> modules;
+	if (!plugins.empty())
+	{
+		if (!LoadPluginModules(plugins, modules))
 		{
 			printf("Failed to load plugin modules\n");
 			QDebugOut("Failed to load plugin modules");
@@ -104,14 +109,13 @@ BOOL CMPQDraftCLI::Execute(
 	else
 	{
 		QDebugOut("No plugins specified");
-		printf("No plugins specified\n");
 	}
 
 	// Convert MPQ paths to LPCSTR array
-	std::vector<const char*> mpqs;
-	for (size_t i = 0; i < mpqPaths.size(); i++)
+	std::vector<const char*> mpqPtrs;
+	for (size_t i = 0; i < mpqs.size(); i++)
 	{
-		mpqs.push_back(mpqPaths[i].c_str());
+		mpqPtrs.push_back(mpqs[i].c_str());
 	}
 
 	// Compile the flags
@@ -119,13 +123,13 @@ BOOL CMPQDraftCLI::Execute(
 	dwFlags |= MPQD_EXTENDED_REDIR;
 
 	// Execute the patcher
-	QDebugOut("About to call ExecutePatcher with %d MPQs and %d modules", (int)mpqs.size(), (int)modules.size());
+	QDebugOut("About to call ExecutePatcher with %d MPQs and %d modules", (int)mpqPtrs.size(), (int)modules.size());
 	BOOL bSuccess = ExecutePatcher(
 		lpszPatcherDLLPath,
-		exePathArg.c_str(),
+		lpszTarget,
 		"",  // No additional parameters
 		dwFlags,
-		mpqs,
+		mpqPtrs,
 		modules
 	);
 
@@ -138,39 +142,6 @@ BOOL CMPQDraftCLI::Execute(
 	return FALSE;  // Always return FALSE to exit the application
 }
 
-void CMPQDraftCLI::ParseCommaSeparatedValues(
-	IN LPCSTR lpszInput,
-	OUT std::vector<std::string>& output
-)
-{
-	if (!lpszInput || lpszInput[0] == '\0')
-		return;
-
-	std::string input = lpszInput;
-	size_t start = 0;
-	size_t end = 0;
-
-	while ((end = input.find(',', start)) != std::string::npos)
-	{
-		std::string field = input.substr(start, end - start);
-		field = TrimWhitespace(field);
-
-		if (!field.empty())
-			output.push_back(field);
-
-		start = end + 1;
-	}
-
-	// Add the last field
-	if (start < input.length())
-	{
-		std::string field = input.substr(start);
-		field = TrimWhitespace(field);
-
-		if (!field.empty())
-			output.push_back(field);
-	}
-}
 
 BOOL CMPQDraftCLI::LoadPluginModules(
 	IN const std::vector<std::string>& qdpPaths,

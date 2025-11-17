@@ -48,7 +48,7 @@
     <ClCompile Include="cli\MPQDraftCLI.cpp">
       <Filter>Source Files\cli</Filter>
     </ClCompile>
-    <ClCompile Include="cli\MPQDraftCommandParser.cpp">
+    <ClCompile Include="cli\CommandParser.cpp">
       <Filter>Source Files\cli</Filter>
     </ClCompile>
     <ClCompile Include="gui\BitmapDialog.cpp">
@@ -98,7 +98,7 @@
     <ClInclude Include="cli\MPQDraftCLI.h">
       <Filter>Header Files\cli</Filter>
     </ClInclude>
-    <ClInclude Include="cli\MPQDraftCommandParser.h">
+    <ClInclude Include="cli\CommandParser.h">
       <Filter>Header Files\cli</Filter>
     </ClInclude>
     <ClInclude Include="gui\BitmapDialog.h">

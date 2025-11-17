@@ -36,18 +36,13 @@ public:
 	// Main entry point for CLI operations
 	// Returns FALSE to indicate the application should exit
 	BOOL Execute(
-		IN const std::vector<std::string>& params,
-		IN const std::vector<std::string>& switches,
+		IN LPCSTR lpszTarget,
+		IN const std::vector<std::string>& mpqs,
+		IN const std::vector<std::string>& plugins,
 		IN LPCSTR lpszPatcherDLLPath
 	);
 
 private:
-	// Parse comma-separated values into an array
-	void ParseCommaSeparatedValues(
-		IN LPCSTR lpszInput,
-		OUT std::vector<std::string>& output
-	);
-
 	// Load plugin modules from file paths
 	BOOL LoadPluginModules(
 		IN const std::vector<std::string>& qdpPaths,

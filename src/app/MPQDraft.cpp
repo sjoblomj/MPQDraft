@@ -175,12 +175,17 @@ BOOL CMPQDraft::InitInstance()
 	}
 
 	// Parse command line using our custom parser
-	m_cmdParser.ParseCommandLine(GetCommandLine());
+	if (!m_cmdParser.ParseCommandLine(GetCommandLine()))
+	{
+		// Parsing failed - show error and exit
+		const std::string& errorMsg = m_cmdParser.GetErrorMessage();
+		printf("Command line parsing error: %s\n", errorMsg.c_str());
+		QDebugOut("Command line parsing error: %s", errorMsg.c_str());
+		return FALSE;
+	}
 
-	const std::vector<std::string>& params = m_cmdParser.GetParams();
-	const std::vector<std::string>& switches = m_cmdParser.GetSwitches();
-
-	if (!switches.empty() && !params.empty()) {
+	// Check if we're in CLI mode (target was specified)
+	if (m_cmdParser.HasTarget()) {
 		return InitConsole();
 	}
 	else {
@@ -191,8 +196,9 @@ BOOL CMPQDraft::InitInstance()
 BOOL CMPQDraft::InitConsole()
 {
 	// Get command line parameters
-	const std::vector<std::string>& params = m_cmdParser.GetParams();
-	const std::vector<std::string>& switches = m_cmdParser.GetSwitches();
+	const std::string& target = m_cmdParser.GetTarget();
+	const std::vector<std::string>& mpqs = m_cmdParser.GetMPQs();
+	const std::vector<std::string>& plugins = m_cmdParser.GetPlugins();
 
 	// Get patcher DLL path
 	CString* lpstrPatcherDLL = GetPatcherDLLPath();
@@ -205,7 +211,7 @@ BOOL CMPQDraft::InitConsole()
 
 	// Create CLI handler and execute
 	CMPQDraftCLI cli;
-	return cli.Execute(params, switches, *lpstrPatcherDLL);
+	return cli.Execute(target.c_str(), mpqs, plugins, *lpstrPatcherDLL);
 }
 
 BOOL CMPQDraft::InitUI()

@@ -11,19 +11,27 @@
 #include <vector>
 #include <string>
 
-class MPQDraftCommandParser
+class CommandParser
 {
 public:
 	// Parse command line arguments
-	void ParseCommandLine(int argc, char* argv[]);
-	void ParseCommandLine(const char* lpCmdLine);
+	// Returns true on success, false on error
+	bool ParseCommandLine(const char* lpCmdLine);
 
 	// Get parsed results
-	const std::vector<std::string>& GetParams() const { return m_params; }
-	const std::vector<std::string>& GetSwitches() const { return m_switches; }
+	const std::string& GetTarget() const { return m_target; }
+	const std::vector<std::string>& GetMPQs() const { return m_mpqs; }
+	const std::vector<std::string>& GetPlugins() const { return m_plugins; }
+
+	// Check if target was specified
+	bool HasTarget() const { return !m_target.empty(); }
+
+	// Get error message if parsing failed
+	const std::string& GetErrorMessage() const { return m_errorMessage; }
 
 private:
-	std::vector<std::string> m_params;
-	std::vector<std::string> m_switches;
-	void ParseParam(const char* param, BOOL isFlag);
+	std::string m_target;
+	std::vector<std::string> m_mpqs;
+	std::vector<std::string> m_plugins;
+	std::string m_errorMessage;
 };

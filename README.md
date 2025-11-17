@@ -4,10 +4,10 @@ This fork aims to update MPQDraft up to Win10 APIs and streamline the developmen
 
 ## Command Line Usage
 ```
-Usage: MPQDraft.exe -launch <scExePath> <mpqFiles> <qdpFiles>
+Usage: MPQDraft.exe --target <exePath> --mpq <mpqFile> --plugin <qdpFile>
 
 Example:
-MPQDraft.exe -launch "C:\Starcraft\StarCraft.exe" "C:\Mod\my_mod_1.mpq,C:\Mod\my_mod_2.mpq" "C:Mod\my_plugin_1.qdp,C:\Mod\my_plugin_2.qdp"
+MPQDraft.exe --target "C:\Starcraft\StarCraft.exe" --mpq "C:\Mod\my_mod_1.mpq" --mpq "C:\Mod\my_mod_2.mpq" --plugin "C:Mod\my_plugin_1.qdp" --plugin "C:\Mod\my_plugin_2.qdp"
 ```
 
 ## Development

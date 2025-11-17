@@ -146,7 +146,7 @@
     <ClCompile Include="common\QInjectDLL.cpp" />
     <ClCompile Include="common\QResource.cpp" />
     <ClCompile Include="app\cli\MPQDraftCLI.cpp" />
-    <ClCompile Include="app\cli\MPQDraftCommandParser.cpp" />
+    <ClCompile Include="app\cli\CommandParser.cpp" />
     <ClCompile Include="core\Common.cpp" />
     <ClCompile Include="app\gui\BitmapDialog.cpp" />
     <ClCompile Include="app\gui\CommonPages.cpp" />
@@ -165,7 +165,7 @@
     <ClInclude Include="common\QDebug.h" />
     <ClInclude Include="common\QResource.h" />
     <ClInclude Include="app\cli\MPQDraftCLI.h" />
-    <ClInclude Include="app\cli\MPQDraftCommandParser.h" />
+    <ClInclude Include="app\cli\CommandParser.h" />
     <ClInclude Include="core\Common.h" />
     <ClInclude Include="app\gui\BitmapDialog.h" />
     <ClInclude Include="app\gui\CommonPages.h" />
