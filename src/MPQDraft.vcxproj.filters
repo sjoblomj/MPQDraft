@@ -45,10 +45,13 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cli\MPQDraftCLI.cpp">
+    <ClCompile Include="app\cli\stdafx_cli.cpp">
       <Filter>Source Files\cli</Filter>
     </ClCompile>
-    <ClCompile Include="cli\CommandParser.cpp">
+    <ClCompile Include="app\cli\MPQDraftCLI.cpp">
+      <Filter>Source Files\cli</Filter>
+    </ClCompile>
+    <ClCompile Include="app\cli\CommandParser.cpp">
       <Filter>Source Files\cli</Filter>
     </ClCompile>
     <ClCompile Include="gui\BitmapDialog.cpp">
@@ -95,10 +98,16 @@
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="cli\MPQDraftCLI.h">
+    <ClInclude Include="app\resource_ids.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="app\cli\stdafx_cli.h">
       <Filter>Header Files\cli</Filter>
     </ClInclude>
-    <ClInclude Include="cli\CommandParser.h">
+    <ClInclude Include="app\cli\MPQDraftCLI.h">
+      <Filter>Header Files\cli</Filter>
+    </ClInclude>
+    <ClInclude Include="app\cli\CommandParser.h">
       <Filter>Header Files\cli</Filter>
     </ClInclude>
     <ClInclude Include="gui\BitmapDialog.h">

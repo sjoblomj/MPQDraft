@@ -24,6 +24,7 @@
 #define IDI_STAREDIT                    137
 #define IDI_WAR2BNE                     138
 #define IDI_WAR2EDIT                    139
+// NOTE: IDR_SEMPQSTUB is also defined in ../resource_ids.h for use by non-GUI code. Keep in sync!
 #define IDR_SEMPQSTUB                   143
 #define IDB_MAINMENU                    144
 #define IDB_SEMPQBUTTONUP               145
@@ -36,6 +37,7 @@
 #define IDB_MINBUTTONDOWN               156
 #define IDB_WIZARD                      157
 #define IDR_MPQDRAFTDLL                 159
+// NOTE: IDR_PATCHERDLL is also defined in ../resource_ids.h for use by non-GUI code. Keep in sync!
 #define IDR_PATCHERDLL                  159
 #define IDB_SGBUTTONON                  160
 #define IDB_SGBUTTONOFF                 161

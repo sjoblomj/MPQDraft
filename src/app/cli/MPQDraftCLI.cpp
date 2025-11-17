@@ -9,17 +9,11 @@
 // MPQDraftCLI.cpp : Implementation of command-line interface for MPQDraft
 //
 
-#include "../../stdafx.h"
+#include "stdafx_cli.h"
 #include "MPQDraftCLI.h"
 #include "CommandParser.h"
 #include "../PluginLoader.h"
-#include <shlwapi.h>
-
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#undef THIS_FILE
-static char THIS_FILE[] = __FILE__;
-#endif
+#include "../resource_ids.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // Helper functions
