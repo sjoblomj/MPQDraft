@@ -60,7 +60,7 @@ jobs:
 
       - name: Build MPQDraft solution
         run: |
-          msbuild MPQDraft/MPQDraft.sln /p:Configuration=Release /m
+          msbuild src/MPQDraft.sln /p:Configuration=Release /m
 
       - name: Set artifact name
         shell: pwsh
@@ -84,9 +84,13 @@ jobs:
             Add-Content -Path $env:GITHUB_ENV -Value "ARTIFACT_NAME=MPQDraft-beta-$branch-$timestamp"
           }
 
+      - name: Prepare artifact
+        shell: pwsh
+        run: |
+          Copy-Item -Path "src/Release/MPQDraft.exe" -Destination "${{ env.ARTIFACT_NAME }}.exe"
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}
-          path: |
-            MPQDraft/**/Release/**
+          path: ${{ env.ARTIFACT_NAME }}.exe
