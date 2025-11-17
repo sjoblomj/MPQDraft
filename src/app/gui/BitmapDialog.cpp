@@ -23,7 +23,7 @@
 // BitmapDialog.cpp
 //
 
-#include "../../stdafx.h"
+#include "stdafx_gui.h"
 #include "BitmapDialog.h"
 
 #ifdef _DEBUG

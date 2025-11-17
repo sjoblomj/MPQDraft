@@ -41,6 +41,6 @@
 #endif
 
 // Common MPQDraft headers
-#include <QDebug.h>
-#include <QInjectDLL.h>
-#include <QResource.h>
+#include "../../common/QDebug.h"
+#include "../../common/QInjectDLL.h"
+#include "../../common/QResource.h"
