@@ -58,7 +58,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <PreBuildEvent>
-      <Command>powershell -Command "$date = Get-Date -Format 'yyyy-MM-dd'; $content = Get-Content '$(ProjectDir)app\cli\version.h' -Raw; $content = $content -replace '#define MPQDRAFT_VERSION \".*\"', ('#define MPQDRAFT_VERSION \"' + $date + '\"'); Set-Content '$(ProjectDir)app\cli\version.h' -Value $content -NoNewline"</Command>
+      <Command>powershell -ExecutionPolicy Bypass -Command "&amp; { $date = Get-Date -Format 'yyyy-MM-dd'; $file = '$(ProjectDir)app\cli\version.h'; $content = Get-Content $file -Raw; $content = $content -replace '\"dev\"', ('\"' + $date + '\"'); Set-Content $file -Value $content -NoNewline }"</Command>
     </PreBuildEvent>
     <Midl>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -104,7 +104,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <PreBuildEvent>
-      <Command>powershell -Command "$date = Get-Date -Format 'yyyy-MM-dd'; $content = Get-Content '$(ProjectDir)app\cli\version.h' -Raw; $content = $content -replace '#define MPQDRAFT_VERSION \".*\"', ('#define MPQDRAFT_VERSION \"' + $date + '\"'); Set-Content '$(ProjectDir)app\cli\version.h' -Value $content -NoNewline"</Command>
+      <Command>powershell -ExecutionPolicy Bypass -Command "&amp; { $date = Get-Date -Format 'yyyy-MM-dd'; $file = '$(ProjectDir)app\cli\version.h'; $content = Get-Content $file -Raw; $content = $content -replace '\"dev\"', ('\"' + $date + '\"'); Set-Content $file -Value $content -NoNewline }"</Command>
     </PreBuildEvent>
     <CustomBuildStep>
       <Message />

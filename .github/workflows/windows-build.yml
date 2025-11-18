@@ -1,4 +1,4 @@
-name: Build MPQDraft Windows binary
+name: Build MPQDraft Windows binaries
 
 on:
   push:
@@ -84,13 +84,23 @@ jobs:
             Add-Content -Path $env:GITHUB_ENV -Value "ARTIFACT_NAME=MPQDraft-beta-$branch-$timestamp"
           }
 
-      - name: Prepare artifact
+      - name: Prepare artifacts
         shell: pwsh
         run: |
-          Copy-Item -Path "src/Release/MPQDraft.exe" -Destination "${{ env.ARTIFACT_NAME }}.exe"
+          # Create artifact directory
+          New-Item -ItemType Directory -Force -Path "artifacts"
+
+          # Get current date in ISO format
+          $date = (Get-Date).ToString('yyyy-MM-dd')
+
+          # Copy GUI executable with date in filename
+          Copy-Item -Path "src/Release/MPQDraft.exe" -Destination "artifacts/MPQDraft-$date.exe"
+
+          # Copy CLI executable with date in filename
+          Copy-Item -Path "src/Release/MPQDraftCLI.exe" -Destination "artifacts/MPQDraftCLI-$date.exe"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}
-          path: ${{ env.ARTIFACT_NAME }}.exe
+          path: artifacts/*
