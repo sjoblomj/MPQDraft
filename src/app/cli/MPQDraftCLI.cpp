@@ -14,9 +14,32 @@
 #include "CommandParser.h"
 #include "../PluginLoader.h"
 #include "../resource_ids.h"
+#include "version.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // Helper functions
+
+void PrintVersion()
+{
+	printf("MPQDraft %s\n", MPQDRAFT_VERSION);
+	printf("By Quantam (Justin Olbrantz)\n");
+	printf("Updated by milestone-dev and Ojan (Johan Sjöblom)");
+}
+
+void PrintHelp()
+{
+	printf("MPQDraft CLI - Command-line interface for MPQDraft\n\n");
+	printf("Usage: MPQDraft.exe --target <exePath> [--mpq <mpqFile>]... [--plugin <pluginFile>]...\n\n");
+	printf("Options:\n");
+	printf("  -t, --target <exe>    Target executable to patch and launch\n");
+	printf("  -m, --mpq <mpq>       MPQ archive to load (can be specified multiple times)\n");
+	printf("  -p, --plugin <qdp>    Plugin to load (can be specified multiple times)\n");
+	printf("  -h, --help            Show this help message\n");
+	printf("  -v, --version         Show version information\n");
+	printf("\nAt least one MPQ or plugin must be specified.\n");
+	printf("\nExamples:\n");
+	printf("  MPQDraft.exe --target \"C:\\Starcraft\\StarCraft.exe\" --mpq \"C:\\Mod\\my_mod_1.mpq\" --mpq \"C:\\Mod\\my_mod_2.mpq\" --plugin \"C:\\Mod\\my_plugin_1.qdp\" --plugin \"C:\\Mod\\my_plugin_2.qdp\"\n");
+}
 
 // Trim whitespace from both ends of a string
 static std::string TrimWhitespace(const std::string& str)
@@ -27,17 +50,6 @@ static std::string TrimWhitespace(const std::string& str)
 
 	size_t last = str.find_last_not_of(" \t\r\n");
 	return str.substr(first, last - first + 1);
-}
-
-/////////////////////////////////////////////////////////////////////////////
-// CMPQDraftCLI construction/destruction
-
-CMPQDraftCLI::CMPQDraftCLI()
-{
-}
-
-CMPQDraftCLI::~CMPQDraftCLI()
-{
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -59,17 +71,13 @@ BOOL CMPQDraftCLI::Execute(
 		if (mpqs.empty() && plugins.empty())
 		{
 			QDebugOut("Error: At least one MPQ or plugin must be specified");
-			printf("Error: At least one MPQ or plugin must be specified\n");
+			printf("Error: At least one MPQ or plugin must be specified\n\n");
 		}
 		else {
 			QDebugOut("Error: No target executable specified");
-			printf("Error: No target executable specified\n");
+			printf("Error: No target executable specified\n\n");
 		}
-		printf("Usage: MPQDraft.exe --target <exePath> [--mpq <mpqFile>]... [--plugin <pluginFile>]...\n");
-		printf("  -t, --target:  Path to the game executable\n");
-		printf("  -m, --mpq:     MPQ file to load (can be specified multiple times)\n");
-		printf("  -p, --plugin:  Plugin file to load (can be specified multiple times)\n");
-		printf("\nAt least one MPQ or plugin must be specified.\n");
+		PrintHelp();
 		return FALSE;
 	}
 

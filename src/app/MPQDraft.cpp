@@ -184,6 +184,19 @@ BOOL CMPQDraft::InitInstance()
 		return FALSE;
 	}
 
+	if (m_cmdParser.IsVersionRequested())
+	{
+		PrintVersion();
+		return FALSE;
+	}
+
+	if (m_cmdParser.IsHelpRequested())
+	{
+		PrintHelp();
+		printf("\nIf no command-line arguments are provided, the GUI will be launched.\n");
+		return FALSE;
+	}
+
 	// Check if we're in CLI mode (target was specified)
 	if (m_cmdParser.HasTarget()) {
 		return InitConsole();

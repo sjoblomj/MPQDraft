@@ -27,12 +27,12 @@
 	encapsulates all CLI-specific functionality, including argument parsing,
 	MPQ/plugin loading, and launching the patched executable. */
 
+void PrintVersion();
+void PrintHelp();
+
 class CMPQDraftCLI
 {
 public:
-	CMPQDraftCLI();
-	~CMPQDraftCLI();
-
 	// Main entry point for CLI operations
 	// Returns FALSE to indicate the application should exit
 	BOOL Execute(

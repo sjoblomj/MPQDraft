@@ -26,6 +26,12 @@ public:
 	// Check if target was specified
 	bool HasTarget() const { return !m_target.empty(); }
 
+	// Check if help was requested
+	bool IsHelpRequested() const { return m_helpRequested; }
+
+	// Check if version was requested
+	bool IsVersionRequested() const { return m_versionRequested; }
+
 	// Get error message if parsing failed
 	const std::string& GetErrorMessage() const { return m_errorMessage; }
 
@@ -34,4 +40,6 @@ private:
 	std::vector<std::string> m_mpqs;
 	std::vector<std::string> m_plugins;
 	std::string m_errorMessage;
+	bool m_helpRequested;
+	bool m_versionRequested;
 };

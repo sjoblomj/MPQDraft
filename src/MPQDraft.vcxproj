@@ -57,6 +57,9 @@
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <PreBuildEvent>
+      <Command>powershell -Command "$date = Get-Date -Format 'yyyy-MM-dd'; $content = Get-Content '$(ProjectDir)app\cli\version.h' -Raw; $content = $content -replace '#define MPQDRAFT_VERSION \".*\"', ('#define MPQDRAFT_VERSION \"' + $date + '\"'); Set-Content '$(ProjectDir)app\cli\version.h' -Value $content -NoNewline"</Command>
+    </PreBuildEvent>
     <Midl>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>true</MkTypLibCompatible>
@@ -100,6 +103,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <PreBuildEvent>
+      <Command>powershell -Command "$date = Get-Date -Format 'yyyy-MM-dd'; $content = Get-Content '$(ProjectDir)app\cli\version.h' -Raw; $content = $content -replace '#define MPQDRAFT_VERSION \".*\"', ('#define MPQDRAFT_VERSION \"' + $date + '\"'); Set-Content '$(ProjectDir)app\cli\version.h' -Value $content -NoNewline"</Command>
+    </PreBuildEvent>
     <CustomBuildStep>
       <Message />
       <Command />

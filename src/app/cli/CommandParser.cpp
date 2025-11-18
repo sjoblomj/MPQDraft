@@ -58,6 +58,8 @@ bool CommandParser::ParseCommandLine(const char* lpCmdLine)
 	m_mpqs.clear();
 	m_plugins.clear();
 	m_errorMessage.clear();
+	m_helpRequested = false;
+	m_versionRequested = false;
 
 	if (!lpCmdLine || lpCmdLine[0] == '\0')
 		return true;
@@ -65,8 +67,22 @@ bool CommandParser::ParseCommandLine(const char* lpCmdLine)
 	std::string cmdLine = lpCmdLine;
 	size_t pos = 0;
 
-	// Skip the program name (first argument)
-	ParseArgument(cmdLine, pos);
+	// Check if the first argument is the program name (ends with .exe)
+	// If so, skip it. This handles the case where GetCommandLine() is used
+	// (which includes the program name) vs WinMain's lpCmdLine (which doesn't).
+	size_t testPos = pos;
+	std::string firstArg = ParseArgument(cmdLine, testPos);
+	if (!firstArg.empty())
+	{
+		// Convert to lowercase for case-insensitive comparison
+		std::string lowerArg = firstArg;
+		for (size_t i = 0; i < lowerArg.length(); i++)
+			lowerArg[i] = tolower(lowerArg[i]);
+
+		// If it ends with .exe, skip it
+		if (lowerArg.length() >= 4 && lowerArg.substr(lowerArg.length() - 4) == ".exe")
+			pos = testPos;
+	}
 
 	while (pos < cmdLine.length())
 	{
@@ -108,10 +124,24 @@ bool CommandParser::ParseCommandLine(const char* lpCmdLine)
 		bool isTarget = (flag == "target" || flag == "t");
 		bool isMPQ = (flag == "mpq" || flag == "m");
 		bool isPlugin = (flag == "plugin" || flag == "p");
+		bool isHelp = (flag == "help" || flag == "h");
+		bool isVersion = (flag == "version" || flag == "v");
+
+		if (isHelp)
+		{
+			m_helpRequested = true;
+			return true;
+		}
+
+		if (isVersion)
+		{
+			m_versionRequested = true;
+			return true;
+		}
 
 		if (!isTarget && !isMPQ && !isPlugin)
 		{
-			m_errorMessage = "Unknown flag: '--" + flag + "'. Valid flags are: --target/-t, --mpq/-m, --plugin/-p.";
+			m_errorMessage = "Unknown flag: '--" + flag + "'. Valid flags are: --target/-t, --mpq/-m, --plugin/-p, --help/-h, --version/-v.";
 			return false;
 		}
 
