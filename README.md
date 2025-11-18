@@ -1,6 +1,7 @@
 # MPQDraft
 MPQDraft allows in-memory patching of game data files, added features through plugins, and creation of self-executing mods.
-This fork aims to update MPQDraft up to Win10 APIs and streamline the development process when used in combination with GPTP plugin development.
+
+This fork aims to modernise MPQDraft for use on Win10 APIs and streamline the development process.
 
 ## Command Line Usage
 ```
@@ -9,6 +10,10 @@ Usage: MPQDraft.exe --target <exePath> --mpq <mpqFile> --plugin <qdpFile>
 Example:
 MPQDraft.exe --target "C:\Starcraft\StarCraft.exe" --mpq "C:\Mod\my_mod_1.mpq" --mpq "C:\Mod\my_mod_2.mpq" --plugin "C:\Mod\my_plugin_1.qdp" --plugin "C:\Mod\my_plugin_2.qdp"
 ```
+
+### CLI Plugin Configuration
+MPQDraft plugins can optionally have configuration dialogs. The CLI contains no support for configuring plugins, but if one first runs MPQDraft in GUI mode, the plugins can be configured there, and those changes should persist when running in CLI mode.
+
 
 ## Development
 Required Visual Studio components:
