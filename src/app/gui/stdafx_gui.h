@@ -1,7 +1,8 @@
-// stdafx.h : include file for standard system include files,
+// stdafx_gui.h : include file for standard system include files,
 //  or project specific include files that are used frequently, but
 //      are changed infrequently
 //
+// This is the MFC precompiled header for GUI components.
 
 #if !defined(AFX_STDAFX_H__2BDF3A69_6D53_452A_B5FB_7AE962E08242__INCLUDED_)
 #define AFX_STDAFX_H__2BDF3A69_6D53_452A_B5FB_7AE962E08242__INCLUDED_
@@ -33,7 +34,7 @@
 #include <QDebug.h>
 #include <QInjectDLL.h>
 #include <QResource.h>
-#include "dll/Patcher.h"
+#include "../../dll/Patcher.h"
 
 //{{AFX_INSERT_LOCATION}}
 // Microsoft Visual C++ will insert additional declarations immediately before the previous line.

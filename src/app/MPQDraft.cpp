@@ -10,7 +10,7 @@
 //
 
 
-#include "../stdafx.h"
+#include "gui/stdafx_gui.h"
 #include "MPQDraft.h"
 #include "gui/resource.h"
 #include "gui/MainMenu.h"

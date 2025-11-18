@@ -20,7 +20,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 
-#include "../../stdafx.h"
+#include "stdafx_gui.h"
 #include "dib256.h"
 #include "dibpal.h"
 

@@ -9,7 +9,7 @@
 // PluginLoader.cpp : Implementation of shared plugin loading utilities
 //
 
-#include "../stdafx.h"
+#include <windows.h>
 #include "PluginLoader.h"
 
 BOOL LoadPluginInfo(IN LPCSTR lpszFileName, OUT PluginInfo &pluginInfo)

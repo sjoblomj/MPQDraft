@@ -9,7 +9,7 @@
 // SEMPQWizard.cpp : implementation file
 //
 
-#include "../../stdafx.h"
+#include "stdafx_gui.h"
 #include "../MPQDraft.h"
 #include "resource.h"
 #include "ProgressWnd.h"

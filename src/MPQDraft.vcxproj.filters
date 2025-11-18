@@ -42,8 +42,8 @@
     <ClCompile Include="..\Common\QResource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="stdafx.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="app\gui\stdafx_gui.cpp">
+      <Filter>Source Files\gui</Filter>
     </ClCompile>
     <ClCompile Include="app\cli\stdafx_cli.cpp">
       <Filter>Source Files\cli</Filter>
@@ -95,9 +95,6 @@
     <ClInclude Include="..\Common\QResource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="stdafx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="app\resource_ids.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -135,6 +132,9 @@
       <Filter>Header Files\gui</Filter>
     </ClInclude>
     <ClInclude Include="gui\SEMPQWizard.h">
+      <Filter>Header Files\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="app\gui\stdafx_gui.h">
       <Filter>Header Files\gui</Filter>
     </ClInclude>
   </ItemGroup>

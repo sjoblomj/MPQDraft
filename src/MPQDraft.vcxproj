@@ -71,7 +71,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader />
-      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>app\gui\stdafx_gui.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>.\Debug/MPQDraft.pch</PrecompiledHeaderOutputFile>
       <AssemblerListingLocation>.\Debug/</AssemblerListingLocation>
       <ObjectFileName>.\Debug/</ObjectFileName>
@@ -114,7 +114,7 @@
     <ClCompile>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;VISUALCPPNET;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader />
-      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>app\gui\stdafx_gui.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>.\Release/MPQDraft.pch</PrecompiledHeaderOutputFile>
       <AssemblerListingLocation>.\Release/</AssemblerListingLocation>
       <ObjectFileName>.\Release/</ObjectFileName>
@@ -142,9 +142,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="common\QDebug.cpp" />
-    <ClCompile Include="common\QInjectDLL.cpp" />
-    <ClCompile Include="common\QResource.cpp" />
+    <ClCompile Include="common\QDebug.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="common\QInjectDLL.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="common\QResource.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="app\cli\stdafx_cli.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx_cli.h</PrecompiledHeaderFile>
@@ -157,7 +163,9 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx_cli.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="core\Common.cpp" />
+    <ClCompile Include="core\Common.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="app\gui\BitmapDialog.cpp" />
     <ClCompile Include="app\gui\CommonPages.cpp" />
     <ClCompile Include="app\gui\dib256.cpp" />
@@ -167,8 +175,13 @@
     <ClCompile Include="app\gui\ProgressWnd.cpp" />
     <ClCompile Include="app\gui\SEMPQWizard.cpp" />
     <ClCompile Include="app\MPQDraft.cpp" />
-    <ClCompile Include="app\PluginLoader.cpp" />
-    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="app\PluginLoader.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="app\gui\stdafx_gui.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+      <PrecompiledHeaderFile>stdafx_gui.h</PrecompiledHeaderFile>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core\MPQDraftPlugin.h" />
@@ -188,9 +201,9 @@
     <ClInclude Include="app\gui\ProgressWnd.h" />
     <ClInclude Include="app\gui\resource.h" />
     <ClInclude Include="app\gui\SEMPQWizard.h" />
+    <ClInclude Include="app\gui\stdafx_gui.h" />
     <ClInclude Include="app\MPQDraft.h" />
     <ClInclude Include="app\PluginLoader.h" />
-    <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="app\gui\res\Diablo.ico" />
