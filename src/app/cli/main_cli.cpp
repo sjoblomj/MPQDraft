@@ -62,7 +62,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			printf("Command line parsing error: %s\n\n", errorMsg.c_str());
 			QDebugOut("Command line parsing error: %s", errorMsg.c_str());
 		}
-		if (!cmdParser.HasTarget())
+		if (!cmdParser.HasTarget() && !cmdParser.IsHelpRequested())
 		{
 			printf("No target executable specified\n\n");
 		}

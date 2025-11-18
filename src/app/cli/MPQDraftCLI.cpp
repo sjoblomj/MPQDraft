@@ -22,8 +22,8 @@
 void PrintVersion()
 {
 	printf("MPQDraft %s\n", MPQDRAFT_VERSION);
-	printf("By Quantam (Justin Olbrantz)\n");
-	printf("Updated by milestone-dev and Ojan (Johan Sjöblom)\n");
+	printf("  By Quantam (Justin Olbrantz)\n");
+	printf("  Updated by milestone-dev and Ojan (Johan Sjöblom)\n");
 }
 
 void PrintHelp()
