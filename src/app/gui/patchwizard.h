@@ -9,9 +9,7 @@
 #if !defined(AFX_PATCHWIZARD_H__A9254BF5_26AE_4CD0_932B_C3399E3742DB__INCLUDED_)
 #define AFX_PATCHWIZARD_H__A9254BF5_26AE_4CD0_932B_C3399E3742DB__INCLUDED_
 
-#if _MSC_VER > 1000
 #pragma once
-#endif // _MSC_VER > 1000
 // PatchWizard.h : header file
 //
 

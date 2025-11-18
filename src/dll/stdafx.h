@@ -6,9 +6,7 @@
 #if !defined(AFX_STDAFX_H__14389205_96D1_4D21_B099_93AD280FD1EF__INCLUDED_)
 #define AFX_STDAFX_H__14389205_96D1_4D21_B099_93AD280FD1EF__INCLUDED_
 
-#if _MSC_VER > 1000
 #pragma once
-#endif // _MSC_VER > 1000
 
 // Insert your headers here
 #define _WIN32_WINNT 0x0A00

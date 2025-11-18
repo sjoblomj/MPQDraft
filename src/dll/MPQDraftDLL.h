@@ -19,14 +19,14 @@ extern "C" BOOL WINAPI MPQDraftInitialize(IN MPQDRAFTPATCHERDATA *pData, IN DWOR
   BOOL LoadContext();
   BOOL IsPatchTarget();
   BOOL PatchFunctions();
-    BOOL LocateStorm();
-	 BOOL GetStormVersion();
-    BOOL GetFunctionPointers();
-    BOOL PatchModuleFunctions(HMODULE hModule);
+  BOOL LocateStorm();
+  BOOL GetStormVersion();
+  BOOL GetFunctionPointers();
+  BOOL PatchModuleFunctions(HMODULE hModule);
   BOOL LoadPatchMPQs();
   BOOL LoadPlugins();
 
-BOOL MPQDraftTerminate();
+  BOOL MPQDraftTerminate();
   BOOL UnloadPlugins();
   BOOL UnloadPatchMPQs();
 
@@ -44,7 +44,6 @@ private:
 
 public:
 	CPluginServer();
-	~CPluginServer();
 
 	// Set the modules for this process
 	BOOL SetModules(IN MPQDRAFTPLUGINMODULE *pModules, IN DWORD nModules);

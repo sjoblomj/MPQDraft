@@ -18,10 +18,6 @@ CPluginServer::CPluginServer()
 	m_pModules = NULL;
 }
 
-CPluginServer::~CPluginServer()
-{
-}
-
 BOOL CPluginServer::SetModules(IN MPQDRAFTPLUGINMODULE *pModules, IN DWORD nModules)
 {
 	QDebugWriteEntry("CPluginServer(0x%X)::SetModules(0x%X, %d)", this, pModules, nModules);

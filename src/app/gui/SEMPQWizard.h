@@ -9,9 +9,7 @@
 #if !defined(AFX_SEMPQWIZARD_H__3679CE16_A05F_482B_A7FE_7EA31433F19B__INCLUDED_)
 #define AFX_SEMPQWIZARD_H__3679CE16_A05F_482B_A7FE_7EA31433F19B__INCLUDED_
 
-#if _MSC_VER > 1000
 #pragma once
-#endif // _MSC_VER > 1000
 /*	SEMPQWizard.h : header file
 	This file describes the implementation of the MPQDraft SEMPQ wizard, which 
 	allows users to create self-executing MPQs based on a specific patch 

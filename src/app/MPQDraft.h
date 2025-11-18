@@ -12,9 +12,7 @@
 #if !defined(AFX_MPQDRAFT_H__E554FE73_9CB1_4CFC_8AAF_6299644E02A9__INCLUDED_)
 #define AFX_MPQDRAFT_H__E554FE73_9CB1_4CFC_8AAF_6299644E02A9__INCLUDED_
 
-#if _MSC_VER > 1000
 #pragma once
-#endif // _MSC_VER > 1000
 
 #ifndef __AFXWIN_H__
 	#error include 'stdafx.h' before including this file for PCH

@@ -12,9 +12,7 @@
 #if !defined(AFX_MAINMENU_H__E8081E01_B9C0_4617_B7BE_0C9B1E0D548E__INCLUDED_)
 #define AFX_MAINMENU_H__E8081E01_B9C0_4617_B7BE_0C9B1E0D548E__INCLUDED_
 
-#if _MSC_VER > 1000
 #pragma once
-#endif // _MSC_VER > 1000
 
 #include "BitmapDialog.h"  // Already in gui/ directory
 
