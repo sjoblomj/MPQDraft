@@ -23,7 +23,7 @@ void PrintVersion()
 {
 	printf("MPQDraft %s\n", MPQDRAFT_VERSION);
 	printf("By Quantam (Justin Olbrantz)\n");
-	printf("Updated by milestone-dev and Ojan (Johan Sjöblom)");
+	printf("Updated by milestone-dev and Ojan (Johan Sjöblom)\n");
 }
 
 void PrintHelp()
@@ -160,8 +160,30 @@ BOOL CMPQDraftCLI::LoadPluginModules(
 		{
 			printf("ERROR: Unable to load plugin: %s\n", pluginPath.c_str());
 			QDebugOut("ERROR: Unable to load plugin: <%s>", pluginPath.c_str());
-			continue;
+			return FALSE;
 		}
+
+		printf("Loaded plugin: %s (ID: 0x%08X, Name: %s)\n",
+			pluginPath.c_str(),
+			pluginInfo.dwPluginID,
+			pluginInfo.strPluginName.c_str());
+		QDebugOut("Loaded plugin: <%s> (ID: 0x%08X, Name: %s)",
+			pluginPath.c_str(),
+			pluginInfo.dwPluginID,
+			pluginInfo.strPluginName.c_str());
+
+		// Check if the plugin is ready for patching
+		if (!pluginInfo.pPlugin->ReadyForPatch())
+		{
+			printf("ERROR: Plugin '%s' is not configured or not ready for patching.\n",
+				pluginInfo.strPluginName.c_str());
+			printf("       Please run the GUI version of MPQDraft to configure this plugin first.\n");
+			QDebugOut("ERROR: Plugin '%s' is not ready for patching", pluginInfo.strPluginName.c_str());
+			return FALSE;
+		}
+
+		printf("Plugin '%s' is ready for patching.\n", pluginInfo.strPluginName.c_str());
+		QDebugOut("Plugin '%s' is ready for patching", pluginInfo.strPluginName.c_str());
 
 		// Create the module entry
 		MPQDRAFTPLUGINMODULE m;
@@ -170,9 +192,6 @@ BOOL CMPQDraftCLI::LoadPluginModules(
 		m.bExecute = TRUE;
 		strcpy(m.szModuleFileName, pluginInfo.strFileName.c_str());
 		modules.push_back(m);
-
-		printf("Loaded module: %s (ID: 0x%08X)\n", pluginPath.c_str(), pluginInfo.dwPluginID);
-		QDebugOut("Loaded module: <%s> (ID: 0x%08X)", pluginPath.c_str(), pluginInfo.dwPluginID);
 
 		// Note: We don't call FreeLibrary here because the DLL needs to stay loaded
 		// for the patcher to use it

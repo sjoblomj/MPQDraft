@@ -26,13 +26,13 @@ Required Visual Studio components:
 Creating a workable Windows binary under Linux using MinGW-w64 is a goal that is not yet complete.
 
 Todo:
-- [x] GitHub Actions build pipeline
+- [x] GitHub Actions build-pipeline
 - [x] Case-sensitive file paths
 - [x] Refactor CLI into its own directory
 - [x] Refactor GUI into its own directory
 - [x] Remove MFC from CLI tool
 - [x] Add `--help`, `-h`, `--version`, `-v` flags to CLI
-- [ ] Add plugin configuration support to CLI
+- [x] Add plugin readiness-check to CLI
 - [ ] Replace MFC GUI with a cross-platform GUI framework
 - [ ] Remove obsolete `#if _MSC_VER > 1000  #pragma once  #endif // _MSC_VER > 1000`
 - [ ] Correct `_cdecl`
