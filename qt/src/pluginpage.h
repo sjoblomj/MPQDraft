@@ -16,6 +16,7 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QMap>
+#include <QSet>
 #include "common/pluginloader.h"
 
 class PluginPage : public QWizardPage
@@ -30,22 +31,27 @@ public:
 
 private slots:
     void onBrowseClicked();
+    void onRemoveClicked();
     void onConfigureClicked();
     void onItemSelectionChanged();
     void onItemChanged(QListWidgetItem *item);
 
 private:
     void loadPluginsFromDirectory();
-    void addPlugin(const QString &path);
+    bool addPlugin(const QString &path, bool showMessages = true);
     void validatePluginSelection();
 
     QListWidget *pluginListWidget;
     QPushButton *browseButton;
+    QPushButton *removeButton;
     QPushButton *configureButton;
     QLabel *statusLabel;
 
     // Map of plugin paths to their loaded info
     QMap<QString, PluginInfo*> loadedPlugins;
+
+    // Set of plugin paths that failed to load
+    QSet<QString> failedPlugins;
 };
 
 #endif // PLUGINPAGE_H

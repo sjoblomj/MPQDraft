@@ -10,6 +10,8 @@
 #include <QMessageBox>
 #include <QDir>
 #include <QLabel>
+#include <QFileInfo>
+#include <QIcon>
 
 PluginPage::PluginPage(QWidget *parent)
     : QWizardPage(parent)
@@ -30,6 +32,7 @@ PluginPage::PluginPage(QWidget *parent)
 
     // Plugin list with checkboxes
     pluginListWidget = new QListWidget(this);
+    pluginListWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
     connect(pluginListWidget, &QListWidget::itemChanged, this, &PluginPage::onItemChanged);
     connect(pluginListWidget, &QListWidget::itemSelectionChanged,
             this, &PluginPage::onItemSelectionChanged);
@@ -37,14 +40,18 @@ PluginPage::PluginPage(QWidget *parent)
 
     // Buttons
     QVBoxLayout *buttonLayout = new QVBoxLayout();
-    browseButton = new QPushButton("Browse...", this);
+    browseButton = new QPushButton("Add Plugin...", this);
+    removeButton = new QPushButton("Remove", this);
     configureButton = new QPushButton("Configure", this);
+    removeButton->setEnabled(false);
     configureButton->setEnabled(false);
 
     connect(browseButton, &QPushButton::clicked, this, &PluginPage::onBrowseClicked);
+    connect(removeButton, &QPushButton::clicked, this, &PluginPage::onRemoveClicked);
     connect(configureButton, &QPushButton::clicked, this, &PluginPage::onConfigureClicked);
 
     buttonLayout->addWidget(browseButton);
+    buttonLayout->addWidget(removeButton);
     buttonLayout->addWidget(configureButton);
     buttonLayout->addStretch();
 
@@ -156,35 +163,106 @@ void PluginPage::loadPluginsFromDirectory()
     filters << "*.qdp" << "*.dll";
     QStringList pluginFiles = pluginDir.entryList(filters, QDir::Files);
 
+    int failedCount = 0;
     for (const QString &fileName : pluginFiles) {
         QString fullPath = pluginDir.absoluteFilePath(fileName);
-        addPlugin(fullPath);
+        if (!addPlugin(fullPath, false)) {  // Don't show messages during auto-load
+            failedCount++;
+        }
+    }
+
+    // Show a single summary message if any plugins failed to load
+    if (failedCount > 0) {
+        QMessageBox::warning(this, "Plugin Loading Failed",
+                           QString("Failed to load %1 plugin(s) from the plugins directory.\n\n"
+                                  "The failed plugins are shown in red in the list. "
+                                  "They may be corrupted or missing required dependencies.")
+                           .arg(failedCount));
     }
 }
 
-void PluginPage::addPlugin(const QString &path)
+bool PluginPage::addPlugin(const QString &path, bool showMessages)
 {
-    // Don't add duplicates
-    if (loadedPlugins.contains(path)) {
-        return;
+    // Don't add duplicates - silently filter them out
+    if (loadedPlugins.contains(path) || failedPlugins.contains(path)) {
+        return true;  // Already handled
     }
-    
+
     // Try to load the plugin
     PluginInfo *info = new PluginInfo();
-    if (!LoadPluginInfo(path.toStdString().c_str(), *info)) {
+    bool loadSuccess = LoadPluginInfo(path.toStdString().c_str(), *info);
+
+    if (!loadSuccess) {
+#ifdef _WIN32
+        // On Windows, this is a real error - the plugin DLL couldn't be loaded
         delete info;
-        return;
+
+        // Mark as failed and add to list in red
+        failedPlugins.insert(path);
+
+        QString displayName = QFileInfo(path).fileName() + " (failed to load)";
+        QListWidgetItem *item = new QListWidgetItem(displayName, pluginListWidget);
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(Qt::Unchecked);
+        item->setData(Qt::UserRole, path);  // Store full path
+        item->setForeground(Qt::red);  // Make it red
+
+        // Add DLL icon
+        QIcon dllIcon(":/icons/DLL.ico");
+        item->setIcon(dllIcon);
+
+        if (showMessages) {
+            QMessageBox::warning(this, "Failed to Load Plugin",
+                               QString("Failed to load plugin from:\n%1\n\n"
+                                      "The file may not be a valid MPQDraft plugin, or it may be "
+                                      "missing required dependencies.")
+                               .arg(path));
+        }
+        return false;
+#else
+        // On Linux, plugins can't be loaded (they're Windows DLLs)
+        // But we can still add them to the list for testing the UI
+        if (showMessages) {
+            QMessageBox::information(this, "Plugin Loading Not Available",
+                                    QString("Plugin loading is only available on Windows.\n\n"
+                                           "This is a development build for GUI testing. "
+                                           "The plugin will be added to the list, but cannot be "
+                                           "configured or validated.\n\n"
+                                           "File: %1")
+                                    .arg(QFileInfo(path).fileName()));
+        }
+
+        // Populate the existing PluginInfo as a dummy entry for UI testing
+        info->strFileName = path.toStdString();
+        info->strPluginName = QFileInfo(path).fileName().toStdString();
+        info->dwPluginID = 0;
+        info->hDLLModule = nullptr;
+        info->pPlugin = nullptr;
+        // Fall through to add it to the list
+#endif
     }
-    
+
     // Add to our map
     loadedPlugins[path] = info;
-    
+
     // Add to list widget
     QString displayName = QString::fromStdString(info->strPluginName);
+#ifndef _WIN32
+    // On Linux, mark dummy entries as not loaded
+    if (!info->pPlugin) {
+        displayName += " (not loaded)";
+    }
+#endif
     QListWidgetItem *item = new QListWidgetItem(displayName, pluginListWidget);
     item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
     item->setCheckState(Qt::Unchecked);
     item->setData(Qt::UserRole, path);  // Store full path
+
+    // Add DLL icon
+    QIcon dllIcon(":/icons/DLL.ico");
+    item->setIcon(dllIcon);
+
+    return true;
 }
 
 void PluginPage::onBrowseClicked()
@@ -195,10 +273,37 @@ void PluginPage::onBrowseClicked()
         QString(),
         "MPQDraft Plugins (*.qdp *.dll);;All Files (*.*)"
     );
-    
+
     for (const QString &fileName : fileNames) {
         addPlugin(fileName);
     }
+}
+
+void PluginPage::onRemoveClicked()
+{
+    QList<QListWidgetItem*> selectedItems = pluginListWidget->selectedItems();
+
+    for (QListWidgetItem *item : selectedItems) {
+        QString pluginPath = item->data(Qt::UserRole).toString();
+
+        // Remove from loaded plugins map and clean up
+        if (loadedPlugins.contains(pluginPath)) {
+            PluginInfo *info = loadedPlugins[pluginPath];
+            if (info->hDLLModule) {
+                FreeLibrary(info->hDLLModule);
+            }
+            delete info;
+            loadedPlugins.remove(pluginPath);
+        }
+
+        // Remove from failed plugins set if it's there
+        failedPlugins.remove(pluginPath);
+
+        // Remove from list widget
+        delete item;
+    }
+
+    validatePluginSelection();
 }
 
 void PluginPage::onConfigureClicked()
@@ -235,6 +340,18 @@ void PluginPage::onConfigureClicked()
 
 void PluginPage::onItemSelectionChanged()
 {
-    // Enable configure button only if a plugin is selected
-    configureButton->setEnabled(pluginListWidget->currentItem() != nullptr);
+    int selectedCount = pluginListWidget->selectedItems().count();
+
+    // Remove button: enabled if 1 or more items selected
+    removeButton->setEnabled(selectedCount >= 1);
+
+    // Configure button: enabled only if exactly 1 item selected AND it's not a failed plugin
+    bool enableConfigure = false;
+    if (selectedCount == 1) {
+        QListWidgetItem *item = pluginListWidget->currentItem();
+        QString pluginPath = item->data(Qt::UserRole).toString();
+        // Only enable if the plugin loaded successfully
+        enableConfigure = !failedPlugins.contains(pluginPath);
+    }
+    configureButton->setEnabled(enableConfigure);
 }
