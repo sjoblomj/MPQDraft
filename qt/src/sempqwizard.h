@@ -39,7 +39,7 @@ class SEMPQSettingsPage : public QWizardPage
 
 public:
     explicit SEMPQSettingsPage(QWidget *parent = nullptr);
-    
+
     QString getSEMPQName() const;
     QString getMPQPath() const;
     QString getIconPath() const;
@@ -47,8 +47,11 @@ public:
 private slots:
     void onBrowseMPQClicked();
     void onBrowseIconClicked();
+    void onMPQPathChanged();
 
 private:
+    void validateMPQPath();
+
     QLineEdit *sempqNameEdit;
     QLineEdit *mpqPathEdit;
     QLineEdit *iconPathEdit;

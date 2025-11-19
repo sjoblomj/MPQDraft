@@ -98,6 +98,7 @@ qt/
 - Plugin page with loading and configuration
 - Cross-compilation toolchain files
 - Wizard sidebar image (wizard.png)
+- Add error handling
 
 ### 🚧 TODO
 - Connect to actual patcher DLL
@@ -105,7 +106,6 @@ qt/
 - Add application icons (MPQDraft.ico, game icons, etc.)
 - Load game registry entries
 - Implement progress dialogs
-- Add error handling
 - Testing on Windows
 
 ## Development Notes

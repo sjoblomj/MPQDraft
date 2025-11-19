@@ -4,6 +4,7 @@
 
 #include "patchwizard.h"
 #include "pluginpage.h"
+#include "common/patcher.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFileDialog>
@@ -11,6 +12,10 @@
 #include <QLabel>
 #include <QPixmap>
 #include <QPainter>
+#include <QFileInfo>
+
+// Stylesheet for invalid input fields
+static const char* INVALID_FIELD_STYLE = "QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }";
 
 //=============================================================================
 // Page 0: Introduction
@@ -78,6 +83,7 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
     targetPathEdit->setPlaceholderText("Path to game executable (e.g., StarCraft.exe)");
     browseButton = new QPushButton("Browse...", this);
     connect(browseButton, &QPushButton::clicked, this, &TargetSelectionPage::onBrowseClicked);
+    connect(targetPathEdit, &QLineEdit::textChanged, this, &TargetSelectionPage::onTargetPathChanged);
     targetLayout->addWidget(targetPathEdit);
     targetLayout->addWidget(browseButton);
     layout->addLayout(targetLayout);
@@ -119,6 +125,34 @@ bool TargetSelectionPage::useExtendedRedir() const
     return extendedRedirCheck->isChecked();
 }
 
+void TargetSelectionPage::validateTargetPath()
+{
+    QString targetPath = targetPathEdit->text().trimmed();
+
+    if (targetPath.isEmpty()) {
+        targetPathEdit->setStyleSheet("");
+        targetPathEdit->setToolTip("");
+        return;
+    }
+
+    QFileInfo fileInfo(targetPath);
+    if (!fileInfo.exists()) {
+        targetPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
+        targetPathEdit->setToolTip("File does not exist");
+    } else if (!fileInfo.isFile()) {
+        targetPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
+        targetPathEdit->setToolTip("Path is not a file");
+    } else {
+        targetPathEdit->setStyleSheet("");
+        targetPathEdit->setToolTip("");
+    }
+}
+
+void TargetSelectionPage::onTargetPathChanged()
+{
+    validateTargetPath();
+}
+
 void TargetSelectionPage::onBrowseClicked()
 {
     QString fileName = QFileDialog::getOpenFileName(
@@ -127,7 +161,7 @@ void TargetSelectionPage::onBrowseClicked()
         QString(),
         "Executables (*.exe);;All Files (*.*)"
     );
-    
+
     if (!fileName.isEmpty()) {
         targetPathEdit->setText(fileName);
     }
@@ -141,33 +175,44 @@ MPQSelectionPage::MPQSelectionPage(QWidget *parent)
 {
     setTitle("Select MPQ Files");
     setSubTitle("Add MPQ files to load. Files are loaded in order (later files have higher priority).");
-    
-    QHBoxLayout *mainLayout = new QHBoxLayout(this);
-    
+
+    QVBoxLayout *mainLayout = new QVBoxLayout(this);
+
+    // Status label at top
+    statusLabel = new QLabel(this);
+    statusLabel->setWordWrap(true);
+    statusLabel->hide();
+    mainLayout->addWidget(statusLabel);
+
+    // Horizontal layout for list and buttons
+    QHBoxLayout *contentLayout = new QHBoxLayout();
+
     // MPQ list
     mpqListWidget = new QListWidget(this);
-    mainLayout->addWidget(mpqListWidget);
-    
+    connect(mpqListWidget, &QListWidget::itemChanged, this, &MPQSelectionPage::onItemChanged);
+    contentLayout->addWidget(mpqListWidget);
+
     // Buttons
     QVBoxLayout *buttonLayout = new QVBoxLayout();
     addButton = new QPushButton("Add...", this);
     removeButton = new QPushButton("Remove", this);
     moveUpButton = new QPushButton("Move Up", this);
     moveDownButton = new QPushButton("Move Down", this);
-    
+
     connect(addButton, &QPushButton::clicked, this, &MPQSelectionPage::onAddClicked);
     connect(removeButton, &QPushButton::clicked, this, &MPQSelectionPage::onRemoveClicked);
     connect(moveUpButton, &QPushButton::clicked, this, &MPQSelectionPage::onMoveUpClicked);
     connect(moveDownButton, &QPushButton::clicked, this, &MPQSelectionPage::onMoveDownClicked);
-    
+
     buttonLayout->addWidget(addButton);
     buttonLayout->addWidget(removeButton);
     buttonLayout->addSpacing(20);
     buttonLayout->addWidget(moveUpButton);
     buttonLayout->addWidget(moveDownButton);
     buttonLayout->addStretch();
-    
-    mainLayout->addLayout(buttonLayout);
+
+    contentLayout->addLayout(buttonLayout);
+    mainLayout->addLayout(contentLayout);
 }
 
 QStringList MPQSelectionPage::getSelectedMPQs() const
@@ -179,6 +224,49 @@ QStringList MPQSelectionPage::getSelectedMPQs() const
     return mpqs;
 }
 
+void MPQSelectionPage::validateMPQList()
+{
+    int mpqCount = mpqListWidget->count();
+
+    // Check if too many MPQs
+    if (mpqCount > MAX_PATCH_MPQS) {
+        statusLabel->setText(QString("<font color='#d32f2f'><b>Warning:</b> Too many MPQ files (%1/%2). "
+                                     "Please remove some files.</font>")
+                            .arg(mpqCount).arg(MAX_PATCH_MPQS));
+        statusLabel->show();
+        return;
+    }
+
+    // Check for missing files
+    QStringList missingFiles;
+    for (int i = 0; i < mpqCount; ++i) {
+        QString mpqPath = mpqListWidget->item(i)->text();
+        QFileInfo fileInfo(mpqPath);
+
+        if (!fileInfo.exists()) {
+            missingFiles.append(QFileInfo(mpqPath).fileName());
+            mpqListWidget->item(i)->setForeground(QColor("#d32f2f"));
+            mpqListWidget->item(i)->setToolTip("File does not exist");
+        } else {
+            mpqListWidget->item(i)->setForeground(QColor());
+            mpqListWidget->item(i)->setToolTip("");
+        }
+    }
+
+    if (!missingFiles.isEmpty()) {
+        statusLabel->setText(QString("<font color='#d32f2f'><b>Warning:</b> Some MPQ files do not exist: %1</font>")
+                            .arg(missingFiles.join(", ")));
+        statusLabel->show();
+    } else {
+        statusLabel->hide();
+    }
+}
+
+void MPQSelectionPage::onItemChanged()
+{
+    validateMPQList();
+}
+
 void MPQSelectionPage::onAddClicked()
 {
     QStringList fileNames = QFileDialog::getOpenFileNames(
@@ -187,10 +275,12 @@ void MPQSelectionPage::onAddClicked()
         QString(),
         "MPQ Archives (*.mpq);;All Files (*.*)"
     );
-    
+
     for (const QString &fileName : fileNames) {
         mpqListWidget->addItem(fileName);
     }
+
+    validateMPQList();
 }
 
 void MPQSelectionPage::onRemoveClicked()
@@ -199,6 +289,7 @@ void MPQSelectionPage::onRemoveClicked()
     for (QListWidgetItem *item : selected) {
         delete item;
     }
+    validateMPQList();
 }
 
 void MPQSelectionPage::onMoveUpClicked()

@@ -3,6 +3,7 @@
 */
 
 #include "pluginpage.h"
+#include "common/patcher.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFileDialog>
@@ -15,30 +16,41 @@ PluginPage::PluginPage(QWidget *parent)
 {
     setTitle("Select Plugins");
     setSubTitle("Choose plugins to load. Plugins can add custom patching functionality.");
-    
-    QHBoxLayout *mainLayout = new QHBoxLayout(this);
-    
+
+    QVBoxLayout *mainLayout = new QVBoxLayout(this);
+
+    // Status label at top
+    statusLabel = new QLabel(this);
+    statusLabel->setWordWrap(true);
+    statusLabel->hide();
+    mainLayout->addWidget(statusLabel);
+
+    // Horizontal layout for list and buttons
+    QHBoxLayout *contentLayout = new QHBoxLayout();
+
     // Plugin list with checkboxes
     pluginListWidget = new QListWidget(this);
-    mainLayout->addWidget(pluginListWidget);
-    
+    connect(pluginListWidget, &QListWidget::itemChanged, this, &PluginPage::onItemChanged);
+    connect(pluginListWidget, &QListWidget::itemSelectionChanged,
+            this, &PluginPage::onItemSelectionChanged);
+    contentLayout->addWidget(pluginListWidget);
+
     // Buttons
     QVBoxLayout *buttonLayout = new QVBoxLayout();
     browseButton = new QPushButton("Browse...", this);
     configureButton = new QPushButton("Configure", this);
     configureButton->setEnabled(false);
-    
+
     connect(browseButton, &QPushButton::clicked, this, &PluginPage::onBrowseClicked);
     connect(configureButton, &QPushButton::clicked, this, &PluginPage::onConfigureClicked);
-    connect(pluginListWidget, &QListWidget::itemSelectionChanged, 
-            this, &PluginPage::onItemSelectionChanged);
-    
+
     buttonLayout->addWidget(browseButton);
     buttonLayout->addWidget(configureButton);
     buttonLayout->addStretch();
-    
-    mainLayout->addLayout(buttonLayout);
-    
+
+    contentLayout->addLayout(buttonLayout);
+    mainLayout->addLayout(contentLayout);
+
     // Load plugins from default directory
     loadPluginsFromDirectory();
 }
@@ -64,6 +76,71 @@ QStringList PluginPage::getSelectedPlugins() const
         }
     }
     return selected;
+}
+
+void PluginPage::validatePluginSelection()
+{
+    // Count selected plugins
+    int selectedCount = 0;
+    int totalModules = 0;
+
+    for (int i = 0; i < pluginListWidget->count(); ++i) {
+        QListWidgetItem *item = pluginListWidget->item(i);
+        if (item->checkState() == Qt::Checked) {
+            selectedCount++;
+
+            // Each plugin counts as 1 module (the plugin DLL itself)
+            totalModules++;
+
+            // Get the plugin info to count auxiliary modules
+            QString pluginPath = item->data(Qt::UserRole).toString();
+            PluginInfo *info = loadedPlugins.value(pluginPath, nullptr);
+
+#ifdef _WIN32
+            // TODO
+            // On Windows, we can actually call GetModules to get the count
+            if (info && info->pPlugin) {
+                DWORD numModules = 0;
+                if (info->pPlugin->GetModules(nullptr, &numModules)) {
+                    totalModules += numModules;
+                }
+            }
+#else
+            // On non-Windows, we can't load plugins, so we can't count modules
+            // This validation will only work properly on Windows
+#endif
+        }
+    }
+
+    // Check limits
+    bool hasError = false;
+    QString errorMsg;
+
+    if (selectedCount > MAX_MPQDRAFT_PLUGINS) {
+        errorMsg = QString("<font color='#d32f2f'><b>Warning:</b> Too many plugins selected (%1/%2). "
+                          "Please deselect some plugins.</font>")
+                      .arg(selectedCount).arg(MAX_MPQDRAFT_PLUGINS);
+        hasError = true;
+    } else if (totalModules > MAX_AUXILIARY_MODULES) {
+        errorMsg = QString("<font color='#d32f2f'><b>Warning:</b> Too many plugin modules (%1/%2). "
+                          "Plugins and their auxiliary modules exceed the limit. "
+                          "Please deselect some plugins.</font>")
+                      .arg(totalModules).arg(MAX_AUXILIARY_MODULES);
+        hasError = true;
+    }
+
+    if (hasError) {
+        statusLabel->setText(errorMsg);
+        statusLabel->show();
+    } else {
+        statusLabel->hide();
+    }
+}
+
+void PluginPage::onItemChanged(QListWidgetItem *item)
+{
+    Q_UNUSED(item);
+    validatePluginSelection();
 }
 
 void PluginPage::loadPluginsFromDirectory()

@@ -11,6 +11,10 @@
 #include <QLabel>
 #include <QPixmap>
 #include <QPainter>
+#include <QFileInfo>
+
+// Stylesheet for invalid input fields
+static const char* INVALID_FIELD_STYLE = "QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }";
 
 //=============================================================================
 // Page 0: Introduction
@@ -83,6 +87,7 @@ SEMPQSettingsPage::SEMPQSettingsPage(QWidget *parent)
     mpqPathEdit->setPlaceholderText("Select the MPQ file to package");
     browseMPQButton = new QPushButton("Browse...", this);
     connect(browseMPQButton, &QPushButton::clicked, this, &SEMPQSettingsPage::onBrowseMPQClicked);
+    connect(mpqPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::onMPQPathChanged);
     mpqLayout->addWidget(mpqPathEdit);
     mpqLayout->addWidget(browseMPQButton);
     layout->addLayout(mpqLayout);
@@ -121,6 +126,34 @@ QString SEMPQSettingsPage::getMPQPath() const
 QString SEMPQSettingsPage::getIconPath() const
 {
     return iconPathEdit->text();
+}
+
+void SEMPQSettingsPage::validateMPQPath()
+{
+    QString mpqPath = mpqPathEdit->text().trimmed();
+
+    if (mpqPath.isEmpty()) {
+        mpqPathEdit->setStyleSheet("");
+        mpqPathEdit->setToolTip("");
+        return;
+    }
+
+    QFileInfo fileInfo(mpqPath);
+    if (!fileInfo.exists()) {
+        mpqPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
+        mpqPathEdit->setToolTip("File does not exist");
+    } else if (!fileInfo.isFile()) {
+        mpqPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
+        mpqPathEdit->setToolTip("Path is not a file");
+    } else {
+        mpqPathEdit->setStyleSheet("");
+        mpqPathEdit->setToolTip("");
+    }
+}
+
+void SEMPQSettingsPage::onMPQPathChanged()
+{
+    validateMPQPath();
 }
 
 void SEMPQSettingsPage::onBrowseMPQClicked()

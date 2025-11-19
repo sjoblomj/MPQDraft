@@ -41,15 +41,18 @@ class TargetSelectionPage : public QWizardPage
 
 public:
     explicit TargetSelectionPage(QWidget *parent = nullptr);
-    
+
     QString getTargetPath() const;
     QString getParameters() const;
     bool useExtendedRedir() const;
 
 private slots:
     void onBrowseClicked();
+    void onTargetPathChanged();
 
 private:
+    void validateTargetPath();
+
     QLineEdit *targetPathEdit;
     QLineEdit *parametersEdit;
     QCheckBox *extendedRedirCheck;
@@ -65,7 +68,7 @@ class MPQSelectionPage : public QWizardPage
 
 public:
     explicit MPQSelectionPage(QWidget *parent = nullptr);
-    
+
     QStringList getSelectedMPQs() const;
 
 private slots:
@@ -73,13 +76,17 @@ private slots:
     void onRemoveClicked();
     void onMoveUpClicked();
     void onMoveDownClicked();
+    void onItemChanged();
 
 private:
+    void validateMPQList();
+
     QListWidget *mpqListWidget;
     QPushButton *addButton;
     QPushButton *removeButton;
     QPushButton *moveUpButton;
     QPushButton *moveDownButton;
+    QLabel *statusLabel;
 };
 
 //=============================================================================
