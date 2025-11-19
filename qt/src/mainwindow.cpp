@@ -81,13 +81,29 @@ void MainWindow::onPatchClicked()
 {
     // Create and show the patch wizard
     PatchWizard wizard(this);
+
+    // Position wizard at main window location and hide main window
+    wizard.move(this->pos());
+    this->hide();
+
     wizard.exec();
+
+    // Show main window again after wizard closes
+    this->show();
 }
 
 void MainWindow::onSEMPQClicked()
 {
     // Create and show the SEMPQ wizard
     SEMPQWizard wizard(this);
+
+    // Position wizard at main window location and hide main window
+    wizard.move(this->pos());
+    this->hide();
+
     wizard.exec();
+
+    // Show main window again after wizard closes
+    this->show();
 }
 
