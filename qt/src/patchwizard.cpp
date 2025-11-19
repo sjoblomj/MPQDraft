@@ -105,6 +105,7 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
     QHBoxLayout *extendedRedirLayout = new QHBoxLayout();
 
     extendedRedirCheck = new QCheckBox("Use extended file redirection", this);
+    extendedRedirCheck->setChecked(true);  // Default to checked (most games need it)
     extendedRedirLayout->addWidget(extendedRedirCheck);
 
     // Info icon with detailed explanation
@@ -227,7 +228,9 @@ MPQSelectionPage::MPQSelectionPage(QWidget *parent)
 
     // MPQ list
     mpqListWidget = new QListWidget(this);
+    mpqListWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
     connect(mpqListWidget, &QListWidget::itemChanged, this, &MPQSelectionPage::onItemChanged);
+    connect(mpqListWidget, &QListWidget::itemSelectionChanged, this, &MPQSelectionPage::onSelectionChanged);
     contentLayout->addWidget(mpqListWidget);
 
     // Buttons
@@ -237,6 +240,11 @@ MPQSelectionPage::MPQSelectionPage(QWidget *parent)
     removeButton = new QPushButton("Remove", this);
     moveUpButton = new QPushButton("Move Up", this);
     moveDownButton = new QPushButton("Move Down", this);
+
+    // Initially disable buttons that require selection
+    removeButton->setEnabled(false);
+    moveUpButton->setEnabled(false);
+    moveDownButton->setEnabled(false);
 
     connect(addButton, &QPushButton::clicked, this, &MPQSelectionPage::onAddClicked);
     connect(addFolderButton, &QPushButton::clicked, this, &MPQSelectionPage::onAddFolderClicked);
@@ -444,6 +452,18 @@ void MPQSelectionPage::onMoveDownClicked()
         mpqListWidget->insertItem(currentRow + 1, item);
         mpqListWidget->setCurrentRow(currentRow + 1);
     }
+}
+
+void MPQSelectionPage::onSelectionChanged()
+{
+    int selectedCount = mpqListWidget->selectedItems().count();
+
+    // Remove button: enabled if 1 or more items selected
+    removeButton->setEnabled(selectedCount >= 1);
+
+    // Move Up/Down buttons: enabled only if exactly 1 item selected
+    moveUpButton->setEnabled(selectedCount == 1);
+    moveDownButton->setEnabled(selectedCount == 1);
 }
 
 //=============================================================================

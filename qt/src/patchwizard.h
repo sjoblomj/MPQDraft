@@ -79,6 +79,7 @@ private slots:
     void onMoveUpClicked();
     void onMoveDownClicked();
     void onItemChanged();
+    void onSelectionChanged();
 
 private:
     void validateMPQList();
