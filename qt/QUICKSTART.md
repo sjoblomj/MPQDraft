@@ -41,9 +41,62 @@ Run it:
 
 **Note:** The Linux version is just for GUI development. The actual patching functionality requires Windows.
 
-## Step 3: Cross-Compile for Windows
+## Step 3: Set Up Qt6 for Cross-Compilation
 
-Build a Windows executable from Linux:
+**Important:** Cross-compiling to Windows requires Qt6 built for MinGW, not the Linux Qt6.
+
+### Option A: Automatic Setup (Recommended)
+
+Run the setup helper script:
+
+```bash
+cd qt
+./setup-qt-mingw.sh
+```
+
+This will:
+1. Search for Qt6 MinGW installations
+2. Update the toolchain files automatically
+3. Tell you which build command to use
+
+### Option B: Manual Setup
+
+1. **Download Qt with MinGW:**
+   - Go to https://www.qt.io/download-qt-installer
+   - Download the Qt Online Installer for Linux
+   - Run it: `chmod +x qt-*.run && ./qt-*.run`
+   - Select Qt 6.x.x
+   - Check **"MinGW 11.2.0 32-bit"** and/or **"MinGW 11.2.0 64-bit"**
+   - Install (default location: `~/Qt/`)
+
+2. **Update toolchain files:**
+
+   Edit `qt/toolchain/mingw-w64-i686.cmake` (for 32-bit):
+   ```cmake
+   set(Qt6_DIR "$ENV{HOME}/Qt/6.8.0/mingw_32/lib/cmake/Qt6")
+   ```
+
+   Edit `qt/toolchain/mingw-w64-x86_64.cmake` (for 64-bit):
+   ```cmake
+   set(Qt6_DIR "$ENV{HOME}/Qt/6.8.0/mingw_64/lib/cmake/Qt6")
+   ```
+
+   (Adjust version number to match your installation)
+
+### Option C: Skip Cross-Compilation (For Now)
+
+You can develop the GUI on Linux and cross-compile later:
+
+```bash
+./build.sh linux
+./build/MPQDraftQt
+```
+
+The GUI will work on Linux (with Wine for testing), and you can add Windows cross-compilation when needed.
+
+## Step 4: Cross-Compile for Windows
+
+Once Qt6 MinGW is set up:
 
 ```bash
 # For 32-bit Windows (recommended for compatibility)
@@ -53,7 +106,7 @@ Build a Windows executable from Linux:
 ./build.sh win64
 ```
 
-## Step 4: Test with Wine
+## Step 5: Test with Wine
 
 Test the Windows build on Linux using Wine:
 
@@ -65,7 +118,7 @@ wine build-win32/MPQDraftQt.exe
 wine64 build-win64/MPQDraftQt.exe
 ```
 
-## Step 5: Test on Real Windows
+## Step 6: Test on Real Windows
 
 Copy the executable to a Windows machine:
 

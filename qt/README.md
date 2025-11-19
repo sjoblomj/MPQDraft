@@ -81,6 +81,8 @@ qt/
 │       └── common.h            # Common types and definitions
 ├── resources/
 │   ├── mpqdraft.qrc            # Qt resource file
+│   ├── images/
+│   │   └── wizard.png          # Wizard sidebar image
 │   └── icons/                  # Application icons (to be added)
 └── toolchain/
     ├── mingw-w64-i686.cmake    # 32-bit Windows cross-compilation
@@ -91,15 +93,16 @@ qt/
 
 ### ✅ Implemented
 - Main window with two buttons (Patch / Create SEMPQ)
-- Patch wizard structure (3 pages)
-- SEMPQ wizard structure (2 pages)
+- Patch wizard structure (3 pages) with sidebar image
+- SEMPQ wizard structure (2 pages) with sidebar image
 - Plugin page with loading and configuration
 - Cross-compilation toolchain files
+- Wizard sidebar image (wizard.png)
 
 ### 🚧 TODO
 - Connect to actual patcher DLL
 - Implement SEMPQ creation
-- Add application icons
+- Add application icons (MPQDraft.ico, game icons, etc.)
 - Load game registry entries
 - Implement progress dialogs
 - Add error handling

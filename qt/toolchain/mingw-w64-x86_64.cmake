@@ -20,12 +20,13 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 
-# Qt6 for MinGW (if installed via package manager or Qt installer)
-# You may need to adjust this path based on your Qt6 installation
-# Example paths:
-#   - Ubuntu package: /usr/lib/x86_64-linux-gnu/qt6
-#   - Qt installer: ~/Qt/6.x.x/mingw_64
-# set(Qt6_DIR "/path/to/qt6/lib/cmake/Qt6")
+# Qt6 for MinGW - REQUIRED for cross-compilation
+# Install Qt6 with MinGW from: https://www.qt.io/download-qt-installer
+# Then uncomment and adjust the path below to match your installation:
+# set(Qt6_DIR "$ENV{HOME}/Qt/6.8.0/mingw_64/lib/cmake/Qt6")
+#
+# Or set it via environment variable:
+# export Qt6_DIR=~/Qt/6.8.0/mingw_64/lib/cmake/Qt6
 
 # Windows-specific flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
