@@ -13,6 +13,49 @@
 #include <QPainter>
 
 //=============================================================================
+// Page 0: Introduction
+//=============================================================================
+SEMPQIntroPage::SEMPQIntroPage(QWidget *parent)
+    : QWizardPage(parent)
+{
+    setTitle("Welcome to SEMPQ Creation Wizard");
+    setSubTitle("Create Self-Executing MPQ (SEMPQ) files.");
+
+    QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->setSpacing(15);
+
+    QLabel *introLabel = new QLabel(
+        "<p>This wizard will help you create a Self-Executing MPQ (SEMPQ) file.</p>"
+
+        "<p><b>What are MPQs?</b><br>"
+        "MPQs are archives containing game data such as  graphics, sounds and other resources. "
+        "They were used extensively by Blizzard Entertainment, but also Sierra OnLine's "
+        "Lords of Magic.</p>"
+
+        "<p><b>What is a SEMPQ?</b><br>"
+        "A SEMPQ is a standalone executable that contains an MPQ archive and optional plugins. "
+        "When run, it automatically patches and launches a game with the embedded modifications. "
+        "The user does not need to have MPQDraft installed to run a SEMPQ.</p>"
+
+        "<p><b>Benefits of SEMPQ files:</b></p>"
+        "<ul>"
+        "<li>Easy distribution - share a single .exe file with others</li>"
+        "<li>No installation required - recipients just run the file</li>"
+        "<li>Automatic patching - the game is patched and launched in one step</li>"
+        "<li>Self-contained - includes all necessary MPQ data and plugins</li>"
+        "</ul>"
+
+        "<p>Click <b>Next</b> to configure your SEMPQ file.</p>",
+        this
+    );
+    introLabel->setWordWrap(true);
+    introLabel->setTextFormat(Qt::RichText);
+
+    layout->addWidget(introLabel);
+    layout->addStretch();
+}
+
+//=============================================================================
 // Page 1: SEMPQ Settings
 //=============================================================================
 SEMPQSettingsPage::SEMPQSettingsPage(QWidget *parent)
@@ -130,10 +173,12 @@ SEMPQWizard::SEMPQWizard(QWidget *parent)
     setPixmap(QWizard::WatermarkPixmap, pixmapWithMargin);
 
     // Create pages
+    introPage = new SEMPQIntroPage(this);
     settingsPage = new SEMPQSettingsPage(this);
     pluginPage = new PluginPage(this);
 
     // Add pages
+    addPage(introPage);
     addPage(settingsPage);
     addPage(pluginPage);
 

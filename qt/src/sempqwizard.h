@@ -20,6 +20,17 @@
 class PluginPage;
 
 //=============================================================================
+// Page 0: Introduction
+//=============================================================================
+class SEMPQIntroPage : public QWizardPage
+{
+    Q_OBJECT
+
+public:
+    explicit SEMPQIntroPage(QWidget *parent = nullptr);
+};
+
+//=============================================================================
 // Page 1: SEMPQ Settings
 //=============================================================================
 class SEMPQSettingsPage : public QWizardPage
@@ -58,9 +69,10 @@ public:
     void accept() override;
 
 private:
+    SEMPQIntroPage *introPage;
     SEMPQSettingsPage *settingsPage;
     PluginPage *pluginPage;
-    
+
     void createSEMPQ();
 };
 

@@ -22,6 +22,17 @@
 class PluginPage;
 
 //=============================================================================
+// Page 0: Introduction
+//=============================================================================
+class PatchIntroPage : public QWizardPage
+{
+    Q_OBJECT
+
+public:
+    explicit PatchIntroPage(QWidget *parent = nullptr);
+};
+
+//=============================================================================
 // Page 1: Select Target Executable
 //=============================================================================
 class TargetSelectionPage : public QWizardPage
@@ -84,10 +95,11 @@ public:
     void accept() override;
 
 private:
+    PatchIntroPage *introPage;
     TargetSelectionPage *targetPage;
     MPQSelectionPage *mpqPage;
     PluginPage *pluginPage;
-    
+
     void performPatch();
 };
 

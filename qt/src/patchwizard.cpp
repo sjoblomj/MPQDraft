@@ -13,6 +13,52 @@
 #include <QPainter>
 
 //=============================================================================
+// Page 0: Introduction
+//=============================================================================
+PatchIntroPage::PatchIntroPage(QWidget *parent)
+    : QWizardPage(parent)
+{
+    setTitle("Welcome to MPQDraft Patch Wizard");
+    setSubTitle("Load custom MPQ archives with game data, or use plugins to add new features.");
+
+    QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->setSpacing(15);
+
+    QLabel *introLabel = new QLabel(
+        "<p>This wizard will help you patch a game executable with custom MPQ archives "
+        "to change game assets and plugins to change game behavior.</p>"
+
+        "<p><b>What are MPQs?</b><br>"
+        "MPQs are archives containing game data such as  graphics, sounds and other resources. "
+        "They were used extensively by Blizzard Entertainment, but also Sierra OnLine's "
+        "Lords of Magic.</p>"
+
+        "<p><b>What is MPQDraft?</b><br>"
+        "MPQDraft allows you to modify games by loading custom MPQ files and plugins "
+        "without permanently modifying the game installation.</p>"
+
+        "<p><b>What you can do:</b></p>"
+        "<ul>"
+        "<li>Load custom graphics, sounds, and other game data from MPQ files provided by you</li>"
+        "<li>Enable plugins that add new features or modify game behavior</li>"
+        "<li>Launch the game with your modifications applied temporarily</li>"
+        "</ul>"
+
+        "<p><b>How it works:</b><br>"
+        "MPQDraft intercepts the game's file access and redirects it to your custom MPQ files, "
+        "allowing you to run modifications without altering the original game files.</p>"
+
+        "<p>Click <b>Next</b> to begin selecting your target game and MPQ files.</p>",
+        this
+    );
+    introLabel->setWordWrap(true);
+    introLabel->setTextFormat(Qt::RichText);
+
+    layout->addWidget(introLabel);
+    layout->addStretch();
+}
+
+//=============================================================================
 // Page 1: Target Selection
 //=============================================================================
 TargetSelectionPage::TargetSelectionPage(QWidget *parent)
@@ -197,11 +243,13 @@ PatchWizard::PatchWizard(QWidget *parent)
     setPixmap(QWizard::WatermarkPixmap, pixmapWithMargin);
 
     // Create pages
+    introPage = new PatchIntroPage(this);
     targetPage = new TargetSelectionPage(this);
     mpqPage = new MPQSelectionPage(this);
     pluginPage = new PluginPage(this);
 
     // Add pages
+    addPage(introPage);
     addPage(targetPage);
     addPage(mpqPage);
     addPage(pluginPage);
