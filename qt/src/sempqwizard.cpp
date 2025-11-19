@@ -69,50 +69,83 @@ SEMPQSettingsPage::SEMPQSettingsPage(QWidget *parent)
 {
     setTitle("SEMPQ Settings");
     setSubTitle("Configure the self-executing MPQ file to create.");
-    
+
     QVBoxLayout *layout = new QVBoxLayout(this);
-    
+
     // SEMPQ name
     QLabel *nameLabel = new QLabel("SEMPQ Name:", this);
     layout->addWidget(nameLabel);
     sempqNameEdit = new QLineEdit(this);
     sempqNameEdit->setPlaceholderText("e.g., MyMod");
     layout->addWidget(sempqNameEdit);
-    
+
     layout->addSpacing(20);
-    
-    // Source MPQ
+
+    // Source MPQ with icon to the left of both label and input
+    QHBoxLayout *mpqSectionLayout = new QHBoxLayout();
+
+    // MPQ icon on the left
+    mpqIconLabel = new QLabel(this);
+    QPixmap mpqPixmap(":/icons/MPQ.ico");
+    mpqIconLabel->setPixmap(mpqPixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    mpqIconLabel->setFixedSize(64, 64);
+    mpqIconLabel->setAlignment(Qt::AlignTop);
+    mpqSectionLayout->addWidget(mpqIconLabel);
+
+    // Vertical layout for label and input
+    QVBoxLayout *mpqVerticalLayout = new QVBoxLayout();
     QLabel *mpqLabel = new QLabel("Source MPQ File:", this);
-    layout->addWidget(mpqLabel);
-    QHBoxLayout *mpqLayout = new QHBoxLayout();
+    mpqVerticalLayout->addWidget(mpqLabel);
+
+    QHBoxLayout *mpqInputLayout = new QHBoxLayout();
     mpqPathEdit = new QLineEdit(this);
     mpqPathEdit->setPlaceholderText("Select the MPQ file to package");
     browseMPQButton = new QPushButton("Browse...", this);
     connect(browseMPQButton, &QPushButton::clicked, this, &SEMPQSettingsPage::onBrowseMPQClicked);
     connect(mpqPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::onMPQPathChanged);
-    mpqLayout->addWidget(mpqPathEdit);
-    mpqLayout->addWidget(browseMPQButton);
-    layout->addLayout(mpqLayout);
-    
+    mpqInputLayout->addWidget(mpqPathEdit);
+    mpqInputLayout->addWidget(browseMPQButton);
+    mpqVerticalLayout->addLayout(mpqInputLayout);
+
+    mpqSectionLayout->addLayout(mpqVerticalLayout);
+    layout->addLayout(mpqSectionLayout);
+
     layout->addSpacing(20);
-    
-    // Icon
-    QLabel *iconLabel = new QLabel("Icon (optional):", this);
-    layout->addWidget(iconLabel);
-    QHBoxLayout *iconLayout = new QHBoxLayout();
+
+    // Icon with preview to the left of both label and input
+    QHBoxLayout *iconSectionLayout = new QHBoxLayout();
+
+    // Icon preview on the left
+    iconPreviewLabel = new QLabel(this);
+    iconPreviewLabel->setFixedSize(64, 64);
+    iconPreviewLabel->setAlignment(Qt::AlignTop);
+    iconSectionLayout->addWidget(iconPreviewLabel);
+
+    // Vertical layout for label and input
+    QVBoxLayout *iconVerticalLayout = new QVBoxLayout();
+    QLabel *iconLabel = new QLabel("Icon of SEMPQ (optional):", this);
+    iconVerticalLayout->addWidget(iconLabel);
+
+    QHBoxLayout *iconInputLayout = new QHBoxLayout();
     iconPathEdit = new QLineEdit(this);
     iconPathEdit->setPlaceholderText("Select an icon file (.ico)");
     browseIconButton = new QPushButton("Browse...", this);
     connect(browseIconButton, &QPushButton::clicked, this, &SEMPQSettingsPage::onBrowseIconClicked);
-    iconLayout->addWidget(iconPathEdit);
-    iconLayout->addWidget(browseIconButton);
-    layout->addLayout(iconLayout);
-    
+    connect(iconPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::onIconPathChanged);
+    iconInputLayout->addWidget(iconPathEdit);
+    iconInputLayout->addWidget(browseIconButton);
+    iconVerticalLayout->addLayout(iconInputLayout);
+
+    iconSectionLayout->addLayout(iconVerticalLayout);
+    layout->addLayout(iconSectionLayout);
+
     layout->addStretch();
-    
+
     // Register required fields
     registerField("sempqName*", sempqNameEdit);
     registerField("mpqPath*", mpqPathEdit);
+
+    SEMPQSettingsPage::onIconPathChanged();
 }
 
 QString SEMPQSettingsPage::getSEMPQName() const
@@ -180,9 +213,34 @@ void SEMPQSettingsPage::onBrowseIconClicked()
         QString(),
         "Icon Files (*.ico);;All Files (*.*)"
     );
-    
+
     if (!fileName.isEmpty()) {
         iconPathEdit->setText(fileName);
+    }
+}
+
+void SEMPQSettingsPage::onIconPathChanged()
+{
+    updateIconPreview();
+}
+
+void SEMPQSettingsPage::updateIconPreview()
+{
+    QString iconPath = iconPathEdit->text().trimmed();
+
+    bool loadedIcon = false;
+    if (!iconPath.isEmpty()) {
+        // Try to load the custom icon
+        QPixmap customPixmap(iconPath);
+        if (!customPixmap.isNull()) {
+            iconPreviewLabel->setPixmap(customPixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            loadedIcon = true;
+        }
+    }
+    if (!loadedIcon) {
+        // No custom icon or failed to load it - show default StarDraft.ico
+        QPixmap defaultPixmap(":/icons/StarDraft.ico");
+        iconPreviewLabel->setPixmap(defaultPixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     }
 }
 

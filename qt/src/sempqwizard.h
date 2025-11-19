@@ -52,15 +52,19 @@ private slots:
     void onBrowseMPQClicked();
     void onBrowseIconClicked();
     void onMPQPathChanged();
+    void onIconPathChanged();
 
 private:
     void validateMPQPath();
+    void updateIconPreview();
 
     QLineEdit *sempqNameEdit;
     QLineEdit *mpqPathEdit;
     QLineEdit *iconPathEdit;
     QPushButton *browseMPQButton;
     QPushButton *browseIconButton;
+    QLabel *mpqIconLabel;
+    QLabel *iconPreviewLabel;
 };
 
 //=============================================================================

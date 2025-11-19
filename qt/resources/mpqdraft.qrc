@@ -22,6 +22,7 @@
         <file>icons/MPQDraft.ico</file>
         <file>icons/MPQ.ico</file>
         <file>icons/DLL.ico</file>
+        <file>icons/StarDraft.ico</file>
     </qresource>
 </RCC>
 
