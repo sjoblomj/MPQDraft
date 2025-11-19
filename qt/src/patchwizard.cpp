@@ -9,6 +9,8 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QLabel>
+#include <QPixmap>
+#include <QPainter>
 
 //=============================================================================
 // Page 1: Target Selection
@@ -182,17 +184,28 @@ PatchWizard::PatchWizard(QWidget *parent)
     setWindowTitle("MPQDraft Patch Wizard");
     setWizardStyle(QWizard::ModernStyle);
     setOption(QWizard::HaveHelpButton, false);
-    
+
+    // Set the wizard sidebar image with margin
+    QPixmap originalPixmap(":/images/wizard.png");
+    int margin = 10;
+    QPixmap pixmapWithMargin(originalPixmap.width() + margin * 2,
+                             originalPixmap.height() + margin * 2);
+    pixmapWithMargin.fill(Qt::transparent);
+    QPainter painter(&pixmapWithMargin);
+    painter.drawPixmap(margin, margin, originalPixmap);
+    painter.end();
+    setPixmap(QWizard::WatermarkPixmap, pixmapWithMargin);
+
     // Create pages
     targetPage = new TargetSelectionPage(this);
     mpqPage = new MPQSelectionPage(this);
     pluginPage = new PluginPage(this);
-    
+
     // Add pages
     addPage(targetPage);
     addPage(mpqPage);
     addPage(pluginPage);
-    
+
     // Set minimum size
     setMinimumSize(600, 500);
 }
@@ -229,4 +242,3 @@ void PatchWizard::performPatch()
     QMessageBox::information(this, "Patch Ready", 
                             message + "\n\nPatching functionality will be implemented next.");
 }
-

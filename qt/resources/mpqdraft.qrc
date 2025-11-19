@@ -1,6 +1,9 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource>
+        <!-- Wizard sidebar image -->
+        <file>images/wizard.png</file>
+
         <!-- Icons will be added here later -->
         <!-- Example:
         <file>icons/MPQDraft.ico</file>

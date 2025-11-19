@@ -9,6 +9,8 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QLabel>
+#include <QPixmap>
+#include <QPainter>
 
 //=============================================================================
 // Page 1: SEMPQ Settings
@@ -115,15 +117,26 @@ SEMPQWizard::SEMPQWizard(QWidget *parent)
     setWindowTitle("MPQDraft SEMPQ Wizard");
     setWizardStyle(QWizard::ModernStyle);
     setOption(QWizard::HaveHelpButton, false);
-    
+
+    // Set the wizard sidebar image with margin
+    QPixmap originalPixmap(":/images/wizard.png");
+    int margin = 10;
+    QPixmap pixmapWithMargin(originalPixmap.width() + margin * 2,
+                             originalPixmap.height() + margin * 2);
+    pixmapWithMargin.fill(Qt::transparent);
+    QPainter painter(&pixmapWithMargin);
+    painter.drawPixmap(margin, margin, originalPixmap);
+    painter.end();
+    setPixmap(QWizard::WatermarkPixmap, pixmapWithMargin);
+
     // Create pages
     settingsPage = new SEMPQSettingsPage(this);
     pluginPage = new PluginPage(this);
-    
+
     // Add pages
     addPage(settingsPage);
     addPage(pluginPage);
-    
+
     // Set minimum size
     setMinimumSize(600, 500);
 }
@@ -157,4 +170,3 @@ void SEMPQWizard::createSEMPQ()
     QMessageBox::information(this, "SEMPQ Ready", 
                             message + "\n\nSEMPQ creation functionality will be implemented next.");
 }
-
