@@ -1,0 +1,11 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource>
+        <!-- Icons will be added here later -->
+        <!-- Example:
+        <file>icons/MPQDraft.ico</file>
+        <file>icons/Starcraft.ico</file>
+        -->
+    </qresource>
+</RCC>
+
