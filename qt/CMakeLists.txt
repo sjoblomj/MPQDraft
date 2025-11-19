@@ -20,6 +20,7 @@ set(SOURCES
     src/sempqwizard.cpp
     src/pluginpage.cpp
     src/common/pluginloader.cpp
+    src/common/gamedata.cpp
 )
 
 set(HEADERS
@@ -30,6 +31,8 @@ set(HEADERS
     src/common/pluginloader.h
     src/common/mpqdraftplugin.h
     src/common/common.h
+    src/common/patcher.h
+    src/common/gamedata.h
 )
 
 # Resource files

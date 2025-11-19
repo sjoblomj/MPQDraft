@@ -98,12 +98,48 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
     layout->addWidget(parametersEdit);
     
     layout->addSpacing(20);
-    
-    // Extended redirect option
+
+    // Extended redirect option with info icon
+    QHBoxLayout *extendedRedirLayout = new QHBoxLayout();
+
     extendedRedirCheck = new QCheckBox("Use extended file redirection", this);
-    extendedRedirCheck->setToolTip("Redirect file open attempts that explicitly specify an archive");
-    layout->addWidget(extendedRedirCheck);
-    
+    extendedRedirLayout->addWidget(extendedRedirCheck);
+
+    // Info icon with detailed explanation
+    QLabel *infoIcon = new QLabel(this);
+    infoIcon->setText(" ? ");
+    infoIcon->setStyleSheet(
+        "QLabel { "
+        "background-color: #0066cc; "
+        "color: white; "
+        "border-radius: 10px; "
+        "font-weight: bold; "
+        "font-size: 12px; "
+        "padding: 2px; "
+        "min-width: 16px; "
+        "max-width: 16px; "
+        "min-height: 16px; "
+        "max-height: 16px; "
+        "qproperty-alignment: AlignCenter; "
+        "}");
+    infoIcon->setToolTip(
+        "<b>Extended File Redirection</b><br><br>"
+        "Blizzard games use Storm.dll to access MPQ archives. Some Storm functions "
+        "(like SFileOpenFileEx) can bypass the normal MPQ priority chain by accepting "
+        "a specific archive handle.<br><br>"
+        "When enabled, MPQDraft hooks these functions to force them to search through "
+        "the entire MPQ priority chain (including your custom MPQs), even when the game "
+        "tries to read from a specific archive.<br><br>"
+        "<b>When to enable:</b> Most Blizzard games (StarCraft, Warcraft III, Diablo II) "
+        "require this for mods to work correctly.<br><br>"
+        "<b>When to disable:</b> Only disable if you're certain the target program doesn't "
+        "use these Storm functions, or if you experience compatibility issues.");
+    infoIcon->setCursor(Qt::WhatsThisCursor);
+    extendedRedirLayout->addWidget(infoIcon);
+
+    extendedRedirLayout->addStretch();
+    layout->addLayout(extendedRedirLayout);
+
     layout->addStretch();
     
     // Register field for validation
@@ -346,7 +382,7 @@ PatchWizard::PatchWizard(QWidget *parent)
     addPage(pluginPage);
 
     // Set minimum size
-    setMinimumSize(600, 500);
+    setMinimumSize(600, 550);
 }
 
 void PatchWizard::accept()

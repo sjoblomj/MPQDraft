@@ -4,11 +4,24 @@
         <!-- Wizard sidebar image -->
         <file>images/wizard.png</file>
 
-        <!-- Icons will be added here later -->
-        <!-- Example:
-        <file>icons/MPQDraft.ico</file>
+        <!-- Game icons -->
+        <file>icons/Diablo.ico</file>
+        <file>icons/Diablo2.ico</file>
+        <file>icons/hellfire.ico</file>
         <file>icons/Starcraft.ico</file>
-        -->
+        <file>icons/StarEdit.ico</file>
+        <file>icons/War2BNE.ico</file>
+        <file>icons/War2Edit.ico</file>
+        <file>icons/War3.ico</file>
+        <file>icons/War3Head.ico</file>
+        <file>icons/War3Edit.ico</file>
+        <file>icons/War3x.ico</file>
+        <file>icons/lomse.ico</file>
+
+        <!-- Other icons -->
+        <file>icons/MPQDraft.ico</file>
+        <file>icons/MPQ.ico</file>
+        <file>icons/DLL.ico</file>
     </qresource>
 </RCC>
 
