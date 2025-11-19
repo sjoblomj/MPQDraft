@@ -70,9 +70,11 @@ public:
     explicit MPQSelectionPage(QWidget *parent = nullptr);
 
     QStringList getSelectedMPQs() const;
+    bool validatePage() override;
 
 private slots:
     void onAddClicked();
+    void onAddFolderClicked();
     void onRemoveClicked();
     void onMoveUpClicked();
     void onMoveDownClicked();
@@ -80,9 +82,11 @@ private slots:
 
 private:
     void validateMPQList();
+    void addMPQFile(const QString &fileName, bool checked);
 
     QListWidget *mpqListWidget;
     QPushButton *addButton;
+    QPushButton *addFolderButton;
     QPushButton *removeButton;
     QPushButton *moveUpButton;
     QPushButton *moveDownButton;

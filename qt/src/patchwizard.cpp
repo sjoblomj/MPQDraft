@@ -13,6 +13,8 @@
 #include <QPixmap>
 #include <QPainter>
 #include <QFileInfo>
+#include <QDir>
+#include <QIcon>
 
 // Stylesheet for invalid input fields
 static const char* INVALID_FIELD_STYLE = "QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }";
@@ -210,7 +212,7 @@ MPQSelectionPage::MPQSelectionPage(QWidget *parent)
     : QWizardPage(parent)
 {
     setTitle("Select MPQ Files");
-    setSubTitle("Add MPQ files to load. Files are loaded in order (later files have higher priority).");
+    setSubTitle("Add MPQ files to load. Files are loaded in order (files higher up have higher priority).");
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
@@ -230,17 +232,20 @@ MPQSelectionPage::MPQSelectionPage(QWidget *parent)
 
     // Buttons
     QVBoxLayout *buttonLayout = new QVBoxLayout();
-    addButton = new QPushButton("Add...", this);
+    addButton = new QPushButton("Add MPQ...", this);
+    addFolderButton = new QPushButton("Add Folder...", this);
     removeButton = new QPushButton("Remove", this);
     moveUpButton = new QPushButton("Move Up", this);
     moveDownButton = new QPushButton("Move Down", this);
 
     connect(addButton, &QPushButton::clicked, this, &MPQSelectionPage::onAddClicked);
+    connect(addFolderButton, &QPushButton::clicked, this, &MPQSelectionPage::onAddFolderClicked);
     connect(removeButton, &QPushButton::clicked, this, &MPQSelectionPage::onRemoveClicked);
     connect(moveUpButton, &QPushButton::clicked, this, &MPQSelectionPage::onMoveUpClicked);
     connect(moveDownButton, &QPushButton::clicked, this, &MPQSelectionPage::onMoveDownClicked);
 
     buttonLayout->addWidget(addButton);
+    buttonLayout->addWidget(addFolderButton);
     buttonLayout->addWidget(removeButton);
     buttonLayout->addSpacing(20);
     buttonLayout->addWidget(moveUpButton);
@@ -255,38 +260,86 @@ QStringList MPQSelectionPage::getSelectedMPQs() const
 {
     QStringList mpqs;
     for (int i = 0; i < mpqListWidget->count(); ++i) {
-        mpqs.append(mpqListWidget->item(i)->text());
+        QListWidgetItem *item = mpqListWidget->item(i);
+        if (item->checkState() == Qt::Checked) {
+            mpqs.append(item->text());
+        }
     }
     return mpqs;
+}
+
+bool MPQSelectionPage::validatePage()
+{
+    // Count checked MPQs
+    int checkedCount = 0;
+    for (int i = 0; i < mpqListWidget->count(); ++i) {
+        if (mpqListWidget->item(i)->checkState() == Qt::Checked) {
+            checkedCount++;
+        }
+    }
+
+    // If there are items but none are checked, warn the user
+    if (mpqListWidget->count() > 0 && checkedCount == 0) {
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this,
+            "No MPQs Selected",
+            "You have MPQ files in the list, but none are selected (checked). "
+            "Do you want to proceed without any MPQ files?",
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No
+        );
+
+        return reply == QMessageBox::Yes;
+    }
+
+    // Check if too many checked MPQs
+    if (checkedCount > MAX_PATCH_MPQS) {
+        QMessageBox::warning(
+            this,
+            "Too Many MPQs",
+            QString("You have selected too many MPQ files (%1/%2). "
+                   "Please uncheck some files.")
+                .arg(checkedCount).arg(MAX_PATCH_MPQS)
+        );
+        return false;
+    }
+
+    return true;
 }
 
 void MPQSelectionPage::validateMPQList()
 {
     int mpqCount = mpqListWidget->count();
+    int checkedCount = 0;
 
-    // Check if too many MPQs
-    if (mpqCount > MAX_PATCH_MPQS) {
-        statusLabel->setText(QString("<font color='#d32f2f'><b>Warning:</b> Too many MPQ files (%1/%2). "
-                                     "Please remove some files.</font>")
-                            .arg(mpqCount).arg(MAX_PATCH_MPQS));
-        statusLabel->show();
-        return;
-    }
-
-    // Check for missing files
+    // Count checked MPQs and check for missing files
     QStringList missingFiles;
     for (int i = 0; i < mpqCount; ++i) {
-        QString mpqPath = mpqListWidget->item(i)->text();
+        QListWidgetItem *item = mpqListWidget->item(i);
+        QString mpqPath = item->text();
         QFileInfo fileInfo(mpqPath);
+
+        if (item->checkState() == Qt::Checked) {
+            checkedCount++;
+        }
 
         if (!fileInfo.exists()) {
             missingFiles.append(QFileInfo(mpqPath).fileName());
-            mpqListWidget->item(i)->setForeground(QColor("#d32f2f"));
-            mpqListWidget->item(i)->setToolTip("File does not exist");
+            item->setForeground(QColor("#d32f2f"));
+            item->setToolTip("File does not exist");
         } else {
-            mpqListWidget->item(i)->setForeground(QColor());
-            mpqListWidget->item(i)->setToolTip("");
+            item->setForeground(QColor());
+            item->setToolTip("");
         }
+    }
+
+    // Check if too many checked MPQs
+    if (checkedCount > MAX_PATCH_MPQS) {
+        statusLabel->setText(QString("<font color='#d32f2f'><b>Warning:</b> Too many MPQ files selected (%1/%2). "
+                                     "Please uncheck some files.</font>")
+                            .arg(checkedCount).arg(MAX_PATCH_MPQS));
+        statusLabel->show();
+        return;
     }
 
     if (!missingFiles.isEmpty()) {
@@ -303,6 +356,26 @@ void MPQSelectionPage::onItemChanged()
     validateMPQList();
 }
 
+void MPQSelectionPage::addMPQFile(const QString &fileName, bool checked)
+{
+    // Don't add duplicates - silently filter them out
+    for (int i = 0; i < mpqListWidget->count(); ++i) {
+        if (mpqListWidget->item(i)->text() == fileName) {
+            return;  // Already in the list
+        }
+    }
+
+    QListWidgetItem *item = new QListWidgetItem(fileName);
+    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+    item->setCheckState(checked ? Qt::Checked : Qt::Unchecked);
+
+    // Add MPQ icon
+    QIcon mpqIcon(":/icons/MPQ.ico");
+    item->setIcon(mpqIcon);
+
+    mpqListWidget->addItem(item);
+}
+
 void MPQSelectionPage::onAddClicked()
 {
     QStringList fileNames = QFileDialog::getOpenFileNames(
@@ -313,7 +386,32 @@ void MPQSelectionPage::onAddClicked()
     );
 
     for (const QString &fileName : fileNames) {
-        mpqListWidget->addItem(fileName);
+        addMPQFile(fileName, true);  // Add as checked
+    }
+
+    validateMPQList();
+}
+
+void MPQSelectionPage::onAddFolderClicked()
+{
+    QString folderPath = QFileDialog::getExistingDirectory(
+        this,
+        "Select Folder Containing MPQ Files",
+        QString(),
+        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
+    );
+
+    if (folderPath.isEmpty()) {
+        return;  // User cancelled
+    }
+
+    // Find all MPQ files in the selected folder
+    QDir dir(folderPath);
+    QStringList mpqFiles = dir.entryList(QStringList() << "*.mpq" << "*.MPQ", QDir::Files);
+
+    for (const QString &fileName : mpqFiles) {
+        QString fullPath = dir.absoluteFilePath(fileName);
+        addMPQFile(fullPath, false);  // Add as unchecked
     }
 
     validateMPQList();
