@@ -476,14 +476,40 @@ PatchWizard::PatchWizard(QWidget *parent)
     setWizardStyle(QWizard::ModernStyle);
     setOption(QWizard::HaveHelpButton, false);
 
-    // Set the wizard sidebar image with margin
+    // Set the wizard sidebar image with margin and frame
     QPixmap originalPixmap(":/images/wizard.png");
-    int margin = 10;
-    QPixmap pixmapWithMargin(originalPixmap.width() + margin * 2,
-                             originalPixmap.height() + margin * 2);
+    int innerMargin = 10;  // Space between frame and image
+    int outerMargin = 25;  // Space between canvas edge and frame
+    int frameWidth = 1;
+
+    // Calculate total canvas size
+    QPixmap pixmapWithMargin(originalPixmap.width() + innerMargin * 2 + frameWidth * 2 + outerMargin * 2,
+                             originalPixmap.height() + innerMargin * 2 + frameWidth * 2 + outerMargin * 2);
     pixmapWithMargin.fill(Qt::transparent);
     QPainter painter(&pixmapWithMargin);
-    painter.drawPixmap(margin, margin, originalPixmap);
+    painter.setRenderHint(QPainter::Antialiasing, false);
+
+    // Calculate positions
+    int frameX = outerMargin;
+    int frameY = outerMargin;
+    int frameRectWidth = originalPixmap.width() + innerMargin * 2 + frameWidth * 2;
+    int frameRectHeight = originalPixmap.height() + innerMargin * 2 + frameWidth * 2;
+    int imageX = outerMargin + frameWidth + innerMargin;
+    int imageY = outerMargin + frameWidth + innerMargin;
+
+    // Draw the background inside the frame (light gray)
+    painter.fillRect(frameX + frameWidth, frameY + frameWidth,
+                     frameRectWidth - frameWidth * 2, frameRectHeight - frameWidth * 2,
+                     QColor(200, 200, 200));
+
+    // Draw the frame border
+    painter.setPen(QPen(QColor(100, 100, 100), frameWidth));  // Dark gray
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRect(frameX, frameY, frameRectWidth - 1, frameRectHeight - 1);
+
+    // Draw the image inside the frame
+    painter.drawPixmap(imageX, imageY, originalPixmap);
+
     painter.end();
     setPixmap(QWizard::WatermarkPixmap, pixmapWithMargin);
 
