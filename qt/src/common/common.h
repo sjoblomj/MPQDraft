@@ -12,7 +12,45 @@
 #if !defined(COMMON_H)
 #define COMMON_H
 
+#ifdef _WIN32
 #include <windows.h>
+#else
+// Stub types for non-Windows builds
+typedef void* LPVOID;
+typedef void* LPSECURITY_ATTRIBUTES;
+typedef const char* LPCSTR;
+typedef char* LPSTR;
+typedef unsigned long DWORD;
+typedef int BOOL;
+
+struct STARTUPINFO {
+    DWORD cb;
+    LPSTR lpReserved;
+    LPSTR lpDesktop;
+    LPSTR lpTitle;
+    DWORD dwX;
+    DWORD dwY;
+    DWORD dwXSize;
+    DWORD dwYSize;
+    DWORD dwXCountChars;
+    DWORD dwYCountChars;
+    DWORD dwFillAttribute;
+    DWORD dwFlags;
+    unsigned short wShowWindow;
+    unsigned short cbReserved2;
+    unsigned char* lpReserved2;
+    void* hStdInput;
+    void* hStdOutput;
+    void* hStdError;
+};
+typedef STARTUPINFO* LPSTARTUPINFO;
+
+#define WINAPI
+#define IN
+#define OUT
+#define OPTIONAL
+#endif
+
 #include "mpqdraftplugin.h"
 
 // Component and module IDs for MPQDraft modules

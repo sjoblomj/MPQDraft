@@ -73,12 +73,12 @@ void PluginPage::loadPluginsFromDirectory()
     if (!pluginDir.exists()) {
         return;
     }
-    
+
     // Find all .qdp files (MPQDraft plugin files)
     QStringList filters;
     filters << "*.qdp" << "*.dll";
     QStringList pluginFiles = pluginDir.entryList(filters, QDir::Files);
-    
+
     for (const QString &fileName : pluginFiles) {
         QString fullPath = pluginDir.absoluteFilePath(fileName);
         addPlugin(fullPath);
@@ -126,27 +126,34 @@ void PluginPage::onBrowseClicked()
 
 void PluginPage::onConfigureClicked()
 {
+#ifdef _WIN32
     QListWidgetItem *currentItem = pluginListWidget->currentItem();
     if (!currentItem) {
         return;
     }
-    
+
     QString pluginPath = currentItem->data(Qt::UserRole).toString();
     PluginInfo *info = loadedPlugins.value(pluginPath);
-    
+
     if (!info || !info->pPlugin) {
         return;
     }
-    
+
     // Get the native window handle for the plugin to use
     // This is how we bridge Qt and the Windows plugin API
     HWND hwnd = (HWND)winId();
-    
+
     // Call the plugin's Configure method
     if (!info->pPlugin->Configure(hwnd)) {
         QMessageBox::warning(this, "Configuration Failed",
                            "Failed to configure the plugin.");
     }
+#else
+    // TODO
+    QMessageBox::information(this, "Not Available",
+                            "Plugin configuration is only available on Windows.\n\n"
+                            "This is a development build for GUI testing.");
+#endif
 }
 
 void PluginPage::onItemSelectionChanged()
@@ -154,4 +161,3 @@ void PluginPage::onItemSelectionChanged()
     // Enable configure button only if a plugin is selected
     configureButton->setEnabled(pluginListWidget->currentItem() != nullptr);
 }
-

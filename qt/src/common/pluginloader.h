@@ -14,7 +14,22 @@
 
 #pragma once
 
+#ifdef _WIN32
 #include <windows.h>
+#else
+// Stub types for non-Windows builds
+typedef void* HMODULE;
+typedef int BOOL;
+typedef unsigned long DWORD;
+typedef const char* LPCSTR;
+#define TRUE 1
+#define FALSE 0
+#define IN
+#define OUT
+// Stub functions (no-ops on non-Windows)
+inline BOOL FreeLibrary(HMODULE) { return TRUE; }
+#endif
+
 #include <string>
 #include "common.h"
 

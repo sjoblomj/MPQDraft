@@ -9,11 +9,11 @@
 // PluginLoader.cpp : Implementation of shared plugin loading utilities
 // This is a copy from /src/app/PluginLoader.cpp for the Qt GUI
 
-#include <windows.h>
 #include "pluginloader.h"
 
 BOOL LoadPluginInfo(IN LPCSTR lpszFileName, OUT PluginInfo &pluginInfo)
 {
+#ifdef _WIN32
 	// Load the plugin's module
 	pluginInfo.hDLLModule = LoadLibrary(lpszFileName);
 	if (!pluginInfo.hDLLModule)
@@ -42,5 +42,12 @@ BOOL LoadPluginInfo(IN LPCSTR lpszFileName, OUT PluginInfo &pluginInfo)
 	pluginInfo.strFileName = lpszFileName;
 
 	return TRUE;
+#else
+	// Plugin loading not supported on non-Windows platforms
+	// (Plugins are Windows DLLs)
+	(void)lpszFileName;
+	(void)pluginInfo;
+	return FALSE;
+#endif
 }
 
