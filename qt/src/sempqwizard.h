@@ -111,10 +111,17 @@ private slots:
     void onCustomRegistryChanged();
     void onTabChanged(int index);
     void onExtendedRedirChanged(int state);
+    void onPasteRegKeyClicked();
+    void onPasteRegValueClicked();
+    void onPasteExeFileClicked();
+    void onPasteTargetFileClicked();
 
 private:
     void validateCustomPath();
     void updateExtendedRedirCheckbox();
+    void updateCustomRegistryPlaceholders();
+    void clearWhitespaceOnlyFields();
+    const GameComponent* getReferenceComponent() const;
 
     QTabWidget *tabWidget;
 
@@ -130,6 +137,18 @@ private:
     QSpinBox *customRegShuntCountSpinBox;
     QCheckBox *customRegIsFullPathCheckbox;
     QCheckBox *customRegNoSpawningCheckbox;
+
+    // Paste buttons for Custom Registry
+    QPushButton *pasteRegKeyButton;
+    QPushButton *pasteRegValueButton;
+    QPushButton *pasteExeFileButton;
+    QPushButton *pasteTargetFileButton;
+
+    // Labels showing reference game values for checkboxes and spinbox
+    QLabel *isFullPathRefLabel;
+    QLabel *noSpawningRefLabel;
+    QLabel *shuntCountRefLabel;
+    QLabel *extendedRedirRefLabel;
 
     // Custom Target tab (Mode 3)
     QLineEdit *customPathEdit;

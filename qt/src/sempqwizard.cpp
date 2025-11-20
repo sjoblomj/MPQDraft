@@ -201,7 +201,7 @@ void SEMPQSettingsPage::onBrowseMPQClicked()
         QString(),
         "MPQ Archives (*.mpq);;All Files (*.*)"
     );
-    
+
     if (!fileName.isEmpty()) {
         mpqPathEdit->setText(fileName);
     }
@@ -365,10 +365,20 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     regKeyLabelLayout->addStretch();
     customRegLayout->addLayout(regKeyLabelLayout);
 
+    QHBoxLayout *regKeyInputLayout = new QHBoxLayout();
     customRegKeyEdit = new QLineEdit(customRegContentWidget);
     customRegKeyEdit->setPlaceholderText("e.g., SOFTWARE\\Blizzard Entertainment\\Starcraft II");
     connect(customRegKeyEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::onCustomRegistryChanged);
-    customRegLayout->addWidget(customRegKeyEdit);
+    regKeyInputLayout->addWidget(customRegKeyEdit);
+
+    pasteRegKeyButton = new QPushButton(customRegContentWidget);
+    pasteRegKeyButton->setIcon(QIcon(":/icons/paste.ico"));
+    pasteRegKeyButton->setMaximumWidth(30);
+    pasteRegKeyButton->setToolTip("Copy value from selected game");
+    connect(pasteRegKeyButton, &QPushButton::clicked, this, &SEMPQTargetPage::onPasteRegKeyClicked);
+    regKeyInputLayout->addWidget(pasteRegKeyButton);
+
+    customRegLayout->addLayout(regKeyInputLayout);
 
     customRegLayout->addSpacing(5);
 
@@ -398,10 +408,20 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     regValueLabelLayout->addStretch();
     customRegLayout->addLayout(regValueLabelLayout);
 
+    QHBoxLayout *regValueInputLayout = new QHBoxLayout();
     customRegValueEdit = new QLineEdit(customRegContentWidget);
     customRegValueEdit->setPlaceholderText("e.g., InstallPath");
     connect(customRegValueEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::onCustomRegistryChanged);
-    customRegLayout->addWidget(customRegValueEdit);
+    regValueInputLayout->addWidget(customRegValueEdit);
+
+    pasteRegValueButton = new QPushButton(customRegContentWidget);
+    pasteRegValueButton->setIcon(QIcon(":/icons/paste.ico"));
+    pasteRegValueButton->setMaximumWidth(30);
+    pasteRegValueButton->setToolTip("Copy value from selected game");
+    connect(pasteRegValueButton, &QPushButton::clicked, this, &SEMPQTargetPage::onPasteRegValueClicked);
+    regValueInputLayout->addWidget(pasteRegValueButton);
+
+    customRegLayout->addLayout(regValueInputLayout);
 
     customRegLayout->addSpacing(5);
 
@@ -428,16 +448,26 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     exeFileLabelLayout->addStretch();
     customRegLayout->addLayout(exeFileLabelLayout);
 
+    QHBoxLayout *exeFileInputLayout = new QHBoxLayout();
     customRegExeEdit = new QLineEdit(customRegContentWidget);
     customRegExeEdit->setPlaceholderText("e.g., StarCraft II.exe");
     connect(customRegExeEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::onCustomRegistryChanged);
-    customRegLayout->addWidget(customRegExeEdit);
+    exeFileInputLayout->addWidget(customRegExeEdit);
+
+    pasteExeFileButton = new QPushButton(customRegContentWidget);
+    pasteExeFileButton->setIcon(QIcon(":/icons/paste.ico"));
+    pasteExeFileButton->setMaximumWidth(30);
+    pasteExeFileButton->setToolTip("Copy value from selected game");
+    connect(pasteExeFileButton, &QPushButton::clicked, this, &SEMPQTargetPage::onPasteExeFileClicked);
+    exeFileInputLayout->addWidget(pasteExeFileButton);
+
+    customRegLayout->addLayout(exeFileInputLayout);
 
     customRegLayout->addSpacing(5);
 
-    // Target File Name (optional)
+    // Target File Name
     QHBoxLayout *targetFileLabelLayout = new QHBoxLayout();
-    QLabel *targetFileLabel = new QLabel("Target File Name (optional):", customRegContentWidget);
+    QLabel *targetFileLabel = new QLabel("Target File Name:", customRegContentWidget);
     targetFileLabelLayout->addWidget(targetFileLabel);
 
     QLabel *targetFileHelp = new QLabel(customRegContentWidget);
@@ -449,20 +479,31 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
         "qproperty-alignment: AlignCenter; }");
     targetFileHelp->setToolTip(
         "<b>Target File Name</b><br><br>"
-        "The file that MPQDraft will inject into and patch. Usually this is the same as "
-        "the executable, so you can leave this empty.<br><br>"
-        "<b>When to specify:</b> Some games use a launcher that starts a different executable. "
-        "For example, Diablo II has 'Diablo II.exe' (launcher) and 'Game.exe' (actual game).<br><br>"
-        "In such cases, specify the launcher as the Executable Filename and the actual game "
-        "executable here as the Target File Name.");
+        "The file that MPQDraft will inject into and patch.<br><br>"
+        "<b>Most common case:</b> This is the same as the Executable Filename. "
+        "For example, if the executable is 'StarCraft.exe', the target is also 'StarCraft.exe'.<br><br>"
+        "<b>Special case:</b> Some games use a launcher that starts a different executable. "
+        "For example, Diablo II has 'Diablo II.exe' (launcher) and 'Game.exe' (actual game). "
+        "In such cases, the Executable Filename is 'Diablo II.exe' and the Target File Name is 'Game.exe'.");
     targetFileHelp->setCursor(Qt::WhatsThisCursor);
     targetFileLabelLayout->addWidget(targetFileHelp);
     targetFileLabelLayout->addStretch();
     customRegLayout->addLayout(targetFileLabelLayout);
 
+    QHBoxLayout *targetFileInputLayout = new QHBoxLayout();
     customRegTargetFileEdit = new QLineEdit(customRegContentWidget);
-    customRegTargetFileEdit->setPlaceholderText("Leave empty if same as executable (most common)");
-    customRegLayout->addWidget(customRegTargetFileEdit);
+    customRegTargetFileEdit->setPlaceholderText("e.g., StarCraft.exe");
+    connect(customRegTargetFileEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::onCustomRegistryChanged);
+    targetFileInputLayout->addWidget(customRegTargetFileEdit);
+
+    pasteTargetFileButton = new QPushButton(customRegContentWidget);
+    pasteTargetFileButton->setIcon(QIcon(":/icons/paste.ico"));
+    pasteTargetFileButton->setMaximumWidth(30);
+    pasteTargetFileButton->setToolTip("Copy value from selected game");
+    connect(pasteTargetFileButton, &QPushButton::clicked, this, &SEMPQTargetPage::onPasteTargetFileClicked);
+    targetFileInputLayout->addWidget(pasteTargetFileButton);
+
+    customRegLayout->addLayout(targetFileInputLayout);
 
     customRegLayout->addSpacing(5);
 
@@ -492,18 +533,26 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     shuntCountLabelLayout->addStretch();
     customRegLayout->addLayout(shuntCountLabelLayout);
 
+    QHBoxLayout *shuntCountInputLayout = new QHBoxLayout();
     customRegShuntCountSpinBox = new QSpinBox(customRegContentWidget);
     customRegShuntCountSpinBox->setMinimum(0);
     customRegShuntCountSpinBox->setMaximum(INT_MAX);  // Unlimited (max int value)
     customRegShuntCountSpinBox->setValue(0);
-    customRegLayout->addWidget(customRegShuntCountSpinBox);
+    shuntCountInputLayout->addWidget(customRegShuntCountSpinBox);
+
+    shuntCountRefLabel = new QLabel(customRegContentWidget);
+    shuntCountRefLabel->setStyleSheet("QLabel { color: #808080; }");  // Gray text
+    shuntCountInputLayout->addWidget(shuntCountRefLabel);
+
+    shuntCountInputLayout->addStretch();
+    customRegLayout->addLayout(shuntCountInputLayout);
 
     customRegLayout->addSpacing(10);
 
     // Checkbox for "Value is full path"
     QHBoxLayout *isFullPathLayout = new QHBoxLayout();
     customRegIsFullPathCheckbox = new QCheckBox(
-        "Registry value contains full path to executable (not just directory)",
+        "Registry value contains full path to executable",
         customRegContentWidget);
     isFullPathLayout->addWidget(customRegIsFullPathCheckbox);
 
@@ -526,6 +575,11 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
         "that the registry value includes the .exe filename.");
     isFullPathHelp->setCursor(Qt::WhatsThisCursor);
     isFullPathLayout->addWidget(isFullPathHelp);
+
+    isFullPathRefLabel = new QLabel(customRegContentWidget);
+    isFullPathRefLabel->setStyleSheet("QLabel { color: #808080; }");  // Gray text
+    isFullPathLayout->addWidget(isFullPathRefLabel);
+
     isFullPathLayout->addStretch();
     customRegLayout->addLayout(isFullPathLayout);
 
@@ -537,7 +591,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     QHBoxLayout *noSpawningLayout = new QHBoxLayout();
     customRegNoSpawningCheckbox = new QCheckBox(
-        "Do not inject into child processes (MPQD_NO_SPAWNING)",
+        "Do not inject into child processes",
         customRegContentWidget);
     noSpawningLayout->addWidget(customRegNoSpawningCheckbox);
 
@@ -559,6 +613,11 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
         "and some games require it for patches to work correctly.");
     noSpawningHelp->setCursor(Qt::WhatsThisCursor);
     noSpawningLayout->addWidget(noSpawningHelp);
+
+    noSpawningRefLabel = new QLabel(customRegContentWidget);
+    noSpawningRefLabel->setStyleSheet("QLabel { color: #808080; }");  // Gray text
+    noSpawningLayout->addWidget(noSpawningRefLabel);
+
     noSpawningLayout->addStretch();
     customRegLayout->addLayout(noSpawningLayout);
 
@@ -682,12 +741,20 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     infoIcon->setCursor(Qt::WhatsThisCursor);
     extendedRedirLayout->addWidget(infoIcon);
 
+    extendedRedirRefLabel = new QLabel(this);
+    extendedRedirRefLabel->setStyleSheet("QLabel { color: #808080; }");  // Gray text
+    extendedRedirRefLabel->setVisible(false);  // Hidden by default (shown only in Custom Registry tab)
+    extendedRedirLayout->addWidget(extendedRedirRefLabel);
+
     extendedRedirLayout->addStretch();
     mainLayout->addLayout(extendedRedirLayout);
 
     // Now that all widgets are created, connect the signals
     connect(tabWidget, &QTabWidget::currentChanged, this, &SEMPQTargetPage::onTabChanged);
     connect(extendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
+
+    // Initialize Custom Registry placeholders with default game (Diablo)
+    updateCustomRegistryPlaceholders();
 }
 
 bool SEMPQTargetPage::isRegistryBased() const
@@ -793,6 +860,9 @@ void SEMPQTargetPage::onGameSelectionChanged(QListWidgetItem *current, QListWidg
     // Update extended redir checkbox to show the default for this component
     updateExtendedRedirCheckbox();
 
+    // Update Custom Registry placeholders to show values from selected game
+    updateCustomRegistryPlaceholders();
+
     // Emit completeChanged to update wizard buttons
     emit completeChanged();
 }
@@ -824,6 +894,15 @@ void SEMPQTargetPage::onCustomRegistryChanged()
 
 void SEMPQTargetPage::onTabChanged(int index)
 {
+    // If switching to Custom Registry tab (index 1)
+    if (index == 1) {
+        clearWhitespaceOnlyFields();
+        updateCustomRegistryPlaceholders();
+        extendedRedirRefLabel->setVisible(true);  // Show reference label in Custom Registry tab
+    } else {
+        extendedRedirRefLabel->setVisible(false);  // Hide reference label in other tabs
+    }
+
     updateExtendedRedirCheckbox();
     emit completeChanged();
 }
@@ -923,15 +1002,162 @@ bool SEMPQTargetPage::isComplete() const
         // Tab 0: Supported Games - Must have a game selected
         return selectedComponent != nullptr;
     } else if (index == 1) {
-        // Tab 1: Custom Registry - Must have all fields filled
+        // Tab 1: Custom Registry - Must have all required fields filled
         return !customRegKeyEdit->text().trimmed().isEmpty() &&
                !customRegValueEdit->text().trimmed().isEmpty() &&
-               !customRegExeEdit->text().trimmed().isEmpty();
+               !customRegExeEdit->text().trimmed().isEmpty() &&
+               !customRegTargetFileEdit->text().trimmed().isEmpty();
     } else {
         // Tab 2: Custom Target - Must have a custom path entered
         return !customPathEdit->text().isEmpty();
     }
 }
+
+const GameComponent* SEMPQTargetPage::getReferenceComponent() const
+{
+    // If a game is selected in Supported Games tab, use that
+    if (selectedComponent) {
+        return selectedComponent;
+    }
+
+    // Otherwise, use the first component (Diablo) as default
+    const QVector<SupportedGame>& games = getSupportedGames();
+    if (!games.isEmpty() && !games[0].components.isEmpty()) {
+        return &games[0].components[0];
+    }
+
+    return nullptr;
+}
+
+void SEMPQTargetPage::clearWhitespaceOnlyFields()
+{
+    // Clear fields that contain only whitespace
+    if (customRegKeyEdit->text().trimmed().isEmpty()) {
+        customRegKeyEdit->clear();
+    }
+    if (customRegValueEdit->text().trimmed().isEmpty()) {
+        customRegValueEdit->clear();
+    }
+    if (customRegExeEdit->text().trimmed().isEmpty()) {
+        customRegExeEdit->clear();
+    }
+    if (customRegTargetFileEdit->text().trimmed().isEmpty()) {
+        customRegTargetFileEdit->clear();
+    }
+}
+
+void SEMPQTargetPage::updateCustomRegistryPlaceholders()
+{
+    const GameComponent* refComp = getReferenceComponent();
+    if (!refComp) {
+        return;
+    }
+
+    // Find the game that contains this component to get registry info
+    const QVector<SupportedGame>& games = getSupportedGames();
+    const SupportedGame* refGame = nullptr;
+
+    for (const SupportedGame& game : games) {
+        for (const GameComponent& comp : game.components) {
+            if (&comp == refComp) {
+                refGame = &game;
+                break;
+            }
+        }
+        if (refGame) break;
+    }
+
+    if (!refGame) {
+        return;
+    }
+
+    // Get display name for the component
+    QString displayName;
+    if (refGame->components.size() == 1) {
+        displayName = refGame->gameName;
+    } else {
+        displayName = refComp->componentName;
+    }
+
+    // Update placeholders with reference game values
+    customRegKeyEdit->setPlaceholderText(QString("%1: %2").arg(displayName, refGame->registryKey));
+    customRegValueEdit->setPlaceholderText(QString("%1: %2").arg(displayName, refGame->registryValue));
+    customRegExeEdit->setPlaceholderText(QString("%1: %2").arg(displayName, refComp->fileName));
+
+    // Target file name - always show the actual value
+    customRegTargetFileEdit->setPlaceholderText(QString("%1: %2").arg(displayName, refComp->targetFileName));
+
+    // Update paste button tooltips
+    pasteRegKeyButton->setToolTip(QString("Copy value from %1").arg(displayName));
+    pasteRegValueButton->setToolTip(QString("Copy value from %1").arg(displayName));
+    pasteExeFileButton->setToolTip(QString("Copy value from %1").arg(displayName));
+    pasteTargetFileButton->setToolTip(QString("Copy value from %1").arg(displayName));
+
+    // Update reference labels for checkboxes and spinbox
+    // For "value is full path" - this is always false for supported games (they store directory only)
+    isFullPathRefLabel->setText(QString("%1: False").arg(displayName));
+
+    // For "no spawning" - check if MPQD_NO_SPAWNING flag is set
+    bool noSpawning = (refComp->flags & MPQD_NO_SPAWNING) != 0;
+    noSpawningRefLabel->setText(QString("%1: %2").arg(displayName, noSpawning ? "True" : "False"));
+
+    // For shunt count - show the value from the reference component
+    shuntCountRefLabel->setText(QString("%1: %2").arg(displayName).arg(refComp->shuntCount));
+
+    // For extended redir - show the value from the reference component
+    extendedRedirRefLabel->setText(QString("%1: %2").arg(displayName, refComp->extendedRedir ? "True" : "False"));
+}
+
+void SEMPQTargetPage::onPasteRegKeyClicked()
+{
+    const GameComponent* refComp = getReferenceComponent();
+    if (!refComp) return;
+
+    // Find the game to get registry key
+    const QVector<SupportedGame>& games = getSupportedGames();
+    for (const SupportedGame& game : games) {
+        for (const GameComponent& comp : game.components) {
+            if (&comp == refComp) {
+                customRegKeyEdit->setText(game.registryKey);
+                return;
+            }
+        }
+    }
+}
+
+void SEMPQTargetPage::onPasteRegValueClicked()
+{
+    const GameComponent* refComp = getReferenceComponent();
+    if (!refComp) return;
+
+    // Find the game to get registry value
+    const QVector<SupportedGame>& games = getSupportedGames();
+    for (const SupportedGame& game : games) {
+        for (const GameComponent& comp : game.components) {
+            if (&comp == refComp) {
+                customRegValueEdit->setText(game.registryValue);
+                return;
+            }
+        }
+    }
+}
+
+void SEMPQTargetPage::onPasteExeFileClicked()
+{
+    const GameComponent* refComp = getReferenceComponent();
+    if (!refComp) return;
+
+    customRegExeEdit->setText(refComp->fileName);
+}
+
+void SEMPQTargetPage::onPasteTargetFileClicked()
+{
+    const GameComponent* refComp = getReferenceComponent();
+    if (!refComp) return;
+
+    customRegTargetFileEdit->setText(refComp->targetFileName);
+}
+
 
 //=============================================================================
 // Main Wizard
@@ -1055,7 +1281,7 @@ void SEMPQWizard::createSEMPQ()
                         .arg(regKey)
                         .arg(regValue)
                         .arg(exeFile)
-                        .arg(targetFile.isEmpty() ? "(same as executable)" : targetFile)
+                        .arg(targetFile)  // targetFile already defaults to exeFile if empty
                         .arg(shuntCount)
                         .arg(isFullPath ? "Yes" : "No")
                         .arg(flagsStr);
