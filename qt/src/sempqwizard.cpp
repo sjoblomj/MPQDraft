@@ -393,9 +393,13 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     QVBoxLayout *customRegLayout = new QVBoxLayout(customRegContentWidget);
 
     QLabel *customRegInfoLabel = new QLabel(
-        "Specify a custom registry key for games not in the supported list. "
-        "This is more portable than a hardcoded path, as it will work on any "
-        "computer where the game is properly installed.",
+        "If the game you want to target is not in the list of Supported Games, "
+        "you can specify here the Windows registry data for how to find it, "
+        "along with other settings. If this is correctly configured, the SEMPQ "
+        "will work on any computer where the game is properly installed.<br><br>"
+        "By selecting a game in the Supported Games tab, you will see below its "
+        "value for each field. Use the Paste button next to the field to fill "
+        "in the value from the selected game.",
         customRegContentWidget);
     customRegInfoLabel->setWordWrap(true);
     customRegLayout->addWidget(customRegInfoLabel);
@@ -659,7 +663,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
         "max-width: 16px; min-height: 16px; max-height: 16px; "
         "qproperty-alignment: AlignCenter; }");
     noSpawningHelp->setToolTip(
-        "<b>Do Not Inject Into Child Processes</b><br><br>"
+        "<b>Do Not Inject Into Child Processes (MPQD_NO_SPAWNING)</b><br><br>"
         "By default, MPQDraft injects itself into any child processes created by the game. "
         "This ensures that patches work even if the game launches additional executables.<br><br>"
         "<b>When to enable:</b> Some games launch helper processes (updaters, launchers, "
@@ -703,29 +707,44 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     QLabel *customInfoLabel = new QLabel(
         "Specify a custom program path. This can be used for programs not in the "
-        "supported games list.",
+        "list in the Supported Games tab.",
         customTargetContentWidget);
     customInfoLabel->setWordWrap(true);
     customLayout->addWidget(customInfoLabel);
 
     customLayout->addSpacing(10);
 
-    // Warning label
-    warningLabel = new QLabel(
-        "<b>⚠ Warning:</b> When using a custom path, the exact path you specify must "
-        "exist on all computers where the SEMPQ will be run. For better portability, "
-        "use the Supported Games tab instead.",
-        customTargetContentWidget);
-    warningLabel->setWordWrap(true);
-    warningLabel->setStyleSheet(
-        "QLabel { "
+    // Warning box with icon
+    QWidget *warningWidget = new QWidget(customTargetContentWidget);
+    warningWidget->setStyleSheet(
+        "QWidget { "
         "background-color: #fff3cd; "
         "border: 1px solid #ffc107; "
         "border-radius: 4px; "
-        "padding: 10px; "
-        "color: #856404; "
         "}");
-    customLayout->addWidget(warningLabel);
+    QHBoxLayout *warningLayout = new QHBoxLayout(warningWidget);
+    warningLayout->setContentsMargins(10, 10, 10, 10);
+    warningLayout->setSpacing(8);
+
+    // Warning icon
+    QLabel *warningIcon = new QLabel(warningWidget);
+    warningIcon->setPixmap(style()->standardIcon(QStyle::SP_MessageBoxWarning).pixmap(16, 16));
+    warningIcon->setAlignment(Qt::AlignTop);
+    warningIcon->setStyleSheet("QLabel { background-color: transparent; border: none; }");
+    warningIcon->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    warningLayout->addWidget(warningIcon);
+
+    // Warning text
+    warningLabel = new QLabel(
+        "<b>Warning:</b> When using a custom path, the exact path you specify "
+        "must exist on all computers where the SEMPQ will be run. For better "
+        "portability, use the Supported Games tab instead.",
+        warningWidget);
+    warningLabel->setWordWrap(true);
+    warningLabel->setStyleSheet("QLabel { color: #856404; background-color: transparent; border: none; }");
+    warningLayout->addWidget(warningLabel, 1);  // Stretch factor of 1 to take remaining space
+
+    customLayout->addWidget(warningWidget);
 
     customLayout->addSpacing(10);
 
@@ -798,7 +817,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
         "max-width: 16px; min-height: 16px; max-height: 16px; "
         "qproperty-alignment: AlignCenter; }");
     customTargetNoSpawningHelp->setToolTip(
-        "<b>Do Not Inject Into Child Processes</b><br><br>"
+        "<b>Do Not Inject Into Child Processes (MPQD_NO_SPAWNING)</b><br><br>"
         "By default, MPQDraft injects itself into any child processes created by the game. "
         "This ensures that patches work even if the game launches additional executables.<br><br>"
         "<b>When to enable:</b> Some games launch helper processes (updaters, launchers, "
