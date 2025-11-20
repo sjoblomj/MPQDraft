@@ -10,7 +10,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 # Find Qt6
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Svg)
 
 # Source files
 set(SOURCES
@@ -51,6 +51,7 @@ add_executable(${PROJECT_NAME} WIN32
 target_link_libraries(${PROJECT_NAME}
     Qt6::Core
     Qt6::Widgets
+    Qt6::Svg
 )
 
 # Windows-specific libraries

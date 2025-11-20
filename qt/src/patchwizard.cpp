@@ -29,6 +29,7 @@ PatchIntroPage::PatchIntroPage(QWidget *parent)
 {
     setTitle("Welcome to MPQDraft Patch Wizard");
     setSubTitle("Load custom MPQ archives with game data, or use plugins to add new features.");
+    setPixmap(QWizard::LogoPixmap, QPixmap(":/icons/mpqdraft.png").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -81,7 +82,8 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
 {
     setTitle("Select Target Executable");
     setSubTitle("Choose the game executable to patch and any command-line parameters.");
-    
+    setPixmap(QWizard::LogoPixmap, QPixmap(":/icons/blizzard/bnet.png").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+
     QVBoxLayout *layout = new QVBoxLayout(this);
     
     // Target path
@@ -229,6 +231,7 @@ MPQSelectionPage::MPQSelectionPage(QWidget *parent)
 {
     setTitle("Select MPQ Files");
     setSubTitle("Add MPQ files to load. Files are loaded in order (files higher up have higher priority).");
+    setPixmap(QWizard::LogoPixmap, QPixmap(":/icons/mpq.svg").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
@@ -398,7 +401,7 @@ void MPQSelectionPage::addMPQFile(const QString &fileName, bool checked)
     item->setCheckState(checked ? Qt::Checked : Qt::Unchecked);
 
     // Add MPQ icon
-    QIcon mpqIcon(":/icons/MPQ.ico");
+    QIcon mpqIcon(":/icons/mpq.svg");
     item->setIcon(mpqIcon);
 
     mpqListWidget->addItem(item);

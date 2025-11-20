@@ -18,6 +18,7 @@ PluginPage::PluginPage(QWidget *parent)
 {
     setTitle("Select Plugins");
     setSubTitle("Choose plugins to load. Plugins can add custom patching functionality.");
+    setPixmap(QWizard::LogoPixmap, QPixmap(":/icons/plugin.svg").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
@@ -238,9 +239,9 @@ bool PluginPage::addPlugin(const QString &path, bool showMessages)
         item->setData(Qt::UserRole, path);  // Store full path
         item->setForeground(Qt::red);  // Make it red
 
-        // Add DLL icon
-        QIcon dllIcon(":/icons/DLL.ico");
-        item->setIcon(dllIcon);
+        // Add Plugin icon
+        QIcon pluginIcon(":/icons/plugin.svg");
+        item->setIcon(pluginIcon);
 
         if (showMessages) {
             QMessageBox::warning(this, "Failed to Load Plugin",
@@ -291,9 +292,9 @@ bool PluginPage::addPlugin(const QString &path, bool showMessages)
     item->setCheckState(showMessages ? Qt::Checked : Qt::Unchecked);
     item->setData(Qt::UserRole, path);  // Store full path
 
-    // Add DLL icon
-    QIcon dllIcon(":/icons/DLL.ico");
-    item->setIcon(dllIcon);
+    // Add Plugin icon
+    QIcon pluginIcon(":/icons/plugin.svg");
+    item->setIcon(pluginIcon);
 
     // Select the item if it was added by the user (showMessages=true)
     if (showMessages) {

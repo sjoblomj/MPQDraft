@@ -5,25 +5,27 @@
         <file>images/wizard.png</file>
 
         <!-- Game icons -->
-        <file>icons/Diablo.ico</file>
-        <file>icons/Diablo2.ico</file>
-        <file>icons/hellfire.ico</file>
-        <file>icons/Starcraft.ico</file>
-        <file>icons/StarEdit.ico</file>
-        <file>icons/War2BNE.ico</file>
-        <file>icons/War2Edit.ico</file>
-        <file>icons/War3.ico</file>
-        <file>icons/War3Head.ico</file>
-        <file>icons/War3Edit.ico</file>
-        <file>icons/War3x.ico</file>
-        <file>icons/lomse.ico</file>
+        <file>icons/blizzard/bnet.png</file>
+        <file>icons/blizzard/Diablo.ico</file>
+        <file>icons/blizzard/Diablo2.ico</file>
+        <file>icons/blizzard/hellfire.ico</file>
+        <file>icons/blizzard/Starcraft.ico</file>
+        <file>icons/blizzard/StarEdit.ico</file>
+        <file>icons/blizzard/War2BNE.ico</file>
+        <file>icons/blizzard/War2Edit.ico</file>
+        <file>icons/blizzard/War3.ico</file>
+        <file>icons/blizzard/War3Head.ico</file>
+        <file>icons/blizzard/War3Edit.ico</file>
+        <file>icons/blizzard/War3x.ico</file>
+        <file>icons/sierra/lomse.ico</file>
 
         <!-- Other icons -->
-        <file>icons/MPQDraft.ico</file>
-        <file>icons/MPQ.ico</file>
-        <file>icons/DLL.ico</file>
-        <file>icons/StarDraft.ico</file>
-        <file>icons/paste.ico</file>
+        <file>icons/mpqdraft.png</file>
+        <file>icons/mpq.svg</file>
+        <file>icons/plugin.svg</file>
+        <file>icons/not-found.png</file>
+        <file>icons/StarDraft.png</file>
+        <file>icons/paste.svg</file>
     </qresource>
 </RCC>
 

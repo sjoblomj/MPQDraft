@@ -28,6 +28,7 @@ SEMPQIntroPage::SEMPQIntroPage(QWidget *parent)
 {
     setTitle("Welcome to SEMPQ Creation Wizard");
     setSubTitle("Create Self-Executing MPQ (SEMPQ) files.");
+    setPixmap(QWizard::LogoPixmap, QPixmap(":/icons/mpqdraft.png").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -77,6 +78,7 @@ SEMPQSettingsPage::SEMPQSettingsPage(QWidget *parent)
 {
     setTitle("SEMPQ Settings");
     setSubTitle("Configure the self-executing MPQ file to create.");
+    setPixmap(QWizard::LogoPixmap, QPixmap(":/icons/mpq.svg").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
     QVBoxLayout *layout = new QVBoxLayout(this);
 
@@ -94,7 +96,7 @@ SEMPQSettingsPage::SEMPQSettingsPage(QWidget *parent)
 
     // MPQ icon on the left
     mpqIconLabel = new QLabel(this);
-    QPixmap mpqPixmap(":/icons/MPQ.ico");
+    QPixmap mpqPixmap(":/icons/mpq.svg");
     mpqIconLabel->setPixmap(mpqPixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     mpqIconLabel->setFixedSize(64, 64);
     mpqIconLabel->setAlignment(Qt::AlignTop);
@@ -287,8 +289,8 @@ void SEMPQSettingsPage::updateIconPreview()
         }
     }
     if (!loadedIcon) {
-        // No custom icon or failed to load it - show default StarDraft.ico
-        QPixmap defaultPixmap(":/icons/StarDraft.ico");
+        // No custom icon or failed to load it - show default StarDraft icon
+        QPixmap defaultPixmap(":/icons/StarDraft.png");
         iconPreviewLabel->setPixmap(defaultPixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     }
 }
@@ -301,6 +303,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 {
     setTitle("Select Target Program");
     setSubTitle("Choose the program that the SEMPQ will launch.");
+    setPixmap(QWizard::LogoPixmap, QPixmap(":/icons/blizzard/bnet.png").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     mainLayout->setSpacing(15);
@@ -419,7 +422,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     regKeyInputLayout->addWidget(customRegKeyEdit);
 
     pasteRegKeyButton = new QPushButton(customRegContentWidget);
-    pasteRegKeyButton->setIcon(QIcon(":/icons/paste.ico"));
+    pasteRegKeyButton->setIcon(QIcon(":/icons/paste.svg"));
     pasteRegKeyButton->setMaximumWidth(30);
     pasteRegKeyButton->setToolTip("Copy value from selected game");
     connect(pasteRegKeyButton, &QPushButton::clicked, this, &SEMPQTargetPage::onPasteRegKeyClicked);
@@ -462,7 +465,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     regValueInputLayout->addWidget(customRegValueEdit);
 
     pasteRegValueButton = new QPushButton(customRegContentWidget);
-    pasteRegValueButton->setIcon(QIcon(":/icons/paste.ico"));
+    pasteRegValueButton->setIcon(QIcon(":/icons/paste.svg"));
     pasteRegValueButton->setMaximumWidth(30);
     pasteRegValueButton->setToolTip("Copy value from selected game");
     connect(pasteRegValueButton, &QPushButton::clicked, this, &SEMPQTargetPage::onPasteRegValueClicked);
@@ -502,7 +505,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     exeFileInputLayout->addWidget(customRegExeEdit);
 
     pasteExeFileButton = new QPushButton(customRegContentWidget);
-    pasteExeFileButton->setIcon(QIcon(":/icons/paste.ico"));
+    pasteExeFileButton->setIcon(QIcon(":/icons/paste.svg"));
     pasteExeFileButton->setMaximumWidth(30);
     pasteExeFileButton->setToolTip("Copy value from selected game");
     connect(pasteExeFileButton, &QPushButton::clicked, this, &SEMPQTargetPage::onPasteExeFileClicked);
@@ -544,7 +547,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     targetFileInputLayout->addWidget(customRegTargetFileEdit);
 
     pasteTargetFileButton = new QPushButton(customRegContentWidget);
-    pasteTargetFileButton->setIcon(QIcon(":/icons/paste.ico"));
+    pasteTargetFileButton->setIcon(QIcon(":/icons/paste.svg"));
     pasteTargetFileButton->setMaximumWidth(30);
     pasteTargetFileButton->setToolTip("Copy value from selected game");
     connect(pasteTargetFileButton, &QPushButton::clicked, this, &SEMPQTargetPage::onPasteTargetFileClicked);
