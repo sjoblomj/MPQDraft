@@ -96,6 +96,8 @@ public:
 
     // Mode 3: Custom path (returns empty if not Mode 3)
     QString getCustomTargetPath() const;
+    int getCustomTargetShuntCount() const;
+    bool getCustomTargetNoSpawning() const;
 
     // Common to all modes
     QString getParameters() const;
@@ -154,6 +156,8 @@ private:
     QLineEdit *customPathEdit;
     QPushButton *browseButton;
     QLabel *warningLabel;
+    QSpinBox *customTargetShuntCountSpinBox;
+    QCheckBox *customTargetNoSpawningCheckbox;
 
     // Common controls
     QLineEdit *parametersEdit;

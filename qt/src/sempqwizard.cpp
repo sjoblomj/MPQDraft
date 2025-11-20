@@ -631,12 +631,24 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     // Tab 3: Custom Target (Hardcoded Path)
     //=========================================================================
     QWidget *customTargetTab = new QWidget();
-    QVBoxLayout *customLayout = new QVBoxLayout(customTargetTab);
+    QVBoxLayout *customTargetTabLayout = new QVBoxLayout(customTargetTab);
+    customTargetTabLayout->setContentsMargins(0, 0, 0, 0);
+
+    // Create scroll area for custom target content
+    QScrollArea *customTargetScrollArea = new QScrollArea(customTargetTab);
+    customTargetScrollArea->setWidgetResizable(true);
+    customTargetScrollArea->setFrameShape(QFrame::NoFrame);
+    customTargetScrollArea->setStyleSheet("QScrollArea { background-color: white; }");
+
+    // Create content widget for the scroll area
+    QWidget *customTargetContentWidget = new QWidget();
+    customTargetContentWidget->setStyleSheet("QWidget { background-color: white; }");
+    QVBoxLayout *customLayout = new QVBoxLayout(customTargetContentWidget);
 
     QLabel *customInfoLabel = new QLabel(
         "Specify a custom program path. This can be used for programs not in the "
         "supported games list.",
-        customTargetTab);
+        customTargetContentWidget);
     customInfoLabel->setWordWrap(true);
     customLayout->addWidget(customInfoLabel);
 
@@ -647,7 +659,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
         "<b>⚠ Warning:</b> When using a custom path, the exact path you specify must "
         "exist on all computers where the SEMPQ will be run. For better portability, "
         "use the Supported Games tab instead.",
-        customTargetTab);
+        customTargetContentWidget);
     warningLabel->setWordWrap(true);
     warningLabel->setStyleSheet(
         "QLabel { "
@@ -662,22 +674,94 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     customLayout->addSpacing(10);
 
     // Target path
-    QLabel *targetLabel = new QLabel("Target Program Path:", customTargetTab);
+    QLabel *targetLabel = new QLabel("Target Program Path:", customTargetContentWidget);
     customLayout->addWidget(targetLabel);
 
     QHBoxLayout *targetLayout = new QHBoxLayout();
-    customPathEdit = new QLineEdit(customTargetTab);
+    customPathEdit = new QLineEdit(customTargetContentWidget);
     customPathEdit->setPlaceholderText("Path to the executable (can be relative)");
     connect(customPathEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::onCustomPathChanged);
 
-    browseButton = new QPushButton("Browse...", customTargetTab);
+    browseButton = new QPushButton("Browse...", customTargetContentWidget);
     connect(browseButton, &QPushButton::clicked, this, &SEMPQTargetPage::onBrowseClicked);
 
     targetLayout->addWidget(customPathEdit);
     targetLayout->addWidget(browseButton);
     customLayout->addLayout(targetLayout);
 
+    customLayout->addSpacing(10);
+
+    // Shunt Count
+    QHBoxLayout *customTargetShuntCountLabelLayout = new QHBoxLayout();
+    QLabel *customTargetShuntCountLabel = new QLabel("Shunt Count:", customTargetContentWidget);
+    customTargetShuntCountLabelLayout->addWidget(customTargetShuntCountLabel);
+
+    QLabel *customTargetShuntCountHelp = new QLabel(customTargetContentWidget);
+    customTargetShuntCountHelp->setText(" ? ");
+    customTargetShuntCountHelp->setStyleSheet(
+        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    customTargetShuntCountHelp->setToolTip(
+        "<b>Shunt Count</b><br><br>"
+        "The number of times the game restarts itself before MPQDraft activates patching.<br><br>"
+        "<b>0 (default):</b> Activate immediately when the game starts. Use this for most games.<br><br>"
+        "<b>1:</b> Wait for the game to restart itself once before activating. Some games with "
+        "copy protection (like Diablo) restart themselves after checking the CD, so MPQDraft "
+        "needs to wait for this restart.<br><br>"
+        "<b>Higher values:</b> Rarely needed, but available if a game restarts multiple times "
+        "during its startup sequence.");
+    customTargetShuntCountHelp->setCursor(Qt::WhatsThisCursor);
+    customTargetShuntCountLabelLayout->addWidget(customTargetShuntCountHelp);
+    customTargetShuntCountLabelLayout->addStretch();
+    customLayout->addLayout(customTargetShuntCountLabelLayout);
+
+    customTargetShuntCountSpinBox = new QSpinBox(customTargetContentWidget);
+    customTargetShuntCountSpinBox->setMinimum(0);
+    customTargetShuntCountSpinBox->setMaximum(INT_MAX);
+    customTargetShuntCountSpinBox->setValue(0);
+    customLayout->addWidget(customTargetShuntCountSpinBox);
+
+    customLayout->addSpacing(10);
+
+    // Advanced flags section
+    QLabel *customTargetFlagsLabel = new QLabel("<b>Advanced Flags:</b>", customTargetContentWidget);
+    customLayout->addWidget(customTargetFlagsLabel);
+
+    QHBoxLayout *customTargetNoSpawningLayout = new QHBoxLayout();
+    customTargetNoSpawningCheckbox = new QCheckBox(
+        "Do not inject into child processes",
+        customTargetContentWidget);
+    customTargetNoSpawningLayout->addWidget(customTargetNoSpawningCheckbox);
+
+    QLabel *customTargetNoSpawningHelp = new QLabel(customTargetContentWidget);
+    customTargetNoSpawningHelp->setText(" ? ");
+    customTargetNoSpawningHelp->setStyleSheet(
+        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    customTargetNoSpawningHelp->setToolTip(
+        "<b>Do Not Inject Into Child Processes</b><br><br>"
+        "By default, MPQDraft injects itself into any child processes created by the game. "
+        "This ensures that patches work even if the game launches additional executables.<br><br>"
+        "<b>When to enable:</b> Some games launch helper processes (updaters, launchers, "
+        "crash reporters) that don't need patching and may cause issues if MPQDraft injects "
+        "into them. Enable this flag to prevent injection into child processes.<br><br>"
+        "<b>When to disable (default):</b> Most games work fine with child process injection, "
+        "and some games require it for patches to work correctly.");
+    customTargetNoSpawningHelp->setCursor(Qt::WhatsThisCursor);
+    customTargetNoSpawningLayout->addWidget(customTargetNoSpawningHelp);
+
+    customTargetNoSpawningLayout->addStretch();
+    customLayout->addLayout(customTargetNoSpawningLayout);
+
     customLayout->addStretch();
+
+    // Set the content widget in the scroll area and add scroll area to tab
+    customTargetScrollArea->setWidget(customTargetContentWidget);
+    customTargetTabLayout->addWidget(customTargetScrollArea);
 
     //=========================================================================
     // Add tabs to tab widget
@@ -777,6 +861,16 @@ QString SEMPQTargetPage::getCustomTargetPath() const
         return QString();
     }
     return customPathEdit->text();
+}
+
+int SEMPQTargetPage::getCustomTargetShuntCount() const
+{
+    return customTargetShuntCountSpinBox->value();
+}
+
+bool SEMPQTargetPage::getCustomTargetNoSpawning() const
+{
+    return customTargetNoSpawningCheckbox->isChecked();
 }
 
 QString SEMPQTargetPage::getParameters() const
@@ -1288,9 +1382,21 @@ void SEMPQWizard::createSEMPQ()
     } else {
         // Mode 3: Custom Target (Hardcoded Path)
         QString customPath = targetPage->getCustomTargetPath();
-        targetInfo = QString("Custom Target Path:\n  %1\n  Extended Redir: %2")
+        int shuntCount = targetPage->getCustomTargetShuntCount();
+        bool noSpawning = targetPage->getCustomTargetNoSpawning();
+
+        QStringList flagsList;
+        if (extendedRedir) flagsList << "Extended Redir";
+        if (noSpawning) flagsList << "No Spawning";
+        QString flagsStr = flagsList.isEmpty() ? "(none)" : flagsList.join(", ");
+
+        targetInfo = QString("Custom Target Path:\n"
+                           "  Path: %1\n"
+                           "  Shunt Count: %2\n"
+                           "  Flags: %3")
                         .arg(customPath)
-                        .arg(extendedRedir ? "Yes" : "No");
+                        .arg(shuntCount)
+                        .arg(flagsStr);
     }
 
     // TODO: Call the actual SEMPQ creation code
