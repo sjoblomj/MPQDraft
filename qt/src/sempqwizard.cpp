@@ -343,8 +343,27 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     customRegLayout->addSpacing(10);
 
     // Registry Key
+    QHBoxLayout *regKeyLabelLayout = new QHBoxLayout();
     QLabel *regKeyLabel = new QLabel("Registry Key:", customRegContentWidget);
-    customRegLayout->addWidget(regKeyLabel);
+    regKeyLabelLayout->addWidget(regKeyLabel);
+
+    QLabel *regKeyHelp = new QLabel(customRegContentWidget);
+    regKeyHelp->setText(" ? ");
+    regKeyHelp->setStyleSheet(
+        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    regKeyHelp->setToolTip(
+        "<b>Registry Key</b><br><br>"
+        "The Windows registry path where the game stores its installation information.<br><br>"
+        "<b>Example:</b> SOFTWARE\\Blizzard Entertainment\\StarCraft<br><br>"
+        "To find this, open Registry Editor (regedit.exe) and navigate to HKEY_LOCAL_MACHINE "
+        "or HKEY_CURRENT_USER to find where your game stores its installation path.");
+    regKeyHelp->setCursor(Qt::WhatsThisCursor);
+    regKeyLabelLayout->addWidget(regKeyHelp);
+    regKeyLabelLayout->addStretch();
+    customRegLayout->addLayout(regKeyLabelLayout);
 
     customRegKeyEdit = new QLineEdit(customRegContentWidget);
     customRegKeyEdit->setPlaceholderText("e.g., SOFTWARE\\Blizzard Entertainment\\Starcraft II");
@@ -354,8 +373,30 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     customRegLayout->addSpacing(5);
 
     // Registry Value
+    QHBoxLayout *regValueLabelLayout = new QHBoxLayout();
     QLabel *regValueLabel = new QLabel("Registry Value Name:", customRegContentWidget);
-    customRegLayout->addWidget(regValueLabel);
+    regValueLabelLayout->addWidget(regValueLabel);
+
+    QLabel *regValueHelp = new QLabel(customRegContentWidget);
+    regValueHelp->setText(" ? ");
+    regValueHelp->setStyleSheet(
+        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    regValueHelp->setToolTip(
+        "<b>Registry Value Name</b><br><br>"
+        "The name of the registry value that contains the game's installation path.<br><br>"
+        "<b>Common examples:</b><br>"
+        "• InstallPath<br>"
+        "• InstallLocation<br>"
+        "• Path<br>"
+        "• GamePath<br><br>"
+        "Look in the registry key you specified above to find the exact value name.");
+    regValueHelp->setCursor(Qt::WhatsThisCursor);
+    regValueLabelLayout->addWidget(regValueHelp);
+    regValueLabelLayout->addStretch();
+    customRegLayout->addLayout(regValueLabelLayout);
 
     customRegValueEdit = new QLineEdit(customRegContentWidget);
     customRegValueEdit->setPlaceholderText("e.g., InstallPath");
@@ -365,8 +406,27 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     customRegLayout->addSpacing(5);
 
     // Executable Filename
+    QHBoxLayout *exeFileLabelLayout = new QHBoxLayout();
     QLabel *exeFileLabel = new QLabel("Executable Filename:", customRegContentWidget);
-    customRegLayout->addWidget(exeFileLabel);
+    exeFileLabelLayout->addWidget(exeFileLabel);
+
+    QLabel *exeFileHelp = new QLabel(customRegContentWidget);
+    exeFileHelp->setText(" ? ");
+    exeFileHelp->setStyleSheet(
+        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    exeFileHelp->setToolTip(
+        "<b>Executable Filename</b><br><br>"
+        "The name of the game's executable file that will be launched.<br><br>"
+        "<b>Example:</b> StarCraft.exe<br><br>"
+        "This file will be combined with the path from the registry to create the full "
+        "path to the game executable. Make sure to include the .exe extension.");
+    exeFileHelp->setCursor(Qt::WhatsThisCursor);
+    exeFileLabelLayout->addWidget(exeFileHelp);
+    exeFileLabelLayout->addStretch();
+    customRegLayout->addLayout(exeFileLabelLayout);
 
     customRegExeEdit = new QLineEdit(customRegContentWidget);
     customRegExeEdit->setPlaceholderText("e.g., StarCraft II.exe");
@@ -376,42 +436,98 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     customRegLayout->addSpacing(5);
 
     // Target File Name (optional)
+    QHBoxLayout *targetFileLabelLayout = new QHBoxLayout();
     QLabel *targetFileLabel = new QLabel("Target File Name (optional):", customRegContentWidget);
-    customRegLayout->addWidget(targetFileLabel);
+    targetFileLabelLayout->addWidget(targetFileLabel);
+
+    QLabel *targetFileHelp = new QLabel(customRegContentWidget);
+    targetFileHelp->setText(" ? ");
+    targetFileHelp->setStyleSheet(
+        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    targetFileHelp->setToolTip(
+        "<b>Target File Name</b><br><br>"
+        "The file that MPQDraft will inject into and patch. Usually this is the same as "
+        "the executable, so you can leave this empty.<br><br>"
+        "<b>When to specify:</b> Some games use a launcher that starts a different executable. "
+        "For example, Diablo II has 'Diablo II.exe' (launcher) and 'Game.exe' (actual game).<br><br>"
+        "In such cases, specify the launcher as the Executable Filename and the actual game "
+        "executable here as the Target File Name.");
+    targetFileHelp->setCursor(Qt::WhatsThisCursor);
+    targetFileLabelLayout->addWidget(targetFileHelp);
+    targetFileLabelLayout->addStretch();
+    customRegLayout->addLayout(targetFileLabelLayout);
 
     customRegTargetFileEdit = new QLineEdit(customRegContentWidget);
     customRegTargetFileEdit->setPlaceholderText("Leave empty if same as executable (most common)");
-    customRegTargetFileEdit->setToolTip(
-        "The file to patch. Usually the same as the executable.\n"
-        "Only specify if different (e.g., Diablo II launches 'Diablo II.exe' but patches 'Game.exe').");
     customRegLayout->addWidget(customRegTargetFileEdit);
 
     customRegLayout->addSpacing(5);
 
     // Shunt Count
+    QHBoxLayout *shuntCountLabelLayout = new QHBoxLayout();
     QLabel *shuntCountLabel = new QLabel("Shunt Count:", customRegContentWidget);
-    customRegLayout->addWidget(shuntCountLabel);
+    shuntCountLabelLayout->addWidget(shuntCountLabel);
+
+    QLabel *shuntCountHelp = new QLabel(customRegContentWidget);
+    shuntCountHelp->setText(" ? ");
+    shuntCountHelp->setStyleSheet(
+        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    shuntCountHelp->setToolTip(
+        "<b>Shunt Count</b><br><br>"
+        "The number of times the game restarts itself before MPQDraft activates patching.<br><br>"
+        "<b>0 (default):</b> Activate immediately when the game starts. Use this for most games.<br><br>"
+        "<b>1:</b> Wait for the game to restart itself once before activating. Some games with "
+        "copy protection (like Diablo) restart themselves after checking the CD, so MPQDraft "
+        "needs to wait for this restart.<br><br>"
+        "<b>Higher values:</b> Rarely needed, but available if a game restarts multiple times "
+        "during its startup sequence.");
+    shuntCountHelp->setCursor(Qt::WhatsThisCursor);
+    shuntCountLabelLayout->addWidget(shuntCountHelp);
+    shuntCountLabelLayout->addStretch();
+    customRegLayout->addLayout(shuntCountLabelLayout);
 
     customRegShuntCountSpinBox = new QSpinBox(customRegContentWidget);
     customRegShuntCountSpinBox->setMinimum(0);
     customRegShuntCountSpinBox->setMaximum(INT_MAX);  // Unlimited (max int value)
     customRegShuntCountSpinBox->setValue(0);
-    customRegShuntCountSpinBox->setToolTip(
-        "Number of times the game restarts itself before MPQDraft activates.\n"
-        "0 = Activate immediately (most games)\n"
-        "1 = Wait for one restart (games with copy protection like Diablo)");
     customRegLayout->addWidget(customRegShuntCountSpinBox);
 
     customRegLayout->addSpacing(10);
 
     // Checkbox for "Value is full path"
+    QHBoxLayout *isFullPathLayout = new QHBoxLayout();
     customRegIsFullPathCheckbox = new QCheckBox(
         "Registry value contains full path to executable (not just directory)",
         customRegContentWidget);
-    customRegIsFullPathCheckbox->setToolTip(
-        "Check this if the registry value is the full path to the .exe file.\n"
-        "Leave unchecked if the registry value is just the installation directory.");
-    customRegLayout->addWidget(customRegIsFullPathCheckbox);
+    isFullPathLayout->addWidget(customRegIsFullPathCheckbox);
+
+    QLabel *isFullPathHelp = new QLabel(customRegContentWidget);
+    isFullPathHelp->setText(" ? ");
+    isFullPathHelp->setStyleSheet(
+        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    isFullPathHelp->setToolTip(
+        "<b>Registry Value Contains Full Path</b><br><br>"
+        "<b>Unchecked (default):</b> The registry value contains only the installation directory "
+        "(e.g., 'C:\\Program Files\\StarCraft'). MPQDraft will append the executable filename "
+        "to this path.<br><br>"
+        "<b>Checked:</b> The registry value contains the complete path to the executable file "
+        "(e.g., 'C:\\Program Files\\StarCraft\\StarCraft.exe'). MPQDraft will use this path "
+        "directly without appending anything.<br><br>"
+        "Most games store only the directory path, so leave this unchecked unless you've verified "
+        "that the registry value includes the .exe filename.");
+    isFullPathHelp->setCursor(Qt::WhatsThisCursor);
+    isFullPathLayout->addWidget(isFullPathHelp);
+    isFullPathLayout->addStretch();
+    customRegLayout->addLayout(isFullPathLayout);
 
     customRegLayout->addSpacing(10);
 
@@ -419,13 +535,32 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     QLabel *flagsLabel = new QLabel("<b>Advanced Flags:</b>", customRegContentWidget);
     customRegLayout->addWidget(flagsLabel);
 
+    QHBoxLayout *noSpawningLayout = new QHBoxLayout();
     customRegNoSpawningCheckbox = new QCheckBox(
         "Do not inject into child processes (MPQD_NO_SPAWNING)",
         customRegContentWidget);
-    customRegNoSpawningCheckbox->setToolTip(
-        "Prevents MPQDraft from injecting into child processes created by the game.\n"
-        "Use this if the game launches helper processes that shouldn't be patched.");
-    customRegLayout->addWidget(customRegNoSpawningCheckbox);
+    noSpawningLayout->addWidget(customRegNoSpawningCheckbox);
+
+    QLabel *noSpawningHelp = new QLabel(customRegContentWidget);
+    noSpawningHelp->setText(" ? ");
+    noSpawningHelp->setStyleSheet(
+        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    noSpawningHelp->setToolTip(
+        "<b>Do Not Inject Into Child Processes</b><br><br>"
+        "By default, MPQDraft injects itself into any child processes created by the game. "
+        "This ensures that patches work even if the game launches additional executables.<br><br>"
+        "<b>When to enable:</b> Some games launch helper processes (updaters, launchers, "
+        "crash reporters) that don't need patching and may cause issues if MPQDraft injects "
+        "into them. Enable this flag to prevent injection into child processes.<br><br>"
+        "<b>When to disable (default):</b> Most games work fine with child process injection, "
+        "and some games require it for patches to work correctly.");
+    noSpawningHelp->setCursor(Qt::WhatsThisCursor);
+    noSpawningLayout->addWidget(noSpawningHelp);
+    noSpawningLayout->addStretch();
+    customRegLayout->addLayout(noSpawningLayout);
 
     customRegLayout->addStretch();
 
