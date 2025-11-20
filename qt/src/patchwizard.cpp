@@ -5,6 +5,7 @@
 #include "patchwizard.h"
 #include "pluginpage.h"
 #include "common/patcher.h"
+#include "gamedata_qt.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFileDialog>
@@ -17,6 +18,7 @@
 #include <QIcon>
 #include <QScrollArea>
 #include <QFrame>
+#include <QListWidget>
 
 // Stylesheet for invalid input fields
 static const char* INVALID_FIELD_STYLE = "QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }";
@@ -85,11 +87,33 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
     setPixmap(QWizard::LogoPixmap, QPixmap(":/icons/blizzard/bnet.png").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
     QVBoxLayout *layout = new QVBoxLayout(this);
-    
-    // Target path
-    QLabel *targetLabel = new QLabel("Target Executable:", this);
+
+    // Detected games section
+    QLabel *detectedLabel = new QLabel("<b>Detected Games:</b>", this);
+    layout->addWidget(detectedLabel);
+
+    gameList = new QListWidget(this);
+    gameList->setIconSize(QSize(32, 32));
+    gameList->setMaximumHeight(120);
+    connect(gameList, &QListWidget::currentItemChanged, this, &TargetSelectionPage::onGameSelectionChanged);
+    layout->addWidget(gameList);
+
+    // Populate the list with detected games
+    populateInstalledGames();
+
+    layout->addSpacing(10);
+
+    // "Or" separator
+    orLabel = new QLabel("<center>— or —</center>", this);
+    orLabel->setStyleSheet("QLabel { color: #808080; }");
+    layout->addWidget(orLabel);
+
+    layout->addSpacing(10);
+
+    // Target path (manual selection)
+    QLabel *targetLabel = new QLabel("<b>Browse for Executable:</b>", this);
     layout->addWidget(targetLabel);
-    
+
     QHBoxLayout *targetLayout = new QHBoxLayout();
     targetPathEdit = new QLineEdit(this);
     targetPathEdit->setPlaceholderText("Path to game executable (e.g., StarCraft.exe)");
@@ -99,7 +123,7 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
     targetLayout->addWidget(targetPathEdit);
     targetLayout->addWidget(browseButton);
     layout->addLayout(targetLayout);
-    
+
     layout->addSpacing(20);
     
     // Parameters
@@ -206,6 +230,81 @@ void TargetSelectionPage::validateTargetPath()
 void TargetSelectionPage::onTargetPathChanged()
 {
     validateTargetPath();
+
+    // Clear game selection when user manually types a path
+    if (!targetPathEdit->text().isEmpty()) {
+        gameList->clearSelection();
+    }
+}
+
+void TargetSelectionPage::populateInstalledGames()
+{
+    // Get list of installed games
+    QVector<const SupportedGame*> installedGames = getInstalledGamesQt();
+
+    if (installedGames.isEmpty()) {
+        // No games detected - show a message
+        QListWidgetItem *item = new QListWidgetItem(gameList);
+        item->setText("No supported games detected");
+        item->setIcon(QIcon(":/icons/not-found.png"));
+        item->setFlags(Qt::NoItemFlags);  // Make it non-selectable
+        item->setForeground(QBrush(QColor(128, 128, 128)));  // Gray text
+        return;
+    }
+
+    // Populate game list with detected games and their components
+    for (const SupportedGame* game : installedGames) {
+        for (const GameComponent& component : game->components) {
+            // Verify that the component actually exists on disk
+            QString componentPath = locateComponentQt(getRegistryKey(*game), getRegistryValue(*game), getFileName(component));
+            if (componentPath.isEmpty()) {
+                continue;  // Skip components that don't exist
+            }
+
+            QListWidgetItem *item = new QListWidgetItem(gameList);
+
+            // Display format: "Game Name - Component Name" or just "Game Name" for single component
+            QString displayText;
+            if (game->components.size() == 1) {
+                displayText = getGameName(*game);
+            } else {
+                displayText = QString("%1 - %2").arg(getGameName(*game), getComponentName(component));
+            }
+            item->setText(displayText);
+
+            // Set icon
+            QIcon icon(getIconPath(component));
+            item->setIcon(icon);
+
+            // Store the extended redir flag in UserRole
+            item->setData(Qt::UserRole, component.extendedRedir);
+
+            // Store the full path in UserRole+1
+            item->setData(Qt::UserRole + 1, componentPath);
+        }
+    }
+}
+
+void TargetSelectionPage::onGameSelectionChanged(QListWidgetItem *current, QListWidgetItem *previous)
+{
+    Q_UNUSED(previous);
+
+    if (!current) {
+        return;
+    }
+
+    // Get the full path from UserRole+1
+    QString componentPath = current->data(Qt::UserRole + 1).toString();
+
+    // Update the target path edit
+    targetPathEdit->setText(componentPath);
+
+    // Update the Extended Redir checkbox based on the component's default
+    bool extendedRedir = current->data(Qt::UserRole).toBool();
+    extendedRedirCheck->setChecked(extendedRedir);
+
+    // Set focus to parameters field
+    parametersEdit->setFocus();
 }
 
 void TargetSelectionPage::onBrowseClicked()
@@ -218,6 +317,9 @@ void TargetSelectionPage::onBrowseClicked()
     );
 
     if (!fileName.isEmpty()) {
+        // Clear game selection when browsing manually
+        gameList->clearSelection();
+
         targetPathEdit->setText(fileName);
         parametersEdit->setFocus();
     }

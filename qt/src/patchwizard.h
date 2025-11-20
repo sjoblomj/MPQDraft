@@ -52,14 +52,18 @@ public:
 private slots:
     void onBrowseClicked();
     void onTargetPathChanged();
+    void onGameSelectionChanged(QListWidgetItem *current, QListWidgetItem *previous);
 
 private:
     void validateTargetPath();
+    void populateInstalledGames();
 
+    QListWidget *gameList;
     QLineEdit *targetPathEdit;
     QLineEdit *parametersEdit;
     QCheckBox *extendedRedirCheck;
     QPushButton *browseButton;
+    QLabel *orLabel;
 };
 
 //=============================================================================

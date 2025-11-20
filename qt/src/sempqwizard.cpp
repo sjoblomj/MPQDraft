@@ -4,7 +4,7 @@
 
 #include "sempqwizard.h"
 #include "pluginpage.h"
-#include "common/gamedata.h"
+#include "gamedata_qt.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFileDialog>
@@ -296,6 +296,15 @@ void SEMPQSettingsPage::updateIconPreview()
 }
 
 //=============================================================================
+// Helper function to get the static games vector (shared across all functions)
+//=============================================================================
+static const QVector<SupportedGame>& getStaticGamesVector()
+{
+    static QVector<SupportedGame> games = getSupportedGamesQt();
+    return games;
+}
+
+//=============================================================================
 // Page 2: Select Target Program
 //=============================================================================
 SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
@@ -334,7 +343,8 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     connect(gameList, &QListWidget::currentItemChanged, this, &SEMPQTargetPage::onGameSelectionChanged);
 
     // Populate game list with all components from all games
-    const QVector<SupportedGame>& games = getSupportedGames();
+    // Use shared static storage so pointers remain valid
+    const QVector<SupportedGame>& games = getStaticGamesVector();
     for (const SupportedGame& game : games) {
         for (const GameComponent& component : game.components) {
             QListWidgetItem *item = new QListWidgetItem(gameList);
@@ -343,15 +353,15 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
             QString displayText;
             if (game.components.size() == 1) {
                 // Single component - just show game name
-                displayText = game.gameName;
+                displayText = getGameName(game);
             } else {
                 // Multiple components - show "Game - Component"
-                displayText = QString("%1 - %2").arg(game.gameName, component.componentName);
+                displayText = QString("%1 - %2").arg(getGameName(game), getComponentName(component));
             }
             item->setText(displayText);
 
             // Set icon
-            QIcon icon(component.iconPath);
+            QIcon icon(getIconPath(component));
             item->setIcon(icon);
 
             // Store pointer to component in item data
@@ -417,7 +427,6 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     QHBoxLayout *regKeyInputLayout = new QHBoxLayout();
     customRegKeyEdit = new QLineEdit(customRegContentWidget);
-    customRegKeyEdit->setPlaceholderText("e.g., SOFTWARE\\Blizzard Entertainment\\Starcraft II");
     connect(customRegKeyEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::onCustomRegistryChanged);
     regKeyInputLayout->addWidget(customRegKeyEdit);
 
@@ -460,7 +469,6 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     QHBoxLayout *regValueInputLayout = new QHBoxLayout();
     customRegValueEdit = new QLineEdit(customRegContentWidget);
-    customRegValueEdit->setPlaceholderText("e.g., InstallPath");
     connect(customRegValueEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::onCustomRegistryChanged);
     regValueInputLayout->addWidget(customRegValueEdit);
 
@@ -500,7 +508,6 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     QHBoxLayout *exeFileInputLayout = new QHBoxLayout();
     customRegExeEdit = new QLineEdit(customRegContentWidget);
-    customRegExeEdit->setPlaceholderText("e.g., StarCraft II.exe");
     connect(customRegExeEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::onCustomRegistryChanged);
     exeFileInputLayout->addWidget(customRegExeEdit);
 
@@ -542,7 +549,6 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     QHBoxLayout *targetFileInputLayout = new QHBoxLayout();
     customRegTargetFileEdit = new QLineEdit(customRegContentWidget);
-    customRegTargetFileEdit->setPlaceholderText("e.g., StarCraft.exe");
     connect(customRegTargetFileEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::onCustomRegistryChanged);
     targetFileInputLayout->addWidget(customRegTargetFileEdit);
 
@@ -729,7 +735,6 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     QHBoxLayout *targetLayout = new QHBoxLayout();
     customPathEdit = new QLineEdit(customTargetContentWidget);
-    customPathEdit->setPlaceholderText("Path to the executable (can be relative)");
     connect(customPathEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::onCustomPathChanged);
 
     browseButton = new QPushButton("Bro&wse...", customTargetContentWidget);
@@ -1166,8 +1171,8 @@ const GameComponent* SEMPQTargetPage::getReferenceComponent() const
     }
 
     // Otherwise, use the first component (Diablo) as default
-    const QVector<SupportedGame>& games = getSupportedGames();
-    if (!games.isEmpty() && !games[0].components.isEmpty()) {
+    const QVector<SupportedGame>& games = getStaticGamesVector();
+    if (!games.isEmpty() && !games[0].components.empty()) {
         return &games[0].components[0];
     }
 
@@ -1199,7 +1204,7 @@ void SEMPQTargetPage::updateCustomRegistryPlaceholders()
     }
 
     // Find the game that contains this component to get registry info
-    const QVector<SupportedGame>& games = getSupportedGames();
+    const QVector<SupportedGame>& games = getStaticGamesVector();
     const SupportedGame* refGame = nullptr;
 
     for (const SupportedGame& game : games) {
@@ -1219,18 +1224,18 @@ void SEMPQTargetPage::updateCustomRegistryPlaceholders()
     // Get display name for the component
     QString displayName;
     if (refGame->components.size() == 1) {
-        displayName = refGame->gameName;
+        displayName = getGameName(*refGame);
     } else {
-        displayName = refComp->componentName;
+        displayName = getComponentName(*refComp);
     }
 
     // Update placeholders with reference game values
-    customRegKeyEdit->setPlaceholderText(QString("%1: %2").arg(displayName, refGame->registryKey));
-    customRegValueEdit->setPlaceholderText(QString("%1: %2").arg(displayName, refGame->registryValue));
-    customRegExeEdit->setPlaceholderText(QString("%1: %2").arg(displayName, refComp->fileName));
+    customRegKeyEdit->setPlaceholderText(QString("%1: %2").arg(displayName, getRegistryKey(*refGame)));
+    customRegValueEdit->setPlaceholderText(QString("%1: %2").arg(displayName, getRegistryValue(*refGame)));
+    customRegExeEdit->setPlaceholderText(QString("%1: %2").arg(displayName, getFileName(*refComp)));
 
     // Target file name - always show the actual value
-    customRegTargetFileEdit->setPlaceholderText(QString("%1: %2").arg(displayName, refComp->targetFileName));
+    customRegTargetFileEdit->setPlaceholderText(QString("%1: %2").arg(displayName, getTargetFileName(*refComp)));
 
     // Update paste button tooltips
     pasteRegKeyButton->setToolTip(QString("Copy value from %1").arg(displayName));
@@ -1259,11 +1264,11 @@ void SEMPQTargetPage::onPasteRegKeyClicked()
     if (!refComp) return;
 
     // Find the game to get registry key
-    const QVector<SupportedGame>& games = getSupportedGames();
+    const QVector<SupportedGame>& games = getStaticGamesVector();
     for (const SupportedGame& game : games) {
         for (const GameComponent& comp : game.components) {
             if (&comp == refComp) {
-                customRegKeyEdit->setText(game.registryKey);
+                customRegKeyEdit->setText(getRegistryKey(game));
                 return;
             }
         }
@@ -1276,11 +1281,11 @@ void SEMPQTargetPage::onPasteRegValueClicked()
     if (!refComp) return;
 
     // Find the game to get registry value
-    const QVector<SupportedGame>& games = getSupportedGames();
+    const QVector<SupportedGame>& games = getStaticGamesVector();
     for (const SupportedGame& game : games) {
         for (const GameComponent& comp : game.components) {
             if (&comp == refComp) {
-                customRegValueEdit->setText(game.registryValue);
+                customRegValueEdit->setText(getRegistryValue(game));
                 return;
             }
         }
@@ -1292,7 +1297,7 @@ void SEMPQTargetPage::onPasteExeFileClicked()
     const GameComponent* refComp = getReferenceComponent();
     if (!refComp) return;
 
-    customRegExeEdit->setText(refComp->fileName);
+    customRegExeEdit->setText(getFileName(*refComp));
 }
 
 void SEMPQTargetPage::onPasteTargetFileClicked()
@@ -1300,7 +1305,7 @@ void SEMPQTargetPage::onPasteTargetFileClicked()
     const GameComponent* refComp = getReferenceComponent();
     if (!refComp) return;
 
-    customRegTargetFileEdit->setText(refComp->targetFileName);
+    customRegTargetFileEdit->setText(getTargetFileName(*refComp));
 }
 
 
@@ -1398,9 +1403,9 @@ void SEMPQWizard::createSEMPQ()
                            "  Target File: %3\n"
                            "  Shunt Count: %4\n"
                            "  Extended Redir: %5")
-                        .arg(component->componentName)
-                        .arg(component->fileName)
-                        .arg(component->targetFileName)
+                        .arg(getComponentName(*component))
+                        .arg(getFileName(*component))
+                        .arg(getTargetFileName(*component))
                         .arg(component->shuntCount)
                         .arg(component->extendedRedir ? "Yes" : "No");
     } else if (targetPage->isRegistryBased()) {

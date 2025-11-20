@@ -21,6 +21,7 @@ set(SOURCES
     src/pluginpage.cpp
     src/common/pluginloader.cpp
     src/common/gamedata.cpp
+    src/common/gamedetection.cpp
 )
 
 set(HEADERS
@@ -28,11 +29,13 @@ set(HEADERS
     src/patchwizard.h
     src/sempqwizard.h
     src/pluginpage.h
+    src/gamedata_qt.h
     src/common/pluginloader.h
     src/common/mpqdraftplugin.h
     src/common/common.h
     src/common/patcher.h
     src/common/gamedata.h
+    src/common/gamedetection.h
 )
 
 # Resource files
