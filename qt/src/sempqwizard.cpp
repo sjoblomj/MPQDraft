@@ -414,7 +414,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     QLabel *regKeyHelp = new QLabel(customRegContentWidget);
     regKeyHelp->setText(" ? ");
     regKeyHelp->setStyleSheet(
-        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
         "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
         "max-width: 16px; min-height: 16px; max-height: 16px; "
         "qproperty-alignment: AlignCenter; }");
@@ -453,7 +453,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     QLabel *regValueHelp = new QLabel(customRegContentWidget);
     regValueHelp->setText(" ? ");
     regValueHelp->setStyleSheet(
-        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
         "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
         "max-width: 16px; min-height: 16px; max-height: 16px; "
         "qproperty-alignment: AlignCenter; }");
@@ -495,7 +495,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     QLabel *exeFileHelp = new QLabel(customRegContentWidget);
     exeFileHelp->setText(" ? ");
     exeFileHelp->setStyleSheet(
-        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
         "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
         "max-width: 16px; min-height: 16px; max-height: 16px; "
         "qproperty-alignment: AlignCenter; }");
@@ -534,7 +534,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     QLabel *targetFileHelp = new QLabel(customRegContentWidget);
     targetFileHelp->setText(" ? ");
     targetFileHelp->setStyleSheet(
-        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
         "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
         "max-width: 16px; min-height: 16px; max-height: 16px; "
         "qproperty-alignment: AlignCenter; }");
@@ -575,7 +575,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     QLabel *shuntCountHelp = new QLabel(customRegContentWidget);
     shuntCountHelp->setText(" ? ");
     shuntCountHelp->setStyleSheet(
-        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
         "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
         "max-width: 16px; min-height: 16px; max-height: 16px; "
         "qproperty-alignment: AlignCenter; }");
@@ -619,7 +619,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     QLabel *isFullPathHelp = new QLabel(customRegContentWidget);
     isFullPathHelp->setText(" ? ");
     isFullPathHelp->setStyleSheet(
-        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
         "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
         "max-width: 16px; min-height: 16px; max-height: 16px; "
         "qproperty-alignment: AlignCenter; }");
@@ -658,7 +658,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     QLabel *noSpawningHelp = new QLabel(customRegContentWidget);
     noSpawningHelp->setText(" ? ");
     noSpawningHelp->setStyleSheet(
-        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
         "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
         "max-width: 16px; min-height: 16px; max-height: 16px; "
         "qproperty-alignment: AlignCenter; }");
@@ -773,7 +773,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     QLabel *customTargetShuntCountHelp = new QLabel(customTargetContentWidget);
     customTargetShuntCountHelp->setText(" ? ");
     customTargetShuntCountHelp->setStyleSheet(
-        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
         "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
         "max-width: 16px; min-height: 16px; max-height: 16px; "
         "qproperty-alignment: AlignCenter; }");
@@ -812,7 +812,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     QLabel *customTargetNoSpawningHelp = new QLabel(customTargetContentWidget);
     customTargetNoSpawningHelp->setText(" ? ");
     customTargetNoSpawningHelp->setStyleSheet(
-        "QLabel { background-color: #0066cc; color: white; border-radius: 10px; "
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
         "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
         "max-width: 16px; min-height: 16px; max-height: 16px; "
         "qproperty-alignment: AlignCenter; }");
@@ -872,7 +872,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     infoIcon->setText(" ? ");
     infoIcon->setStyleSheet(
         "QLabel { "
-        "background-color: #0066cc; "
+        "background-color: #0079ff; "
         "color: white; "
         "border-radius: 10px; "
         "font-weight: bold; "

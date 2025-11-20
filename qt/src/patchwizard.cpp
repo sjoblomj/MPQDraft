@@ -147,7 +147,7 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
     infoIcon->setText(" ? ");
     infoIcon->setStyleSheet(
         "QLabel { "
-        "background-color: #0066cc; "
+        "background-color: #0079ff; "
         "color: white; "
         "border-radius: 10px; "
         "font-weight: bold; "
