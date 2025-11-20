@@ -15,6 +15,8 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QIcon>
+#include <QScrollArea>
+#include <QFrame>
 
 // Stylesheet for invalid input fields
 static const char* INVALID_FIELD_STYLE = "QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }";
@@ -29,7 +31,7 @@ PatchIntroPage::PatchIntroPage(QWidget *parent)
     setSubTitle("Load custom MPQ archives with game data, or use plugins to add new features.");
 
     QVBoxLayout *layout = new QVBoxLayout(this);
-    layout->setSpacing(15);
+    layout->setContentsMargins(0, 0, 0, 0);
 
     QLabel *introLabel = new QLabel(
         "<p>This wizard will help you patch a game executable with custom MPQ archives "
@@ -55,14 +57,20 @@ PatchIntroPage::PatchIntroPage(QWidget *parent)
         "MPQDraft intercepts the game's file access and redirects it to your custom MPQ files, "
         "allowing you to run modifications without altering the original game files.</p>"
 
-        "<p>Click <b>Next</b> to begin selecting your target game and MPQ files.</p>",
-        this
+        "<p>Click <b>Next</b> to begin selecting your target game and MPQ files.</p>"
     );
     introLabel->setWordWrap(true);
     introLabel->setTextFormat(Qt::RichText);
+    introLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
 
-    layout->addWidget(introLabel);
-    layout->addStretch();
+    QScrollArea *scrollArea = new QScrollArea(this);
+    scrollArea->setWidget(introLabel);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+
+    layout->addWidget(scrollArea);
 }
 
 //=============================================================================
@@ -83,7 +91,7 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
     QHBoxLayout *targetLayout = new QHBoxLayout();
     targetPathEdit = new QLineEdit(this);
     targetPathEdit->setPlaceholderText("Path to game executable (e.g., StarCraft.exe)");
-    browseButton = new QPushButton("Browse...", this);
+    browseButton = new QPushButton("Bro&wse...", this);
     connect(browseButton, &QPushButton::clicked, this, &TargetSelectionPage::onBrowseClicked);
     connect(targetPathEdit, &QLineEdit::textChanged, this, &TargetSelectionPage::onTargetPathChanged);
     targetLayout->addWidget(targetPathEdit);
@@ -144,9 +152,15 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
     layout->addLayout(extendedRedirLayout);
 
     layout->addStretch();
-    
-    // Register field for validation
-    registerField("targetPath*", targetPathEdit);
+
+    // Connect text change to completeChanged signal for validation
+    connect(targetPathEdit, &QLineEdit::textChanged, this, &TargetSelectionPage::completeChanged);
+}
+
+bool TargetSelectionPage::isComplete() const
+{
+    // Page is complete if target path is non-empty
+    return !targetPathEdit->text().trimmed().isEmpty();
 }
 
 QString TargetSelectionPage::getTargetPath() const
@@ -203,6 +217,7 @@ void TargetSelectionPage::onBrowseClicked()
 
     if (!fileName.isEmpty()) {
         targetPathEdit->setText(fileName);
+        parametersEdit->setFocus();
     }
 }
 
@@ -229,17 +244,19 @@ MPQSelectionPage::MPQSelectionPage(QWidget *parent)
     // MPQ list
     mpqListWidget = new QListWidget(this);
     mpqListWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    mpqListWidget->setDragDropMode(QAbstractItemView::InternalMove);
+    mpqListWidget->setDefaultDropAction(Qt::MoveAction);
     connect(mpqListWidget, &QListWidget::itemChanged, this, &MPQSelectionPage::onItemChanged);
     connect(mpqListWidget, &QListWidget::itemSelectionChanged, this, &MPQSelectionPage::onSelectionChanged);
     contentLayout->addWidget(mpqListWidget);
 
     // Buttons
     QVBoxLayout *buttonLayout = new QVBoxLayout();
-    addButton = new QPushButton("Add MPQ...", this);
-    addFolderButton = new QPushButton("Add Folder...", this);
-    removeButton = new QPushButton("Remove", this);
-    moveUpButton = new QPushButton("Move Up", this);
-    moveDownButton = new QPushButton("Move Down", this);
+    addButton = new QPushButton("Add &MPQ...", this);
+    addFolderButton = new QPushButton("Add &Folder...", this);
+    removeButton = new QPushButton("&Remove", this);
+    moveUpButton = new QPushButton("Move &Up", this);
+    moveDownButton = new QPushButton("Move &Down", this);
 
     // Initially disable buttons that require selection
     removeButton->setEnabled(false);
@@ -276,6 +293,20 @@ QStringList MPQSelectionPage::getSelectedMPQs() const
     return mpqs;
 }
 
+bool MPQSelectionPage::isComplete() const
+{
+    // Count checked MPQs
+    int checkedCount = 0;
+    for (int i = 0; i < mpqListWidget->count(); ++i) {
+        if (mpqListWidget->item(i)->checkState() == Qt::Checked) {
+            checkedCount++;
+        }
+    }
+
+    // Page is complete if we don't have too many MPQs selected
+    return checkedCount <= MAX_PATCH_MPQS;
+}
+
 bool MPQSelectionPage::validatePage()
 {
     // Count checked MPQs
@@ -298,18 +329,6 @@ bool MPQSelectionPage::validatePage()
         );
 
         return reply == QMessageBox::Yes;
-    }
-
-    // Check if too many checked MPQs
-    if (checkedCount > MAX_PATCH_MPQS) {
-        QMessageBox::warning(
-            this,
-            "Too Many MPQs",
-            QString("You have selected too many MPQ files (%1/%2). "
-                   "Please uncheck some files.")
-                .arg(checkedCount).arg(MAX_PATCH_MPQS)
-        );
-        return false;
     }
 
     return true;
@@ -362,6 +381,7 @@ void MPQSelectionPage::validateMPQList()
 void MPQSelectionPage::onItemChanged()
 {
     validateMPQList();
+    emit completeChanged();
 }
 
 void MPQSelectionPage::addMPQFile(const QString &fileName, bool checked)
@@ -393,8 +413,17 @@ void MPQSelectionPage::onAddClicked()
         "MPQ Archives (*.mpq);;All Files (*.*)"
     );
 
+    // Clear selection before adding new items
+    mpqListWidget->clearSelection();
+
     for (const QString &fileName : fileNames) {
+        int oldCount = mpqListWidget->count();
         addMPQFile(fileName, true);  // Add as checked
+
+        // Select the newly added item (if it was actually added)
+        if (mpqListWidget->count() > oldCount) {
+            mpqListWidget->item(mpqListWidget->count() - 1)->setSelected(true);
+        }
     }
 
     validateMPQList();
@@ -417,9 +446,18 @@ void MPQSelectionPage::onAddFolderClicked()
     QDir dir(folderPath);
     QStringList mpqFiles = dir.entryList(QStringList() << "*.mpq" << "*.MPQ", QDir::Files);
 
+    // Clear selection before adding new items
+    mpqListWidget->clearSelection();
+
     for (const QString &fileName : mpqFiles) {
         QString fullPath = dir.absoluteFilePath(fileName);
+        int oldCount = mpqListWidget->count();
         addMPQFile(fullPath, false);  // Add as unchecked
+
+        // Select the newly added item (if it was actually added)
+        if (mpqListWidget->count() > oldCount) {
+            mpqListWidget->item(mpqListWidget->count() - 1)->setSelected(true);
+        }
     }
 
     validateMPQList();
@@ -476,6 +514,9 @@ PatchWizard::PatchWizard(QWidget *parent)
     setWizardStyle(QWizard::ModernStyle);
     setOption(QWizard::HaveHelpButton, false);
 
+    // Enable minimize and maximize buttons - use Window flag instead of Dialog
+    setWindowFlags(Qt::Window | Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint);
+
     // Set the wizard sidebar image with margin and frame
     QPixmap originalPixmap(":/images/wizard.png");
     int innerMargin = 10;  // Space between frame and image
@@ -526,7 +567,7 @@ PatchWizard::PatchWizard(QWidget *parent)
     addPage(pluginPage);
 
     // Set minimum size
-    setMinimumSize(600, 550);
+    setMinimumSize(600, 500);
 }
 
 void PatchWizard::accept()

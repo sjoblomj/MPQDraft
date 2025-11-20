@@ -50,6 +50,9 @@ public:
     QString getMPQPath() const;
     QString getIconPath() const;
 
+    // Override to validate page completion
+    bool isComplete() const override;
+
 private slots:
     void onBrowseMPQClicked();
     void onBrowseIconClicked();
@@ -58,6 +61,7 @@ private slots:
 
 private:
     void validateMPQPath();
+    void validateIconPath();
     void updateIconPreview();
 
     QLineEdit *sempqNameEdit;

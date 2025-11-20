@@ -46,6 +46,9 @@ public:
     QString getParameters() const;
     bool useExtendedRedir() const;
 
+    // Override to validate page completion
+    bool isComplete() const override;
+
 private slots:
     void onBrowseClicked();
     void onTargetPathChanged();
@@ -70,6 +73,7 @@ public:
     explicit MPQSelectionPage(QWidget *parent = nullptr);
 
     QStringList getSelectedMPQs() const;
+    bool isComplete() const override;
     bool validatePage() override;
 
 private slots:

@@ -28,6 +28,7 @@ public:
     ~PluginPage();
 
     QStringList getSelectedPlugins() const;
+    bool isComplete() const override;
 
 private slots:
     void onBrowseClicked();

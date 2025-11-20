@@ -40,9 +40,9 @@ PluginPage::PluginPage(QWidget *parent)
 
     // Buttons
     QVBoxLayout *buttonLayout = new QVBoxLayout();
-    browseButton = new QPushButton("Add Plugin...", this);
-    removeButton = new QPushButton("Remove", this);
-    configureButton = new QPushButton("Configure", this);
+    browseButton = new QPushButton("Add &Plugin...", this);
+    removeButton = new QPushButton("&Remove", this);
+    configureButton = new QPushButton("&Configure", this);
     removeButton->setEnabled(false);
     configureButton->setEnabled(false);
 
@@ -83,6 +83,36 @@ QStringList PluginPage::getSelectedPlugins() const
         }
     }
     return selected;
+}
+
+bool PluginPage::isComplete() const
+{
+    // Count selected plugins and modules
+    int selectedCount = 0;
+    int totalModules = 0;
+
+    for (int i = 0; i < pluginListWidget->count(); ++i) {
+        QListWidgetItem *item = pluginListWidget->item(i);
+        if (item->checkState() == Qt::Checked) {
+            selectedCount++;
+
+            // Each plugin counts as 1 module (the plugin DLL itself)
+            totalModules++;
+
+            // Get the plugin info to count auxiliary modules
+            QString pluginPath = item->data(Qt::UserRole).toString();
+            PluginInfo *info = loadedPlugins.value(pluginPath, nullptr);
+            if (info && info->pPlugin) {
+                DWORD numModules = 0;
+                if (info->pPlugin->GetModules(nullptr, &numModules)) {
+                    totalModules += numModules;
+                }
+            }
+        }
+    }
+
+    // Page is complete if we don't exceed the limits
+    return selectedCount <= MAX_MPQDRAFT_PLUGINS && totalModules <= MAX_AUXILIARY_MODULES;
 }
 
 void PluginPage::validatePluginSelection()
@@ -148,6 +178,7 @@ void PluginPage::onItemChanged(QListWidgetItem *item)
 {
     Q_UNUSED(item);
     validatePluginSelection();
+    emit completeChanged();
 }
 
 void PluginPage::loadPluginsFromDirectory()
@@ -255,12 +286,19 @@ bool PluginPage::addPlugin(const QString &path, bool showMessages)
 #endif
     QListWidgetItem *item = new QListWidgetItem(displayName, pluginListWidget);
     item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-    item->setCheckState(Qt::Unchecked);
+    // Check the plugin by default when added by user (showMessages=true)
+    // Leave unchecked when auto-loaded from directory (showMessages=false)
+    item->setCheckState(showMessages ? Qt::Checked : Qt::Unchecked);
     item->setData(Qt::UserRole, path);  // Store full path
 
     // Add DLL icon
     QIcon dllIcon(":/icons/DLL.ico");
     item->setIcon(dllIcon);
+
+    // Select the item if it was added by the user (showMessages=true)
+    if (showMessages) {
+        pluginListWidget->setCurrentItem(item);
+    }
 
     return true;
 }
@@ -275,7 +313,7 @@ void PluginPage::onBrowseClicked()
     );
 
     for (const QString &fileName : fileNames) {
-        addPlugin(fileName);
+        addPlugin(fileName, true);  // Show messages and auto-check when user adds plugin
     }
 }
 

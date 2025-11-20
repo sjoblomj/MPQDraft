@@ -30,7 +30,7 @@ SEMPQIntroPage::SEMPQIntroPage(QWidget *parent)
     setSubTitle("Create Self-Executing MPQ (SEMPQ) files.");
 
     QVBoxLayout *layout = new QVBoxLayout(this);
-    layout->setSpacing(15);
+    layout->setContentsMargins(0, 0, 0, 0);
 
     QLabel *introLabel = new QLabel(
         "<p>This wizard will help you create a Self-Executing MPQ (SEMPQ) file.</p>"
@@ -53,14 +53,20 @@ SEMPQIntroPage::SEMPQIntroPage(QWidget *parent)
         "<li>Self-contained - includes all necessary MPQ data and plugins</li>"
         "</ul>"
 
-        "<p>Click <b>Next</b> to configure your SEMPQ file.</p>",
-        this
+        "<p>Click <b>Next</b> to configure your SEMPQ file.</p>"
     );
     introLabel->setWordWrap(true);
     introLabel->setTextFormat(Qt::RichText);
+    introLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
 
-    layout->addWidget(introLabel);
-    layout->addStretch();
+    QScrollArea *scrollArea = new QScrollArea(this);
+    scrollArea->setWidget(introLabel);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+
+    layout->addWidget(scrollArea);
 }
 
 //=============================================================================
@@ -102,7 +108,7 @@ SEMPQSettingsPage::SEMPQSettingsPage(QWidget *parent)
     QHBoxLayout *mpqInputLayout = new QHBoxLayout();
     mpqPathEdit = new QLineEdit(this);
     mpqPathEdit->setPlaceholderText("Select the MPQ file to package");
-    browseMPQButton = new QPushButton("Browse...", this);
+    browseMPQButton = new QPushButton("Browse for &MPQ...", this);
     connect(browseMPQButton, &QPushButton::clicked, this, &SEMPQSettingsPage::onBrowseMPQClicked);
     connect(mpqPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::onMPQPathChanged);
     mpqInputLayout->addWidget(mpqPathEdit);
@@ -131,7 +137,7 @@ SEMPQSettingsPage::SEMPQSettingsPage(QWidget *parent)
     QHBoxLayout *iconInputLayout = new QHBoxLayout();
     iconPathEdit = new QLineEdit(this);
     iconPathEdit->setPlaceholderText("Select an icon file (.ico)");
-    browseIconButton = new QPushButton("Browse...", this);
+    browseIconButton = new QPushButton("Browse for &Icon...", this);
     connect(browseIconButton, &QPushButton::clicked, this, &SEMPQSettingsPage::onBrowseIconClicked);
     connect(iconPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::onIconPathChanged);
     iconInputLayout->addWidget(iconPathEdit);
@@ -143,11 +149,18 @@ SEMPQSettingsPage::SEMPQSettingsPage(QWidget *parent)
 
     layout->addStretch();
 
-    // Register required fields
-    registerField("sempqName*", sempqNameEdit);
-    registerField("mpqPath*", mpqPathEdit);
+    // Connect text changes to completeChanged signal for validation
+    connect(sempqNameEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::completeChanged);
+    connect(mpqPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::completeChanged);
 
     SEMPQSettingsPage::onIconPathChanged();
+}
+
+bool SEMPQSettingsPage::isComplete() const
+{
+    // Page is complete if both required fields are non-empty
+    return !sempqNameEdit->text().trimmed().isEmpty() &&
+           !mpqPathEdit->text().trimmed().isEmpty();
 }
 
 QString SEMPQSettingsPage::getSEMPQName() const
@@ -204,6 +217,7 @@ void SEMPQSettingsPage::onBrowseMPQClicked()
 
     if (!fileName.isEmpty()) {
         mpqPathEdit->setText(fileName);
+        iconPathEdit->setFocus();
     }
 }
 
@@ -218,12 +232,45 @@ void SEMPQSettingsPage::onBrowseIconClicked()
 
     if (!fileName.isEmpty()) {
         iconPathEdit->setText(fileName);
+        iconPathEdit->selectAll();
+        iconPathEdit->setFocus();
     }
 }
 
 void SEMPQSettingsPage::onIconPathChanged()
 {
     updateIconPreview();
+    validateIconPath();
+}
+
+void SEMPQSettingsPage::validateIconPath()
+{
+    QString iconPath = iconPathEdit->text().trimmed();
+
+    if (iconPath.isEmpty()) {
+        iconPathEdit->setStyleSheet("");
+        iconPathEdit->setToolTip("");
+        return;
+    }
+
+    QFileInfo fileInfo(iconPath);
+    if (!fileInfo.exists()) {
+        iconPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
+        iconPathEdit->setToolTip("File does not exist");
+    } else if (!fileInfo.isFile()) {
+        iconPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
+        iconPathEdit->setToolTip("Path is not a file");
+    } else {
+        // Check if the icon can be loaded
+        QPixmap testPixmap(iconPath);
+        if (testPixmap.isNull()) {
+            iconPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
+            iconPathEdit->setToolTip("File is not a valid icon");
+        } else {
+            iconPathEdit->setStyleSheet("");
+            iconPathEdit->setToolTip("");
+        }
+    }
 }
 
 void SEMPQSettingsPage::updateIconPreview()
@@ -682,7 +729,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     customPathEdit->setPlaceholderText("Path to the executable (can be relative)");
     connect(customPathEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::onCustomPathChanged);
 
-    browseButton = new QPushButton("Browse...", customTargetContentWidget);
+    browseButton = new QPushButton("Bro&wse...", customTargetContentWidget);
     connect(browseButton, &QPushButton::clicked, this, &SEMPQTargetPage::onBrowseClicked);
 
     targetLayout->addWidget(customPathEdit);
@@ -972,6 +1019,7 @@ void SEMPQTargetPage::onBrowseClicked()
 
     if (!fileName.isEmpty()) {
         customPathEdit->setText(fileName);
+        customTargetShuntCountSpinBox->setFocus();
     }
 }
 
@@ -1263,6 +1311,9 @@ SEMPQWizard::SEMPQWizard(QWidget *parent)
     setWizardStyle(QWizard::ModernStyle);
     setOption(QWizard::HaveHelpButton, false);
 
+    // Enable minimize and maximize buttons - use Window flag instead of Dialog
+    setWindowFlags(Qt::Window | Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint);
+
     // Set the wizard sidebar image with margin and frame
     QPixmap originalPixmap(":/images/wizard.png");
     int innerMargin = 10;  // Space between frame and image
@@ -1313,7 +1364,7 @@ SEMPQWizard::SEMPQWizard(QWidget *parent)
     addPage(pluginPage);
 
     // Set minimum size
-    setMinimumSize(600, 550);
+    setMinimumSize(900, 600);
 }
 
 void SEMPQWizard::accept()
