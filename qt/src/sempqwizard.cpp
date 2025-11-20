@@ -14,6 +14,8 @@
 #include <QPainter>
 #include <QFileInfo>
 #include <QIcon>
+#include <QScrollArea>
+#include <QFrame>
 
 // Stylesheet for invalid input fields
 static const char* INVALID_FIELD_STYLE = "QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }";
@@ -258,6 +260,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     // Create tab widget (don't connect signal yet - will do after all widgets are created)
     tabWidget = new QTabWidget(this);
+    tabWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     //=========================================================================
     // Tab 1: Supported Games (Registry-Based)
@@ -309,7 +312,129 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     gamesLayout->addWidget(gameList);
 
     //=========================================================================
-    // Tab 2: Custom Target (Hardcoded Path)
+    // Tab 2: Custom Registry
+    //=========================================================================
+    QWidget *customRegistryTab = new QWidget();
+    QVBoxLayout *customRegTabLayout = new QVBoxLayout(customRegistryTab);
+
+    // Create a scroll area for the content
+    QScrollArea *customRegScrollArea = new QScrollArea(customRegistryTab);
+    customRegScrollArea->setWidgetResizable(true);
+    customRegScrollArea->setFrameShape(QFrame::NoFrame);
+
+    // Set background to match tab background (white)
+    QPalette scrollPalette = customRegScrollArea->palette();
+    scrollPalette.setColor(QPalette::Window, Qt::white);
+    customRegScrollArea->setPalette(scrollPalette);
+    customRegScrollArea->setAutoFillBackground(true);
+
+    // Create the content widget that will go inside the scroll area
+    QWidget *customRegContentWidget = new QWidget();
+    QVBoxLayout *customRegLayout = new QVBoxLayout(customRegContentWidget);
+
+    QLabel *customRegInfoLabel = new QLabel(
+        "Specify a custom registry key for games not in the supported list. "
+        "This is more portable than a hardcoded path, as it will work on any "
+        "computer where the game is properly installed.",
+        customRegContentWidget);
+    customRegInfoLabel->setWordWrap(true);
+    customRegLayout->addWidget(customRegInfoLabel);
+
+    customRegLayout->addSpacing(10);
+
+    // Registry Key
+    QLabel *regKeyLabel = new QLabel("Registry Key:", customRegContentWidget);
+    customRegLayout->addWidget(regKeyLabel);
+
+    customRegKeyEdit = new QLineEdit(customRegContentWidget);
+    customRegKeyEdit->setPlaceholderText("e.g., SOFTWARE\\Blizzard Entertainment\\Starcraft II");
+    connect(customRegKeyEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::onCustomRegistryChanged);
+    customRegLayout->addWidget(customRegKeyEdit);
+
+    customRegLayout->addSpacing(5);
+
+    // Registry Value
+    QLabel *regValueLabel = new QLabel("Registry Value Name:", customRegContentWidget);
+    customRegLayout->addWidget(regValueLabel);
+
+    customRegValueEdit = new QLineEdit(customRegContentWidget);
+    customRegValueEdit->setPlaceholderText("e.g., InstallPath");
+    connect(customRegValueEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::onCustomRegistryChanged);
+    customRegLayout->addWidget(customRegValueEdit);
+
+    customRegLayout->addSpacing(5);
+
+    // Executable Filename
+    QLabel *exeFileLabel = new QLabel("Executable Filename:", customRegContentWidget);
+    customRegLayout->addWidget(exeFileLabel);
+
+    customRegExeEdit = new QLineEdit(customRegContentWidget);
+    customRegExeEdit->setPlaceholderText("e.g., StarCraft II.exe");
+    connect(customRegExeEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::onCustomRegistryChanged);
+    customRegLayout->addWidget(customRegExeEdit);
+
+    customRegLayout->addSpacing(5);
+
+    // Target File Name (optional)
+    QLabel *targetFileLabel = new QLabel("Target File Name (optional):", customRegContentWidget);
+    customRegLayout->addWidget(targetFileLabel);
+
+    customRegTargetFileEdit = new QLineEdit(customRegContentWidget);
+    customRegTargetFileEdit->setPlaceholderText("Leave empty if same as executable (most common)");
+    customRegTargetFileEdit->setToolTip(
+        "The file to patch. Usually the same as the executable.\n"
+        "Only specify if different (e.g., Diablo II launches 'Diablo II.exe' but patches 'Game.exe').");
+    customRegLayout->addWidget(customRegTargetFileEdit);
+
+    customRegLayout->addSpacing(5);
+
+    // Shunt Count
+    QLabel *shuntCountLabel = new QLabel("Shunt Count:", customRegContentWidget);
+    customRegLayout->addWidget(shuntCountLabel);
+
+    customRegShuntCountSpinBox = new QSpinBox(customRegContentWidget);
+    customRegShuntCountSpinBox->setMinimum(0);
+    customRegShuntCountSpinBox->setMaximum(INT_MAX);  // Unlimited (max int value)
+    customRegShuntCountSpinBox->setValue(0);
+    customRegShuntCountSpinBox->setToolTip(
+        "Number of times the game restarts itself before MPQDraft activates.\n"
+        "0 = Activate immediately (most games)\n"
+        "1 = Wait for one restart (games with copy protection like Diablo)");
+    customRegLayout->addWidget(customRegShuntCountSpinBox);
+
+    customRegLayout->addSpacing(10);
+
+    // Checkbox for "Value is full path"
+    customRegIsFullPathCheckbox = new QCheckBox(
+        "Registry value contains full path to executable (not just directory)",
+        customRegContentWidget);
+    customRegIsFullPathCheckbox->setToolTip(
+        "Check this if the registry value is the full path to the .exe file.\n"
+        "Leave unchecked if the registry value is just the installation directory.");
+    customRegLayout->addWidget(customRegIsFullPathCheckbox);
+
+    customRegLayout->addSpacing(10);
+
+    // Advanced flags section
+    QLabel *flagsLabel = new QLabel("<b>Advanced Flags:</b>", customRegContentWidget);
+    customRegLayout->addWidget(flagsLabel);
+
+    customRegNoSpawningCheckbox = new QCheckBox(
+        "Do not inject into child processes (MPQD_NO_SPAWNING)",
+        customRegContentWidget);
+    customRegNoSpawningCheckbox->setToolTip(
+        "Prevents MPQDraft from injecting into child processes created by the game.\n"
+        "Use this if the game launches helper processes that shouldn't be patched.");
+    customRegLayout->addWidget(customRegNoSpawningCheckbox);
+
+    customRegLayout->addStretch();
+
+    // Set the content widget in the scroll area and add scroll area to tab
+    customRegScrollArea->setWidget(customRegContentWidget);
+    customRegTabLayout->addWidget(customRegScrollArea);
+
+    //=========================================================================
+    // Tab 3: Custom Target (Hardcoded Path)
     //=========================================================================
     QWidget *customTargetTab = new QWidget();
     QVBoxLayout *customLayout = new QVBoxLayout(customTargetTab);
@@ -364,7 +489,8 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     // Add tabs to tab widget
     //=========================================================================
     tabWidget->addTab(supportedGamesTab, "Supported &Games");
-    tabWidget->addTab(customTargetTab, "&Custom Target");
+    tabWidget->addTab(customRegistryTab, "Custom &Registry");
+    tabWidget->addTab(customTargetTab, "Custom &Target");
 
     mainLayout->addWidget(tabWidget);
 
@@ -424,8 +550,6 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     extendedRedirLayout->addStretch();
     mainLayout->addLayout(extendedRedirLayout);
 
-    mainLayout->addStretch();
-
     // Now that all widgets are created, connect the signals
     connect(tabWidget, &QTabWidget::currentChanged, this, &SEMPQTargetPage::onTabChanged);
     connect(extendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
@@ -433,7 +557,8 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
 bool SEMPQTargetPage::isRegistryBased() const
 {
-    return tabWidget->currentIndex() == 0;  // First tab is Supported Games
+    int index = tabWidget->currentIndex();
+    return (index == 0 || index == 1);  // Tab 0: Supported Games, Tab 1: Custom Registry
 }
 
 const GameComponent* SEMPQTargetPage::getSelectedComponent() const
@@ -457,16 +582,62 @@ QString SEMPQTargetPage::getParameters() const
     return parametersEdit->text();
 }
 
+QString SEMPQTargetPage::getCustomRegistryKey() const
+{
+    return customRegKeyEdit->text().trimmed();
+}
+
+QString SEMPQTargetPage::getCustomRegistryValue() const
+{
+    return customRegValueEdit->text().trimmed();
+}
+
+QString SEMPQTargetPage::getCustomRegistryExe() const
+{
+    return customRegExeEdit->text().trimmed();
+}
+
+QString SEMPQTargetPage::getCustomRegistryTargetFile() const
+{
+    return customRegTargetFileEdit->text().trimmed();
+}
+
+int SEMPQTargetPage::getCustomRegistryShuntCount() const
+{
+    return customRegShuntCountSpinBox->value();
+}
+
+bool SEMPQTargetPage::getCustomRegistryIsFullPath() const
+{
+    return customRegIsFullPathCheckbox->isChecked();
+}
+
+uint32_t SEMPQTargetPage::getCustomRegistryFlags() const
+{
+    uint32_t flags = 0;
+
+    // Extended redirection is handled by the common checkbox
+    if (extendedRedirCheckbox->isChecked()) {
+        flags |= MPQD_EXTENDED_REDIR;
+    }
+
+    // Custom registry specific flag
+    if (customRegNoSpawningCheckbox->isChecked()) {
+        flags |= MPQD_NO_SPAWNING;
+    }
+
+    return flags;
+}
+
 bool SEMPQTargetPage::getExtendedRedir() const
 {
-    if (isRegistryBased()) {
-        // For registry-based, use the component's default
-        if (selectedComponent) {
-            return selectedComponent->extendedRedir;
-        }
-        return true;  // Default to true
+    int index = tabWidget->currentIndex();
+
+    if (index == 0 && selectedComponent) {
+        // Tab 0: Supported Games - use the component's default
+        return selectedComponent->extendedRedir;
     } else {
-        // For custom target, use the checkbox
+        // Tab 1: Custom Registry or Tab 2: Custom Target - use the checkbox
         return extendedRedirCheckbox->isChecked();
     }
 }
@@ -508,6 +679,11 @@ void SEMPQTargetPage::onBrowseClicked()
 void SEMPQTargetPage::onCustomPathChanged()
 {
     validateCustomPath();
+    emit completeChanged();
+}
+
+void SEMPQTargetPage::onCustomRegistryChanged()
+{
     emit completeChanged();
 }
 
@@ -606,11 +782,18 @@ void SEMPQTargetPage::onExtendedRedirChanged(int state)
 
 bool SEMPQTargetPage::isComplete() const
 {
-    if (isRegistryBased()) {
-        // Mode 1: Must have a game selected
+    int index = tabWidget->currentIndex();
+
+    if (index == 0) {
+        // Tab 0: Supported Games - Must have a game selected
         return selectedComponent != nullptr;
+    } else if (index == 1) {
+        // Tab 1: Custom Registry - Must have all fields filled
+        return !customRegKeyEdit->text().trimmed().isEmpty() &&
+               !customRegValueEdit->text().trimmed().isEmpty() &&
+               !customRegExeEdit->text().trimmed().isEmpty();
     } else {
-        // Mode 2: Must have a custom path entered
+        // Tab 2: Custom Target - Must have a custom path entered
         return !customPathEdit->text().isEmpty();
     }
 }
@@ -696,24 +879,53 @@ void SEMPQWizard::createSEMPQ()
 
     // Get target information based on mode
     QString targetInfo;
-    if (targetPage->isRegistryBased()) {
-        // Mode 1: Registry-based
-        const GameComponent* component = targetPage->getSelectedComponent();
-        if (component) {
-            targetInfo = QString("Registry-Based Target:\n"
-                               "  Component: %1\n"
-                               "  File: %2\n"
-                               "  Target File: %3\n"
-                               "  Shunt Count: %4\n"
-                               "  Extended Redir: %5")
-                            .arg(component->componentName)
-                            .arg(component->fileName)
-                            .arg(component->targetFileName)
-                            .arg(component->shuntCount)
-                            .arg(component->extendedRedir ? "Yes" : "No");
-        }
+    const GameComponent* component = targetPage->getSelectedComponent();
+
+    if (component) {
+        // Mode 1: Supported Games (Registry-based)
+        targetInfo = QString("Registry-Based Target (Supported Game):\n"
+                           "  Component: %1\n"
+                           "  File: %2\n"
+                           "  Target File: %3\n"
+                           "  Shunt Count: %4\n"
+                           "  Extended Redir: %5")
+                        .arg(component->componentName)
+                        .arg(component->fileName)
+                        .arg(component->targetFileName)
+                        .arg(component->shuntCount)
+                        .arg(component->extendedRedir ? "Yes" : "No");
+    } else if (targetPage->isRegistryBased()) {
+        // Mode 2: Custom Registry
+        QString regKey = targetPage->getCustomRegistryKey();
+        QString regValue = targetPage->getCustomRegistryValue();
+        QString exeFile = targetPage->getCustomRegistryExe();
+        QString targetFile = targetPage->getCustomRegistryTargetFile();
+        int shuntCount = targetPage->getCustomRegistryShuntCount();
+        bool isFullPath = targetPage->getCustomRegistryIsFullPath();
+        uint32_t flags = targetPage->getCustomRegistryFlags();
+
+        QStringList flagsList;
+        if (flags & MPQD_EXTENDED_REDIR) flagsList << "Extended Redir";
+        if (flags & MPQD_NO_SPAWNING) flagsList << "No Spawning";
+        QString flagsStr = flagsList.isEmpty() ? "(none)" : flagsList.join(", ");
+
+        targetInfo = QString("Registry-Based Target (Custom):\n"
+                           "  Registry Key: %1\n"
+                           "  Registry Value: %2\n"
+                           "  Executable: %3\n"
+                           "  Target File: %4\n"
+                           "  Shunt Count: %5\n"
+                           "  Value is Full Path: %6\n"
+                           "  Flags: %7")
+                        .arg(regKey)
+                        .arg(regValue)
+                        .arg(exeFile)
+                        .arg(targetFile.isEmpty() ? "(same as executable)" : targetFile)
+                        .arg(shuntCount)
+                        .arg(isFullPath ? "Yes" : "No")
+                        .arg(flagsStr);
     } else {
-        // Mode 2: Custom path
+        // Mode 3: Custom Target (Hardcoded Path)
         QString customPath = targetPage->getCustomTargetPath();
         targetInfo = QString("Custom Target Path:\n  %1\n  Extended Redir: %2")
                         .arg(customPath)

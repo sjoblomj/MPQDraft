@@ -18,6 +18,8 @@
 #include <QLabel>
 #include <QTabWidget>
 #include <QListWidget>
+#include <QSpinBox>
+#include <cstdint>
 
 // Forward declarations
 class PluginPage;
@@ -80,13 +82,22 @@ public:
     // Returns true if using registry-based target (Mode 1)
     bool isRegistryBased() const;
 
-    // Mode 1: Registry-based (returns nullptr if Mode 2)
+    // Mode 1: Registry-based - Supported Games (returns nullptr if not Mode 1)
     const GameComponent* getSelectedComponent() const;
 
-    // Mode 2: Custom path (returns empty if Mode 1)
+    // Mode 2: Registry-based - Custom Registry (returns empty if not Mode 2)
+    QString getCustomRegistryKey() const;
+    QString getCustomRegistryValue() const;
+    QString getCustomRegistryExe() const;
+    QString getCustomRegistryTargetFile() const;
+    int getCustomRegistryShuntCount() const;
+    bool getCustomRegistryIsFullPath() const;
+    uint32_t getCustomRegistryFlags() const;
+
+    // Mode 3: Custom path (returns empty if not Mode 3)
     QString getCustomTargetPath() const;
 
-    // Common to both modes
+    // Common to all modes
     QString getParameters() const;
     bool getExtendedRedir() const;
 
@@ -97,6 +108,7 @@ private slots:
     void onGameSelectionChanged(QListWidgetItem *current, QListWidgetItem *previous);
     void onBrowseClicked();
     void onCustomPathChanged();
+    void onCustomRegistryChanged();
     void onTabChanged(int index);
     void onExtendedRedirChanged(int state);
 
@@ -110,7 +122,16 @@ private:
     QListWidget *gameList;
     const GameComponent *selectedComponent;
 
-    // Custom Target tab (Mode 2)
+    // Custom Registry tab (Mode 2)
+    QLineEdit *customRegKeyEdit;
+    QLineEdit *customRegValueEdit;
+    QLineEdit *customRegExeEdit;
+    QLineEdit *customRegTargetFileEdit;
+    QSpinBox *customRegShuntCountSpinBox;
+    QCheckBox *customRegIsFullPathCheckbox;
+    QCheckBox *customRegNoSpawningCheckbox;
+
+    // Custom Target tab (Mode 3)
     QLineEdit *customPathEdit;
     QPushButton *browseButton;
     QLabel *warningLabel;
