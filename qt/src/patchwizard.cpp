@@ -86,66 +86,110 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
     setSubTitle("Choose the game executable to patch and any command-line parameters.");
     setPixmap(QWizard::LogoPixmap, QPixmap(":/icons/blizzard/bnet.png").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
-    QVBoxLayout *layout = new QVBoxLayout(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
-    // Detected games section
-    QLabel *detectedLabel = new QLabel("<b>Detected Games:</b>", this);
-    layout->addWidget(detectedLabel);
+    // Create tab widget
+    tabWidget = new QTabWidget(this);
+    mainLayout->addWidget(tabWidget);
 
-    gameList = new QListWidget(this);
+    //=========================================================================
+    // Tab 1: Detected Games
+    //=========================================================================
+    QWidget *detectedGamesTab = new QWidget(tabWidget);
+    QVBoxLayout *detectedLayout = new QVBoxLayout(detectedGamesTab);
+
+    QLabel *detectedLabel = new QLabel(
+        "The following games have been detected on your computer, based on the "
+        "Windows Registry. Select a game from the list below, and MPQDraft will "
+        "automatically use the correct settings.",
+        detectedGamesTab);
+    detectedLabel->setWordWrap(true);
+    detectedLayout->addWidget(detectedLabel);
+
+    detectedLayout->addSpacing(10);
+
+    gameList = new QListWidget(detectedGamesTab);
     gameList->setIconSize(QSize(32, 32));
-    gameList->setMaximumHeight(120);
     connect(gameList, &QListWidget::currentItemChanged, this, &TargetSelectionPage::onGameSelectionChanged);
-    layout->addWidget(gameList);
+    detectedLayout->addWidget(gameList);
 
     // Populate the list with detected games
     populateInstalledGames();
 
-    layout->addSpacing(10);
+    tabWidget->addTab(detectedGamesTab, "Detected &Games");
 
-    // "Or" separator
-    orLabel = new QLabel("<center>— or —</center>", this);
-    orLabel->setStyleSheet("QLabel { color: #808080; }");
-    layout->addWidget(orLabel);
+    //=========================================================================
+    // Tab 2: Custom Executable
+    //=========================================================================
+    QWidget *customExeTab = new QWidget(tabWidget);
+    QVBoxLayout *customLayout = new QVBoxLayout(customExeTab);
 
-    layout->addSpacing(10);
+    QLabel *customLabel = new QLabel(
+        "Browse for an executable and configure patching options manually.",
+        customExeTab);
+    customLabel->setWordWrap(true);
+    customLayout->addWidget(customLabel);
 
-    // Target path (manual selection)
-    QLabel *targetLabel = new QLabel("<b>Browse for Executable:</b>", this);
-    layout->addWidget(targetLabel);
+    customLayout->addSpacing(10);
+
+    // Target path
+    QLabel *targetLabel = new QLabel("<b>Executable Path:</b>", customExeTab);
+    customLayout->addWidget(targetLabel);
 
     QHBoxLayout *targetLayout = new QHBoxLayout();
-    targetPathEdit = new QLineEdit(this);
-    targetPathEdit->setPlaceholderText("Path to game executable (e.g., StarCraft.exe)");
-    browseButton = new QPushButton("Bro&wse...", this);
-    connect(browseButton, &QPushButton::clicked, this, &TargetSelectionPage::onBrowseClicked);
-    connect(targetPathEdit, &QLineEdit::textChanged, this, &TargetSelectionPage::onTargetPathChanged);
-    targetLayout->addWidget(targetPathEdit);
-    targetLayout->addWidget(browseButton);
-    layout->addLayout(targetLayout);
+    customTargetPathEdit = new QLineEdit(customExeTab);
+    customTargetPathEdit->setPlaceholderText("Path to game executable (e.g., StarCraft.exe)");
+    customBrowseButton = new QPushButton("Bro&wse...", customExeTab);
+    connect(customBrowseButton, &QPushButton::clicked, this, &TargetSelectionPage::onBrowseClicked);
+    connect(customTargetPathEdit, &QLineEdit::textChanged, this, &TargetSelectionPage::onTargetPathChanged);
+    targetLayout->addWidget(customTargetPathEdit);
+    targetLayout->addWidget(customBrowseButton);
+    customLayout->addLayout(targetLayout);
 
-    layout->addSpacing(20);
-    
+    customLayout->addSpacing(15);
+
+    // Advanced Settings - collapsible section
+    QPushButton *advancedToggle = new QPushButton("Advanced &Settings", customExeTab);
+    advancedToggle->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
+    advancedToggle->setFlat(true);
+    advancedToggle->setStyleSheet("QPushButton { text-align: left; font-weight: bold; }");
+    advancedToggle->setCursor(Qt::PointingHandCursor);
+    customLayout->addWidget(advancedToggle);
+
+    advancedWidget = new QWidget(customExeTab);
+    advancedWidget->setVisible(false);  // Hidden by default
+    QVBoxLayout *advancedLayout = new QVBoxLayout(advancedWidget);
+    advancedLayout->setContentsMargins(20, 0, 0, 0);  // Indent the content
+
+    // Connect toggle button - capture pointer to widget
+    QWidget *advancedWidgetPtr = advancedWidget;
+    connect(advancedToggle, &QPushButton::clicked, [advancedToggle, advancedWidgetPtr, customExeTab]() {
+        bool isVisible = advancedWidgetPtr->isVisible();
+        advancedWidgetPtr->setVisible(!isVisible);
+        advancedToggle->setIcon(customExeTab->style()->standardIcon(
+            isVisible ? QStyle::SP_ArrowRight : QStyle::SP_ArrowDown));
+    });
+
     // Parameters
-    QLabel *paramsLabel = new QLabel("Command-line Parameters (optional):", this);
-    layout->addWidget(paramsLabel);
-    parametersEdit = new QLineEdit(this);
-    parametersEdit->setPlaceholderText("e.g., -window -opengl");
-    layout->addWidget(parametersEdit);
-    
-    layout->addSpacing(20);
+    QLabel *paramsLabel = new QLabel("<b>Command-line Parameters (optional):</b>", advancedWidget);
+    advancedLayout->addWidget(paramsLabel);
+    customParametersEdit = new QLineEdit(advancedWidget);
+    customParametersEdit->setPlaceholderText("e.g., -window -opengl");
+    advancedLayout->addWidget(customParametersEdit);
+
+    advancedLayout->addSpacing(10);
 
     // Extended redirect option with info icon
     QHBoxLayout *extendedRedirLayout = new QHBoxLayout();
 
-    extendedRedirCheck = new QCheckBox("Use extended file redirection", this);
-    extendedRedirCheck->setChecked(true);  // Default to checked (most games need it)
-    extendedRedirLayout->addWidget(extendedRedirCheck);
+    customExtendedRedirCheck = new QCheckBox("Use extended file redirection", advancedWidget);
+    customExtendedRedirCheck->setChecked(true);  // Default to checked (most games need it)
+    extendedRedirLayout->addWidget(customExtendedRedirCheck);
 
     // Info icon with detailed explanation
-    QLabel *infoIcon = new QLabel(this);
-    infoIcon->setText(" ? ");
-    infoIcon->setStyleSheet(
+    QLabel *extendedRedirHelp = new QLabel(advancedWidget);
+    extendedRedirHelp->setText(" ? ");
+    extendedRedirHelp->setStyleSheet(
         "QLabel { "
         "background-color: #0079ff; "
         "color: white; "
@@ -159,7 +203,7 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
         "max-height: 16px; "
         "qproperty-alignment: AlignCenter; "
         "}");
-    infoIcon->setToolTip(
+    extendedRedirHelp->setToolTip(
         "<b>Extended File Redirection</b><br><br>"
         "Blizzard games use Storm.dll to access MPQ archives. Some Storm functions "
         "(like SFileOpenFileEx) can bypass the normal MPQ priority chain by accepting "
@@ -171,70 +215,211 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
         "require this for mods to work correctly.<br><br>"
         "<b>When to disable:</b> Only disable if you're certain the target program doesn't "
         "use these Storm functions, or if you experience compatibility issues.");
-    infoIcon->setCursor(Qt::WhatsThisCursor);
-    extendedRedirLayout->addWidget(infoIcon);
+    extendedRedirHelp->setCursor(Qt::WhatsThisCursor);
+    extendedRedirLayout->addWidget(extendedRedirHelp);
 
     extendedRedirLayout->addStretch();
-    layout->addLayout(extendedRedirLayout);
+    advancedLayout->addLayout(extendedRedirLayout);
 
-    layout->addStretch();
+    advancedLayout->addSpacing(10);
+
+    // Shunt Count
+    QHBoxLayout *shuntCountLabelLayout = new QHBoxLayout();
+    QLabel *shuntCountLabel = new QLabel("<b>Shunt Count:</b>", advancedWidget);
+    shuntCountLabelLayout->addWidget(shuntCountLabel);
+
+    QLabel *shuntCountHelp = new QLabel(advancedWidget);
+    shuntCountHelp->setText(" ? ");
+    shuntCountHelp->setStyleSheet(
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    shuntCountHelp->setToolTip(
+        "<b>Shunt Count</b><br><br>"
+        "The number of times the game restarts itself before MPQDraft activates patching.<br><br>"
+        "<b>0 (default):</b> Activate immediately when the game starts. Use this for most games.<br><br>"
+        "<b>1:</b> Wait for the game to restart itself once before activating. Some games with "
+        "copy protection (like Diablo) restart themselves after checking the CD, so MPQDraft "
+        "needs to wait for this restart.<br><br>"
+        "<b>Higher values:</b> Rarely needed, but available if a game restarts multiple times "
+        "during its startup sequence.");
+    shuntCountHelp->setCursor(Qt::WhatsThisCursor);
+    shuntCountLabelLayout->addWidget(shuntCountHelp);
+    shuntCountLabelLayout->addStretch();
+    advancedLayout->addLayout(shuntCountLabelLayout);
+
+    customShuntCountSpinBox = new QSpinBox(advancedWidget);
+    customShuntCountSpinBox->setMinimum(0);
+    customShuntCountSpinBox->setMaximum(INT_MAX);
+    customShuntCountSpinBox->setValue(0);
+    advancedLayout->addWidget(customShuntCountSpinBox);
+
+    advancedLayout->addSpacing(10);
+
+    // No Spawning flag
+    QHBoxLayout *noSpawningLayout = new QHBoxLayout();
+
+    customNoSpawningCheck = new QCheckBox("Do not inject into child processes", advancedWidget);
+    customNoSpawningCheck->setChecked(false);  // Default to unchecked
+    noSpawningLayout->addWidget(customNoSpawningCheck);
+
+    QLabel *noSpawningHelp = new QLabel(advancedWidget);
+    noSpawningHelp->setText(" ? ");
+    noSpawningHelp->setStyleSheet(
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    noSpawningHelp->setToolTip(
+        "<b>Do Not Inject Into Child Processes (MPQD_NO_SPAWNING)</b><br><br>"
+        "By default, MPQDraft injects itself into any child processes created by the game. "
+        "This ensures that patches work even if the game launches additional executables.<br><br>"
+        "<b>When to enable:</b> Some games launch helper processes (updaters, launchers, "
+        "crash reporters) that don't need patching and may cause issues if MPQDraft injects "
+        "into them. Enable this flag to prevent injection into child processes.<br><br>"
+        "<b>When to disable (default):</b> Most games work fine with child process injection, "
+        "and some games require it for patches to work correctly.");
+    noSpawningHelp->setCursor(Qt::WhatsThisCursor);
+    noSpawningLayout->addWidget(noSpawningHelp);
+
+    noSpawningLayout->addStretch();
+    advancedLayout->addLayout(noSpawningLayout);
+
+    customLayout->addWidget(advancedWidget);
+
+    customLayout->addStretch();
+
+    tabWidget->addTab(customExeTab, "Custom &Executable");
 
     // Connect text change to completeChanged signal for validation
-    connect(targetPathEdit, &QLineEdit::textChanged, this, &TargetSelectionPage::completeChanged);
+    connect(customTargetPathEdit, &QLineEdit::textChanged, this, &TargetSelectionPage::completeChanged);
+    connect(tabWidget, &QTabWidget::currentChanged, this, &TargetSelectionPage::completeChanged);
 }
 
 bool TargetSelectionPage::isComplete() const
 {
-    // Page is complete if target path is non-empty
-    return !targetPathEdit->text().trimmed().isEmpty();
+    int currentTab = tabWidget->currentIndex();
+
+    if (currentTab == 0) {
+        // Detected Games tab - complete if a game is selected
+        return gameList->currentItem() != nullptr;
+    } else {
+        // Custom Executable tab - complete if target path is valid
+        QString targetPath = customTargetPathEdit->text().trimmed();
+        if (targetPath.isEmpty()) {
+            return false;
+        }
+
+        // Check if file exists and is a valid file
+        QFileInfo fileInfo(targetPath);
+        return fileInfo.exists() && fileInfo.isFile();
+    }
 }
 
 QString TargetSelectionPage::getTargetPath() const
 {
-    return targetPathEdit->text();
+    int currentTab = tabWidget->currentIndex();
+
+    if (currentTab == 0) {
+        // Detected Games tab - get path from selected game
+        QListWidgetItem *current = gameList->currentItem();
+        if (current) {
+            return current->data(Qt::UserRole + 1).toString();
+        }
+        return QString();
+    } else {
+        // Custom Executable tab
+        return customTargetPathEdit->text();
+    }
 }
 
 QString TargetSelectionPage::getParameters() const
 {
-    return parametersEdit->text();
+    int currentTab = tabWidget->currentIndex();
+
+    if (currentTab == 0) {
+        // Detected Games tab - no parameters (could be extended in future)
+        return QString();
+    } else {
+        // Custom Executable tab
+        return customParametersEdit->text();
+    }
 }
 
 bool TargetSelectionPage::useExtendedRedir() const
 {
-    return extendedRedirCheck->isChecked();
+    int currentTab = tabWidget->currentIndex();
+
+    if (currentTab == 0) {
+        // Detected Games tab - get from selected game's data
+        QListWidgetItem *current = gameList->currentItem();
+        if (current) {
+            return current->data(Qt::UserRole).toBool();
+        }
+        return true;  // Default to true
+    } else {
+        // Custom Executable tab
+        return customExtendedRedirCheck->isChecked();
+    }
+}
+
+int TargetSelectionPage::getShuntCount() const
+{
+    int currentTab = tabWidget->currentIndex();
+
+    if (currentTab == 0) {
+        // Detected Games tab - shunt count is stored in the game data
+        // We need to retrieve it from the component
+        // For now, return 0 as detected games have their shunt count in the game data
+        // This will be handled by the wizard when it looks up the component
+        return 0;
+    } else {
+        // Custom Executable tab
+        return customShuntCountSpinBox->value();
+    }
+}
+
+bool TargetSelectionPage::useNoSpawning() const
+{
+    int currentTab = tabWidget->currentIndex();
+
+    if (currentTab == 0) {
+        // Detected Games tab - get from game data flags
+        // For now, return false as this is handled by the component's flags
+        return false;
+    } else {
+        // Custom Executable tab
+        return customNoSpawningCheck->isChecked();
+    }
 }
 
 void TargetSelectionPage::validateTargetPath()
 {
-    QString targetPath = targetPathEdit->text().trimmed();
+    QString targetPath = customTargetPathEdit->text().trimmed();
 
     if (targetPath.isEmpty()) {
-        targetPathEdit->setStyleSheet("");
-        targetPathEdit->setToolTip("");
+        customTargetPathEdit->setStyleSheet("");
+        customTargetPathEdit->setToolTip("");
         return;
     }
 
     QFileInfo fileInfo(targetPath);
     if (!fileInfo.exists()) {
-        targetPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
-        targetPathEdit->setToolTip("File does not exist");
+        customTargetPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
+        customTargetPathEdit->setToolTip("File does not exist");
     } else if (!fileInfo.isFile()) {
-        targetPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
-        targetPathEdit->setToolTip("Path is not a file");
+        customTargetPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
+        customTargetPathEdit->setToolTip("Path is not a file");
     } else {
-        targetPathEdit->setStyleSheet("");
-        targetPathEdit->setToolTip("");
+        customTargetPathEdit->setStyleSheet("");
+        customTargetPathEdit->setToolTip("");
     }
 }
 
 void TargetSelectionPage::onTargetPathChanged()
 {
     validateTargetPath();
-
-    // Clear game selection when user manually types a path
-    if (!targetPathEdit->text().isEmpty()) {
-        gameList->clearSelection();
-    }
 }
 
 void TargetSelectionPage::populateInstalledGames()
@@ -293,18 +478,8 @@ void TargetSelectionPage::onGameSelectionChanged(QListWidgetItem *current, QList
         return;
     }
 
-    // Get the full path from UserRole+1
-    QString componentPath = current->data(Qt::UserRole + 1).toString();
-
-    // Update the target path edit
-    targetPathEdit->setText(componentPath);
-
-    // Update the Extended Redir checkbox based on the component's default
-    bool extendedRedir = current->data(Qt::UserRole).toBool();
-    extendedRedirCheck->setChecked(extendedRedir);
-
-    // Set focus to parameters field
-    parametersEdit->setFocus();
+    // Emit completeChanged to update wizard buttons
+    emit completeChanged();
 }
 
 void TargetSelectionPage::onBrowseClicked()
@@ -317,11 +492,14 @@ void TargetSelectionPage::onBrowseClicked()
     );
 
     if (!fileName.isEmpty()) {
-        // Clear game selection when browsing manually
-        gameList->clearSelection();
+        customTargetPathEdit->setText(fileName);
 
-        targetPathEdit->setText(fileName);
-        parametersEdit->setFocus();
+        // Set focus based on whether Advanced Settings is expanded
+        if (advancedWidget->isVisible()) {
+            customParametersEdit->setFocus();
+        } else {
+            customTargetPathEdit->setFocus();
+        }
     }
 }
 
@@ -672,7 +850,7 @@ PatchWizard::PatchWizard(QWidget *parent)
     addPage(pluginPage);
 
     // Set minimum size
-    setMinimumSize(600, 500);
+    setMinimumSize(600, 550);
 }
 
 void PatchWizard::accept()
@@ -687,23 +865,29 @@ void PatchWizard::performPatch()
     QString targetPath = targetPage->getTargetPath();
     QString parameters = targetPage->getParameters();
     bool extendedRedir = targetPage->useExtendedRedir();
+    int shuntCount = targetPage->getShuntCount();
+    bool noSpawning = targetPage->useNoSpawning();
     QStringList mpqs = mpqPage->getSelectedMPQs();
     QStringList plugins = pluginPage->getSelectedPlugins();
-    
+
     // TODO: Call the actual patcher DLL
     // For now, just show a message
     QString message = QString("Patch Configuration:\n\n"
                              "Target: %1\n"
                              "Parameters: %2\n"
                              "Extended Redir: %3\n"
-                             "MPQs: %4\n"
-                             "Plugins: %5")
+                             "Shunt Count: %4\n"
+                             "No Spawning: %5\n"
+                             "MPQs: %6\n"
+                             "Plugins: %7")
                         .arg(targetPath)
                         .arg(parameters.isEmpty() ? "(none)" : parameters)
                         .arg(extendedRedir ? "Yes" : "No")
+                        .arg(shuntCount)
+                        .arg(noSpawning ? "Yes" : "No")
                         .arg(QString::number(mpqs.count()))
                         .arg(QString::number(plugins.count()));
-    
-    QMessageBox::information(this, "Patch Ready", 
+
+    QMessageBox::information(this, "Patch Ready",
                             message + "\n\nPatching functionality will be implemented next.");
 }

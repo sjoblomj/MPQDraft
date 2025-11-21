@@ -17,6 +17,9 @@
 #include <QPushButton>
 #include <QCheckBox>
 #include <QLabel>
+#include <QSpinBox>
+#include <QTabWidget>
+#include <QGroupBox>
 
 // Forward declarations
 class PluginPage;
@@ -45,6 +48,8 @@ public:
     QString getTargetPath() const;
     QString getParameters() const;
     bool useExtendedRedir() const;
+    int getShuntCount() const;
+    bool useNoSpawning() const;
 
     // Override to validate page completion
     bool isComplete() const override;
@@ -58,12 +63,19 @@ private:
     void validateTargetPath();
     void populateInstalledGames();
 
+    QTabWidget *tabWidget;
+
+    // Detected Games tab
     QListWidget *gameList;
-    QLineEdit *targetPathEdit;
-    QLineEdit *parametersEdit;
-    QCheckBox *extendedRedirCheck;
-    QPushButton *browseButton;
-    QLabel *orLabel;
+
+    // Custom Executable tab
+    QLineEdit *customTargetPathEdit;
+    QLineEdit *customParametersEdit;
+    QCheckBox *customExtendedRedirCheck;
+    QSpinBox *customShuntCountSpinBox;
+    QCheckBox *customNoSpawningCheck;
+    QPushButton *customBrowseButton;
+    QWidget *advancedWidget;
 };
 
 //=============================================================================
