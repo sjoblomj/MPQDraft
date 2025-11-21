@@ -11,8 +11,6 @@
 
 #include <QMainWindow>
 #include <QPushButton>
-#include <QVBoxLayout>
-#include <QLabel>
 
 class MainWindow : public QMainWindow
 {
@@ -31,11 +29,10 @@ private slots:
 
 private:
     void setupUI();
-    
+
     // UI components
     QPushButton *patchButton;
     QPushButton *sempqButton;
-    QLabel *titleLabel;
 };
 
 #endif // MAINWINDOW_H

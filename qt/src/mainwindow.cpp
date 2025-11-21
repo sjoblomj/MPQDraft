@@ -38,57 +38,64 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
 
 void MainWindow::setupUI()
 {
-    // Set window properties
     setWindowTitle("MPQDraft");
-    setFixedSize(420, 300);
+    setFixedSize(420, 273);
 
-    // Create central widget and main layout
+    // Create central widget with background image
     QWidget *centralWidget = new QWidget(this);
-    QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
-    mainLayout->setSpacing(20);
-    mainLayout->setContentsMargins(40, 40, 40, 40);
 
-    // Title label
-    titleLabel = new QLabel("MPQDraft", this);
-    QFont titleFont = titleLabel->font();
-    titleFont.setPointSize(24);
-    titleFont.setBold(true);
-    titleLabel->setFont(titleFont);
-    titleLabel->setAlignment(Qt::AlignCenter);
-    mainLayout->addWidget(titleLabel);
+    // Set background image
+    QPixmap background(":/images/main.png");
+    QPalette palette;
+    palette.setBrush(QPalette::Window, background);
+    centralWidget->setAutoFillBackground(true);
+    centralWidget->setPalette(palette);
 
-    // Add some spacing
-    mainLayout->addStretch();
+    // SEMPQ button (left button)
+    sempqButton = new QPushButton(centralWidget);
+    sempqButton->setGeometry(18, 226, 162, 33);
+    sempqButton->setFlat(true);
+    sempqButton->setStyleSheet("QPushButton { border: none; background: transparent; }");
 
-    // Patch button
-    patchButton = new QPushButton("Load MPQs and &Patch", this);
-    patchButton->setMinimumHeight(50);
-    QFont buttonFont = patchButton->font();
-    buttonFont.setPointSize(12);
-    patchButton->setFont(buttonFont);
-    connect(patchButton, &QPushButton::clicked, this, &MainWindow::onPatchClicked);
-    mainLayout->addWidget(patchButton);
+    // Load button images
+    QIcon sempqIcon;
+    sempqIcon.addPixmap(QPixmap(":/images/SEMPQButtonUp.png"), QIcon::Normal);
+    sempqIcon.addPixmap(QPixmap(":/images/SEMPQButtonDown.png"), QIcon::Active);
+    sempqIcon.addPixmap(QPixmap(":/images/SEMPQButtonDown.png"), QIcon::Selected);
+    sempqButton->setIcon(sempqIcon);
+    sempqButton->setIconSize(QSize(162, 33));
 
-    // SEMPQ button
-    sempqButton = new QPushButton("Create Self-Executing &MPQ", this);
-    sempqButton->setMinimumHeight(50);
-    sempqButton->setFont(buttonFont);
+    // Accessibility improvements
+    sempqButton->setAccessibleName("Create SEMPQ");
+    sempqButton->setAccessibleDescription("Create a Self-Executing MPQ file");
+    sempqButton->setToolTip("Create a Self-Executing MPQ file");
+
     connect(sempqButton, &QPushButton::clicked, this, &MainWindow::onSEMPQClicked);
-    mainLayout->addWidget(sempqButton);
 
-    // Add spacing at bottom
-    mainLayout->addStretch();
+    // Patch button (right button)
+    patchButton = new QPushButton(centralWidget);
+    patchButton->setGeometry(240, 226, 162, 33);
+    patchButton->setFlat(true);
+    patchButton->setStyleSheet("QPushButton { border: none; background: transparent; }");
 
-    // Version label
-    QLabel *versionLabel = new QLabel("Qt Version - Development Build", this);
-    versionLabel->setAlignment(Qt::AlignCenter);
-    QFont versionFont = versionLabel->font();
-    versionFont.setPointSize(8);
-    versionLabel->setFont(versionFont);
-    versionLabel->setStyleSheet("color: gray;");
-    mainLayout->addWidget(versionLabel);
+    QIcon patchIcon;
+    patchIcon.addPixmap(QPixmap(":/images/PatchButtonUp.png"), QIcon::Normal);
+    patchIcon.addPixmap(QPixmap(":/images/PatchButtonDown.png"), QIcon::Active);
+    patchIcon.addPixmap(QPixmap(":/images/PatchButtonDown.png"), QIcon::Selected);
+    patchButton->setIcon(patchIcon);
+    patchButton->setIconSize(QSize(162, 33));
+
+    // Accessibility improvements
+    patchButton->setAccessibleName("Load MPQ Patch");
+    patchButton->setAccessibleDescription("Launch a game with MPQ patches or plugins");
+    patchButton->setToolTip("Launch a game with MPQ patches or plugins");
+
+    connect(patchButton, &QPushButton::clicked, this, &MainWindow::onPatchClicked);
 
     setCentralWidget(centralWidget);
+
+    // Clear focus so no button is highlighted on startup
+    centralWidget->setFocus();
 }
 
 void MainWindow::onPatchClicked()
@@ -120,4 +127,3 @@ void MainWindow::onSEMPQClicked()
     // Show main window again after wizard closes
     this->show();
 }
-

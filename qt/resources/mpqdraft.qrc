@@ -1,6 +1,13 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource>
+        <!-- Main window images -->
+        <file>images/main.png</file>
+        <file>images/PatchButtonUp.png</file>
+        <file>images/PatchButtonDown.png</file>
+        <file>images/SEMPQButtonUp.png</file>
+        <file>images/SEMPQButtonDown.png</file>
+
         <!-- Wizard sidebar image -->
         <file>images/wizard.png</file>
 
