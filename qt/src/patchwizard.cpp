@@ -19,6 +19,7 @@
 #include <QScrollArea>
 #include <QFrame>
 #include <QListWidget>
+#include <QDebug>
 
 // Stylesheet for invalid input fields
 static const char* INVALID_FIELD_STYLE = "QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }";
@@ -535,7 +536,7 @@ MPQSelectionPage::MPQSelectionPage(QWidget *parent)
 
     // Buttons
     QVBoxLayout *buttonLayout = new QVBoxLayout();
-    addButton = new QPushButton("Add &MPQ...", this);
+    addButton = new QPushButton("Add &MPQs...", this);
     addFolderButton = new QPushButton("Add &Folder...", this);
     removeButton = new QPushButton("&Remove", this);
     moveUpButton = new QPushButton("Move &Up", this);
@@ -870,24 +871,16 @@ void PatchWizard::performPatch()
     QStringList mpqs = mpqPage->getSelectedMPQs();
     QStringList plugins = pluginPage->getSelectedPlugins();
 
-    // TODO: Call the actual patcher DLL
-    // For now, just show a message
-    QString message = QString("Patch Configuration:\n\n"
-                             "Target: %1\n"
-                             "Parameters: %2\n"
-                             "Extended Redir: %3\n"
-                             "Shunt Count: %4\n"
-                             "No Spawning: %5\n"
-                             "MPQs: %6\n"
-                             "Plugins: %7")
-                        .arg(targetPath)
-                        .arg(parameters.isEmpty() ? "(none)" : parameters)
-                        .arg(extendedRedir ? "Yes" : "No")
-                        .arg(shuntCount)
-                        .arg(noSpawning ? "Yes" : "No")
-                        .arg(QString::number(mpqs.count()))
-                        .arg(QString::number(plugins.count()));
+    // Print all user choices to console
+    qDebug() << "=== Patch Configuration ==="; // TODO: Cleanup
+    qDebug() << "Target:" << targetPath; // TODO: Cleanup
+    qDebug() << "Parameters:" << (parameters.isEmpty() ? "(none)" : parameters); // TODO: Cleanup
+    qDebug() << "Extended Redir:" << (extendedRedir ? "Yes" : "No"); // TODO: Cleanup
+    qDebug() << "Shunt Count:" << shuntCount; // TODO: Cleanup
+    qDebug() << "No Spawning:" << (noSpawning ? "Yes" : "No"); // TODO: Cleanup
+    qDebug() << "MPQs:" << mpqs; // TODO: Cleanup
+    qDebug() << "Plugins:" << plugins; // TODO: Cleanup
+    qDebug() << "==========================="; // TODO: Cleanup
 
-    QMessageBox::information(this, "Patch Ready",
-                            message + "\n\nPatching functionality will be implemented next.");
+    // TODO: Call the actual patcher DLL
 }
