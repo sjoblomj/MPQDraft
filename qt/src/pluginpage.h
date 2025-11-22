@@ -29,6 +29,8 @@ public:
 
     QStringList getSelectedPlugins() const;
     bool isComplete() const override;
+    void initializePage() override;
+    void cleanupPage() override;
 
 private slots:
     void onBrowseClicked();

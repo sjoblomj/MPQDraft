@@ -19,11 +19,16 @@
 #include <QTabWidget>
 #include <QListWidget>
 #include <QSpinBox>
+#include <QProgressBar>
+#include <QTextEdit>
+#include <QThread>
 #include <cstdint>
 
 // Forward declarations
 class PluginPage;
 struct GameComponent;
+class SEMPQCreator;
+class SEMPQCreationWorker;
 
 //=============================================================================
 // Page 0: Introduction
@@ -172,6 +177,76 @@ private:
 };
 
 //=============================================================================
+// Page 4: Progress Page
+//=============================================================================
+class SEMPQProgressPage : public QWizardPage
+{
+    Q_OBJECT
+
+public:
+    explicit SEMPQProgressPage(QWidget *parent = nullptr);
+    ~SEMPQProgressPage();
+
+    void initializePage() override;
+    bool isComplete() const override;
+    void cleanupPage() override;
+
+    void startCreation();
+
+signals:
+    void creationFinished(bool success, const QString& message);
+
+private slots:
+    void onProgressUpdate(int progress, const QString& statusText);
+    void onCreationComplete(bool success, const QString& message);
+
+private:
+    QLabel *statusLabel;
+    QProgressBar *progressBar;
+    QLabel *percentLabel;
+    QTextEdit *progressLog;
+
+    bool creationComplete;
+    bool creationSuccess;
+    QString resultMessage;
+    bool cancelRequested;
+
+    SEMPQCreationWorker *worker;
+
+    // Progress tracking
+    QStringList pluginNames;
+    int currentPluginIndex;
+
+    void updateProgressLog(const QString& text, int progress);
+    void rebuildProgressLog(int progress);
+};
+
+// Worker thread for SEMPQ creation
+class SEMPQCreationWorker : public QThread
+{
+    Q_OBJECT
+
+public:
+    explicit SEMPQCreationWorker(QObject *parent = nullptr);
+    ~SEMPQCreationWorker();
+
+    void setWizard(QWizard *wizard);
+    void requestCancellation();
+
+signals:
+    void progressUpdate(int progress, const QString& statusText);
+    void creationComplete(bool success, const QString& message);
+
+protected:
+    void run() override;
+
+private:
+    QWizard *wizard;
+    SEMPQCreator *creator;
+    bool cancelRequested;
+};
+
+//=============================================================================
 // Main SEMPQ Wizard
 //=============================================================================
 class SEMPQWizard : public QWizard
@@ -180,16 +255,16 @@ class SEMPQWizard : public QWizard
 
 public:
     explicit SEMPQWizard(QWidget *parent = nullptr);
-    
+
     void accept() override;
+    void reject() override;
 
 private:
     SEMPQIntroPage *introPage;
     SEMPQSettingsPage *settingsPage;
     SEMPQTargetPage *targetPage;
     PluginPage *pluginPage;
-
-    void createSEMPQ();
+    SEMPQProgressPage *progressPage;
 };
 
 #endif // SEMPQWIZARD_H

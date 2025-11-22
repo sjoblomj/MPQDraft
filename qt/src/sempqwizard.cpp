@@ -5,6 +5,7 @@
 #include "sempqwizard.h"
 #include "pluginpage.h"
 #include "gamedata_qt.h"
+#include "common/sempq_creator.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFileDialog>
@@ -16,6 +17,8 @@
 #include <QIcon>
 #include <QScrollArea>
 #include <QFrame>
+#include <QApplication>
+#include <QTimer>
 
 // Stylesheet for invalid input fields
 static const char* INVALID_FIELD_STYLE = "QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }";
@@ -1327,6 +1330,568 @@ void SEMPQTargetPage::onPasteTargetFileClicked()
     customRegTargetFileEdit->setText(getTargetFileName(*refComp));
 }
 
+//=============================================================================
+// Page 4: Progress Page
+//=============================================================================
+SEMPQProgressPage::SEMPQProgressPage(QWidget *parent)
+    : QWizardPage(parent)
+    , creationComplete(false)
+    , creationSuccess(false)
+    , cancelRequested(false)
+    , worker(nullptr)
+    , currentPluginIndex(-1)
+{
+    setTitle("Creating SEMPQ");
+    setSubTitle("Please wait while your SEMPQ file is being created...");
+
+    // This is a final page - hide Back button, show only Cancel
+    setFinalPage(true);
+
+    QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->setSpacing(20);
+
+    // Status label - will show "Writing to file <path>"
+    statusLabel = new QLabel("", this);
+    statusLabel->setWordWrap(true);
+    QFont statusFont = statusLabel->font();
+    statusFont.setPointSize(10);
+    statusLabel->setFont(statusFont);
+    layout->addWidget(statusLabel);
+
+    // Progress bar
+    progressBar = new QProgressBar(this);
+    progressBar->setRange(0, 100);
+    progressBar->setValue(0);
+    progressBar->setTextVisible(false);
+    layout->addWidget(progressBar);
+
+    // Percentage label
+    percentLabel = new QLabel("0%", this);
+    percentLabel->setAlignment(Qt::AlignCenter);
+    QFont percentFont = percentLabel->font();
+    percentFont.setPointSize(12);
+    percentFont.setBold(true);
+    percentLabel->setFont(percentFont);
+    layout->addWidget(percentLabel);
+
+    // Progress log
+    progressLog = new QTextEdit(this);
+    progressLog->setReadOnly(true);
+    progressLog->setMaximumHeight(150);
+    progressLog->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    layout->addWidget(progressLog);
+
+    layout->addStretch();
+}
+
+SEMPQProgressPage::~SEMPQProgressPage()
+{
+    // Make sure worker thread is stopped and cleaned up
+    if (worker)
+    {
+        worker->requestCancellation();
+        worker->wait();
+        delete worker;
+        worker = nullptr;
+    }
+}
+
+void SEMPQProgressPage::cleanupPage()
+{
+    // Called when user goes back or cancels the wizard
+    // Stop the worker thread if it's running
+    if (worker)
+    {
+        worker->requestCancellation();
+        worker->wait();
+        delete worker;
+        worker = nullptr;
+    }
+
+    QWizardPage::cleanupPage();
+}
+
+void SEMPQProgressPage::initializePage()
+{
+    // Reset state
+    creationComplete = false;
+    creationSuccess = false;
+    cancelRequested = false;
+    resultMessage.clear();
+
+    progressBar->setValue(0);
+    percentLabel->setText("0%");
+    statusLabel->setText("Initializing...");
+    progressLog->clear();
+    pluginNames.clear();
+    currentPluginIndex = -1;
+
+    // Get the list of plugins from the plugin page
+    for (int i = 0; i < wizard()->pageIds().count(); i++)
+    {
+        int pageId = wizard()->pageIds().at(i);
+        QWizardPage *page = wizard()->page(pageId);
+        PluginPage *pluginPage = qobject_cast<PluginPage*>(page);
+        if (pluginPage)
+        {
+            QStringList selectedPlugins = pluginPage->getSelectedPlugins();
+            for (const QString& plugin : selectedPlugins)
+            {
+                // Extract just the filename from the full path
+                QFileInfo fileInfo(plugin);
+                pluginNames.append(fileInfo.fileName());
+            }
+            break;
+        }
+    }
+
+    // Initialize the progress log with all steps in "not started" state
+    rebuildProgressLog(0);
+
+    // Hide Back button by setting button layout to only show Cancel and Finish
+    QList<QWizard::WizardButton> layout;
+    layout << QWizard::Stretch << QWizard::CancelButton;
+    wizard()->setButtonLayout(layout);
+
+    // Set the icon based on user input and get output path
+    SEMPQWizard *sempqWizard = qobject_cast<SEMPQWizard*>(wizard());
+    if (sempqWizard)
+    {
+        // Find the settings page to get the icon path and SEMPQ name
+        SEMPQSettingsPage *settingsPage = nullptr;
+        for (int i = 0; i < wizard()->pageIds().count(); i++)
+        {
+            int pageId = wizard()->pageIds().at(i);
+            QWizardPage *page = wizard()->page(pageId);
+            settingsPage = qobject_cast<SEMPQSettingsPage*>(page);
+            if (settingsPage)
+                break;
+        }
+
+        if (settingsPage)
+        {
+            QString iconPath = settingsPage->getIconPath();
+            QPixmap iconPixmap;
+
+            // Try to load user's icon, fall back to StarDraft icon
+            if (!iconPath.isEmpty() && QFileInfo::exists(iconPath))
+            {
+                iconPixmap = QPixmap(iconPath);
+            }
+
+            // If user icon failed or wasn't provided, use StarDraft icon
+            if (iconPixmap.isNull())
+            {
+                iconPixmap = QPixmap(":/icons/StarDraft.png");
+            }
+
+            // Scale to 64x64 and set as logo
+            if (!iconPixmap.isNull())
+            {
+                setPixmap(QWizard::LogoPixmap, iconPixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            }
+
+            // Set the status label to show the output path
+            QString sempqName = settingsPage->getSEMPQName();
+            QString outputPath = sempqName;
+            if (!outputPath.endsWith(".exe", Qt::CaseInsensitive))
+                outputPath += ".exe";
+            statusLabel->setText(QString("Writing to file: %1").arg(outputPath));
+        }
+    }
+
+    // Start creation in the next event loop iteration
+    QTimer::singleShot(100, this, &SEMPQProgressPage::startCreation);
+}
+
+bool SEMPQProgressPage::isComplete() const
+{
+    return creationComplete;
+}
+
+void SEMPQProgressPage::startCreation()
+{
+    // Clean up any existing worker
+    if (worker)
+    {
+        worker->requestCancellation();
+        worker->wait();
+        delete worker;
+        worker = nullptr;
+    }
+
+    // Create and start the worker thread
+    worker = new SEMPQCreationWorker(this);
+    worker->setWizard(wizard());
+
+    // Connect signals
+    connect(worker, &SEMPQCreationWorker::progressUpdate,
+            this, &SEMPQProgressPage::onProgressUpdate);
+    connect(worker, &SEMPQCreationWorker::creationComplete,
+            this, &SEMPQProgressPage::onCreationComplete);
+
+    // Connect wizard's Cancel button to worker
+    QPushButton *cancelButton = qobject_cast<QPushButton*>(wizard()->button(QWizard::CancelButton));
+    if (cancelButton)
+    {
+        connect(cancelButton, &QPushButton::clicked, this, [this]() {
+            if (worker)
+            {
+                worker->requestCancellation();
+                cancelRequested = true;
+                statusLabel->setText("Cancelling operation...");
+            }
+        });
+    }
+
+    worker->start();
+}
+
+void SEMPQProgressPage::rebuildProgressLog(int progress)
+{
+    QString html;
+
+    // Use pure ASCII symbols for maximum portability (Windows XP, Wine, etc.)
+    QString doneIcon = "[X]";      // Completed
+    QString activeIcon = "[>]";     // In progress
+    QString pendingIcon = "[ ]";    // Not started
+
+    // Step 1: Writing Executable Code (0-5%)
+    if (progress >= 5) {
+        html += QString("<span style='font-weight: bold; color: green;'>%1 Writing Executable Code</span><br>").arg(doneIcon);
+    } else if (progress >= 0 && progress < 5) {
+        html += QString("<span style='font-style: italic; color: blue;'>%1 Writing Executable Code</span><br>").arg(activeIcon);
+    } else {
+        html += QString("<span style='color: gray;'>%1 Writing Executable Code</span><br>").arg(pendingIcon);
+    }
+
+    // Step 2: Writing Plugins (5-20%)
+    if (progress >= 20) {
+        html += QString("<span style='font-weight: bold; color: green;'>%1 Writing Plugins</span><br>").arg(doneIcon);
+    } else if (progress >= 5 && progress < 20) {
+        html += QString("<span style='font-style: italic; color: blue;'>%1 Writing Plugins</span><br>").arg(activeIcon);
+    } else {
+        html += QString("<span style='color: gray;'>%1 Writing Plugins</span><br>").arg(pendingIcon);
+    }
+
+    // Individual plugins
+    if (!pluginNames.isEmpty())
+    {
+        for (int i = 0; i < pluginNames.size(); i++)
+        {
+            QString pluginName = pluginNames[i];
+
+            // Calculate progress for this plugin
+            // Plugins span 5-20%, so 15% total divided by number of plugins
+            double pluginProgressRange = 15.0 / pluginNames.size();
+            double pluginStartProgress = 5.0 + (i * pluginProgressRange);
+            double pluginEndProgress = pluginStartProgress + pluginProgressRange;
+
+            if (progress >= pluginEndProgress) {
+                html += QString("  <span style='font-weight: bold; color: green;'>%1 Writing plugin %2</span><br>")
+                    .arg(doneIcon, pluginName.toHtmlEscaped());
+            } else if (progress >= pluginStartProgress && progress < pluginEndProgress) {
+                html += QString("  <span style='font-style: italic; color: blue;'>%1 Writing plugin %2</span><br>")
+                    .arg(activeIcon, pluginName.toHtmlEscaped());
+            } else {
+                html += QString("  <span style='color: gray;'>%1 Writing plugin %2</span><br>")
+                    .arg(pendingIcon, pluginName.toHtmlEscaped());
+            }
+        }
+    }
+
+    // Step 3: Writing MPQ Data (20-100%)
+    if (progress >= 100) {
+        html += QString("<span style='font-weight: bold; color: green;'>%1 Writing MPQ Data</span><br>").arg(doneIcon);
+    } else if (progress >= 20 && progress < 100) {
+        html += QString("<span style='font-style: italic; color: blue;'>%1 Writing MPQ Data</span><br>").arg(activeIcon);
+    } else {
+        html += QString("<span style='color: gray;'>%1 Writing MPQ Data</span><br>").arg(pendingIcon);
+    }
+
+    progressLog->setHtml(html);
+}
+
+void SEMPQProgressPage::updateProgressLog(const QString& text, int progress)
+{
+    // Just rebuild the entire log based on current progress
+    rebuildProgressLog(progress);
+}
+
+void SEMPQProgressPage::onProgressUpdate(int progress, const QString& statusText)
+{
+    progressBar->setValue(progress);
+    percentLabel->setText(QString("%1%").arg(progress));
+
+    // Update window title with percentage
+    wizard()->setWindowTitle(QString("MPQDraft SEMPQ Wizard [%1%]").arg(progress));
+
+    // Update progress log
+    updateProgressLog(statusText, progress);
+}
+
+void SEMPQProgressPage::onCreationComplete(bool success, const QString& message)
+{
+    creationComplete = true;
+    creationSuccess = success;
+    resultMessage = message;
+
+    // Restore window title
+    wizard()->setWindowTitle("MPQDraft SEMPQ Wizard");
+
+    // Wait for worker thread to finish and clean up
+    if (worker)
+    {
+        worker->wait();
+        delete worker;
+        worker = nullptr;
+    }
+
+    if (success)
+    {
+        percentLabel->setText("100%");
+        progressBar->setValue(100);
+
+        // Add "Finished" to the progress log
+        QString html = progressLog->toHtml();
+        html += "<span style='font-weight: bold; color: green;'>[X] Finished - SEMPQ created successfully</span>";
+        progressLog->setHtml(html);
+
+        // Show Finish button instead of Cancel
+        QList<QWizard::WizardButton> layout;
+        layout << QWizard::Stretch << QWizard::FinishButton;
+        wizard()->setButtonLayout(layout);
+
+        // Enable the Finish button
+        wizard()->button(QWizard::FinishButton)->setEnabled(true);
+
+        // Set focus on the Finish button
+        wizard()->button(QWizard::FinishButton)->setFocus();
+    }
+    else
+    {
+        // Add "Failed" to the progress log
+        QString html = progressLog->toHtml();
+        html += "<span style='font-weight: bold; color: red;'>[X] Failed to create SEMPQ!</span>";
+        progressLog->setHtml(html);
+
+        // Show error message
+        QMessageBox::critical(this, "Error", message);
+
+        // Show Finish button to close
+        QList<QWizard::WizardButton> layout;
+        layout << QWizard::Stretch << QWizard::FinishButton;
+        wizard()->setButtonLayout(layout);
+
+        // Enable the Finish button
+        wizard()->button(QWizard::FinishButton)->setEnabled(true);
+
+        // Set focus on the Finish button
+        wizard()->button(QWizard::FinishButton)->setFocus();
+    }
+
+    // Signal that the page is complete so Finish button works
+    emit completeChanged();
+}
+
+//=============================================================================
+// SEMPQ Creation Worker Thread
+//=============================================================================
+SEMPQCreationWorker::SEMPQCreationWorker(QObject *parent)
+    : QThread(parent)
+    , wizard(nullptr)
+    , creator(nullptr)
+    , cancelRequested(false)
+{
+    creator = new SEMPQCreator();
+}
+
+SEMPQCreationWorker::~SEMPQCreationWorker()
+{
+    delete creator;
+}
+
+void SEMPQCreationWorker::setWizard(QWizard *w)
+{
+    wizard = w;
+}
+
+void SEMPQCreationWorker::requestCancellation()
+{
+    cancelRequested = true;
+}
+
+void SEMPQCreationWorker::run()
+{
+    if (!wizard)
+    {
+        emit creationComplete(false, "Internal error: wizard not set");
+        return;
+    }
+
+    // Get wizard pages
+    SEMPQWizard *sempqWizard = qobject_cast<SEMPQWizard*>(wizard);
+    if (!sempqWizard)
+    {
+        emit creationComplete(false, "Internal error: invalid wizard type");
+        return;
+    }
+
+    // Get the wizard pages - we need to access them through the wizard
+    SEMPQSettingsPage *settingsPage = nullptr;
+    SEMPQTargetPage *targetPage = nullptr;
+    PluginPage *pluginPage = nullptr;
+
+    // Find the pages by iterating through wizard pages
+    for (int i = 0; i < wizard->pageIds().count(); i++)
+    {
+        int pageId = wizard->pageIds().at(i);
+        QWizardPage *page = wizard->page(pageId);
+
+        if (!settingsPage)
+            settingsPage = qobject_cast<SEMPQSettingsPage*>(page);
+        if (!targetPage)
+            targetPage = qobject_cast<SEMPQTargetPage*>(page);
+        if (!pluginPage)
+            pluginPage = qobject_cast<PluginPage*>(page);
+    }
+
+    if (!settingsPage || !targetPage || !pluginPage)
+    {
+        emit creationComplete(false, "Internal error: could not find wizard pages");
+        return;
+    }
+
+    // Extract parameters from wizard pages
+    QString errorMessage;
+    SEMPQCreationParams params;
+
+    // Get basic settings
+    params.sempqName = settingsPage->getSEMPQName();
+    params.mpqPath = settingsPage->getMPQPath();
+    params.iconPath = settingsPage->getIconPath();
+
+    // Generate output path from SEMPQ name
+    params.outputPath = params.sempqName;
+    if (!params.outputPath.endsWith(".exe", Qt::CaseInsensitive))
+        params.outputPath += ".exe";
+
+    // Get target settings
+    params.parameters = targetPage->getParameters();
+
+    // Get plugins
+    params.pluginPaths = pluginPage->getSelectedPlugins();
+
+    // Print all user choices to console
+    qDebug() << "=== SEMPQ Creation Parameters ==="; // TODO: Cleanup
+    qDebug() << "SEMPQ Name:" << params.sempqName; // TODO: Cleanup
+    qDebug() << "Output Path:" << params.outputPath; // TODO: Cleanup
+    qDebug() << "MPQ Path:" << params.mpqPath; // TODO: Cleanup
+    qDebug() << "Icon Path:" << params.iconPath; // TODO: Cleanup
+    qDebug() << "Parameters:" << params.parameters; // TODO: Cleanup
+    qDebug() << "Plugins:" << params.pluginPaths; // TODO: Cleanup
+
+    // Get target information based on mode
+    const GameComponent* component = targetPage->getSelectedComponent();
+    if (component)
+    {
+        // Mode 1: Supported Games (Registry-based)
+        // Need to find the parent SupportedGame to get registry info
+        params.useRegistry = true;
+
+        // Find the parent game by searching through all supported games
+        QVector<SupportedGame> games = getSupportedGamesQt();
+        for (const SupportedGame& game : games)
+        {
+            for (const GameComponent& comp : game.components)
+            {
+                // Compare by component name and file name to find the match
+                if (comp.componentName == component->componentName &&
+                    comp.fileName == component->fileName)
+                {
+                    params.registryKey = getRegistryKey(game);
+                    params.registryValue = getRegistryValue(game);
+                    break;
+                }
+            }
+            if (!params.registryKey.isEmpty())
+                break;
+        }
+
+        params.targetFileName = getTargetFileName(*component);
+        params.shuntCount = component->shuntCount;
+        params.flags = 0;
+        if (component->extendedRedir)
+            params.flags |= MPQD_EXTENDED_REDIR;
+
+        qDebug() << "Target Mode: Supported Game (Registry-based)"; // TODO: Cleanup
+        qDebug() << "Registry Key:" << params.registryKey; // TODO: Cleanup
+        qDebug() << "Registry Value:" << params.registryValue; // TODO: Cleanup
+        qDebug() << "Target File Name:" << params.targetFileName; // TODO: Cleanup
+        qDebug() << "Shunt Count:" << params.shuntCount; // TODO: Cleanup
+        qDebug() << "Extended Redir:" << (params.flags & MPQD_EXTENDED_REDIR ? "Yes" : "No"); // TODO: Cleanup
+    }
+    else if (targetPage->isRegistryBased())
+    {
+        // Mode 2: Custom Registry
+        params.useRegistry = true;
+        params.registryKey = targetPage->getCustomRegistryKey();
+        params.registryValue = targetPage->getCustomRegistryValue();
+        params.targetFileName = targetPage->getCustomRegistryTargetFile();
+        params.shuntCount = targetPage->getCustomRegistryShuntCount();
+        params.flags = targetPage->getCustomRegistryFlags();
+
+        qDebug() << "Target Mode: Custom Registry"; // TODO: Cleanup
+        qDebug() << "Registry Key:" << params.registryKey; // TODO: Cleanup
+        qDebug() << "Registry Value:" << params.registryValue; // TODO: Cleanup
+        qDebug() << "Target File Name:" << params.targetFileName; // TODO: Cleanup
+        qDebug() << "Shunt Count:" << params.shuntCount; // TODO: Cleanup
+        qDebug() << "Extended Redir:" << (params.flags & MPQD_EXTENDED_REDIR ? "Yes" : "No"); // TODO: Cleanup
+        qDebug() << "No Spawning:" << (params.flags & MPQD_NO_SPAWNING ? "Yes" : "No"); // TODO: Cleanup
+    }
+    else
+    {
+        // Mode 3: Custom Target (Hardcoded Path)
+        params.useRegistry = false;
+        params.targetPath = targetPage->getCustomTargetPath();
+        params.shuntCount = targetPage->getCustomTargetShuntCount();
+        params.flags = 0;
+        if (targetPage->getExtendedRedir())
+            params.flags |= MPQD_EXTENDED_REDIR;
+        if (targetPage->getCustomTargetNoSpawning())
+            params.flags |= MPQD_NO_SPAWNING;
+
+        qDebug() << "Target Mode: Custom Target (Hardcoded Path)"; // TODO: Cleanup
+        qDebug() << "Target Path:" << params.targetPath; // TODO: Cleanup
+        qDebug() << "Shunt Count:" << params.shuntCount; // TODO: Cleanup
+        qDebug() << "Extended Redir:" << (params.flags & MPQD_EXTENDED_REDIR ? "Yes" : "No"); // TODO: Cleanup
+        qDebug() << "No Spawning:" << (params.flags & MPQD_NO_SPAWNING ? "Yes" : "No"); // TODO: Cleanup
+    }
+
+    qDebug() << "================================="; // TODO: Cleanup
+
+    // Create progress callback
+    auto progressCallback = [this](int progress, const QString& statusText) {
+        emit progressUpdate(progress, statusText);
+    };
+
+    // Create cancellation check
+    auto cancellationCheck = [this]() -> bool {
+        return cancelRequested;
+    };
+
+    bool success = creator->createSEMPQ(params, progressCallback, cancellationCheck, errorMessage);
+
+    if (success)
+    {
+        emit creationComplete(true, QString("SEMPQ file '%1' created successfully!").arg(params.outputPath));
+    }
+    else
+    {
+        emit creationComplete(false, errorMessage);
+    }
+}
+
 
 //=============================================================================
 // Main Wizard
@@ -1383,12 +1948,14 @@ SEMPQWizard::SEMPQWizard(QWidget *parent)
     settingsPage = new SEMPQSettingsPage(this);
     targetPage = new SEMPQTargetPage(this);
     pluginPage = new PluginPage(this);
+    progressPage = new SEMPQProgressPage(this);
 
     // Add pages
     addPage(introPage);
     addPage(settingsPage);
     addPage(targetPage);
     addPage(pluginPage);
+    addPage(progressPage);
 
     // Set minimum size
     setMinimumSize(900, 600);
@@ -1396,103 +1963,14 @@ SEMPQWizard::SEMPQWizard(QWidget *parent)
 
 void SEMPQWizard::accept()
 {
-    createSEMPQ();
+    // The progress page will handle the actual creation
+    // Just call the base class accept() which will close the wizard
     QWizard::accept();
 }
 
-void SEMPQWizard::createSEMPQ()
+void SEMPQWizard::reject()
 {
-    // Get data from pages
-    QString sempqName = settingsPage->getSEMPQName();
-    QString mpqPath = settingsPage->getMPQPath();
-    QString iconPath = settingsPage->getIconPath();
-    QString parameters = targetPage->getParameters();
-    bool extendedRedir = targetPage->getExtendedRedir();
-    QStringList plugins = pluginPage->getSelectedPlugins();
-
-    // Get target information based on mode
-    QString targetInfo;
-    const GameComponent* component = targetPage->getSelectedComponent();
-
-    if (component) {
-        // Mode 1: Supported Games (Registry-based)
-        targetInfo = QString("Registry-Based Target (Supported Game):\n"
-                           "  Component: %1\n"
-                           "  File: %2\n"
-                           "  Target File: %3\n"
-                           "  Shunt Count: %4\n"
-                           "  Extended Redir: %5")
-                        .arg(getComponentName(*component))
-                        .arg(getFileName(*component))
-                        .arg(getTargetFileName(*component))
-                        .arg(component->shuntCount)
-                        .arg(component->extendedRedir ? "Yes" : "No");
-    } else if (targetPage->isRegistryBased()) {
-        // Mode 2: Custom Registry
-        QString regKey = targetPage->getCustomRegistryKey();
-        QString regValue = targetPage->getCustomRegistryValue();
-        QString exeFile = targetPage->getCustomRegistryExe();
-        QString targetFile = targetPage->getCustomRegistryTargetFile();
-        int shuntCount = targetPage->getCustomRegistryShuntCount();
-        bool isFullPath = targetPage->getCustomRegistryIsFullPath();
-        uint32_t flags = targetPage->getCustomRegistryFlags();
-
-        QStringList flagsList;
-        if (flags & MPQD_EXTENDED_REDIR) flagsList << "Extended Redir";
-        if (flags & MPQD_NO_SPAWNING) flagsList << "No Spawning";
-        QString flagsStr = flagsList.isEmpty() ? "(none)" : flagsList.join(", ");
-
-        targetInfo = QString("Registry-Based Target (Custom):\n"
-                           "  Registry Key: %1\n"
-                           "  Registry Value: %2\n"
-                           "  Executable: %3\n"
-                           "  Target File: %4\n"
-                           "  Shunt Count: %5\n"
-                           "  Value is Full Path: %6\n"
-                           "  Flags: %7")
-                        .arg(regKey)
-                        .arg(regValue)
-                        .arg(exeFile)
-                        .arg(targetFile)  // targetFile already defaults to exeFile if empty
-                        .arg(shuntCount)
-                        .arg(isFullPath ? "Yes" : "No")
-                        .arg(flagsStr);
-    } else {
-        // Mode 3: Custom Target (Hardcoded Path)
-        QString customPath = targetPage->getCustomTargetPath();
-        int shuntCount = targetPage->getCustomTargetShuntCount();
-        bool noSpawning = targetPage->getCustomTargetNoSpawning();
-
-        QStringList flagsList;
-        if (extendedRedir) flagsList << "Extended Redir";
-        if (noSpawning) flagsList << "No Spawning";
-        QString flagsStr = flagsList.isEmpty() ? "(none)" : flagsList.join(", ");
-
-        targetInfo = QString("Custom Target Path:\n"
-                           "  Path: %1\n"
-                           "  Shunt Count: %2\n"
-                           "  Flags: %3")
-                        .arg(customPath)
-                        .arg(shuntCount)
-                        .arg(flagsStr);
-    }
-
-    // TODO: Call the actual SEMPQ creation code
-    // For now, just show a message
-    QString message = QString("SEMPQ Configuration:\n\n"
-                             "Name: %1\n"
-                             "Source MPQ: %2\n"
-                             "Icon: %3\n\n"
-                             "%4\n\n"
-                             "Parameters: %5\n"
-                             "Plugins: %6")
-                        .arg(sempqName)
-                        .arg(mpqPath)
-                        .arg(iconPath.isEmpty() ? "(default)" : iconPath)
-                        .arg(targetInfo)
-                        .arg(parameters.isEmpty() ? "(none)" : parameters)
-                        .arg(QString::number(plugins.count()));
-
-    QMessageBox::information(this, "SEMPQ Ready",
-                            message + "\n\nSEMPQ creation functionality will be implemented next.");
+    // Make sure the progress page cleans up its worker thread
+    // The cleanupPage() method will be called automatically
+    QWizard::reject();
 }

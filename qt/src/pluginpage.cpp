@@ -116,6 +116,38 @@ bool PluginPage::isComplete() const
     return selectedCount <= MAX_MPQDRAFT_PLUGINS && totalModules <= MAX_AUXILIARY_MODULES;
 }
 
+void PluginPage::initializePage()
+{
+    // Set the button text based on which wizard is using this page
+    QString windowTitle = wizard()->windowTitle();
+
+    if (windowTitle.contains("SEMPQ")) {
+        // SEMPQ Wizard - this is NOT the last page, so change Next button to "Create SEMPQ"
+        wizard()->setButtonText(QWizard::NextButton, "Create &SEMPQ");
+    } else if (windowTitle.contains("Patch")) {
+        // Patch Wizard - this IS the last page, so change Finish button to "Launch"
+        wizard()->setButtonText(QWizard::FinishButton, "&Launch");
+    }
+
+    QWizardPage::initializePage();
+}
+
+void PluginPage::cleanupPage()
+{
+    // Reset button text to default when leaving the page
+    QString windowTitle = wizard()->windowTitle();
+
+    if (windowTitle.contains("SEMPQ")) {
+        // Reset Next button to default "Next >"
+        wizard()->setButtonText(QWizard::NextButton, tr("&Next >"));
+    } else if (windowTitle.contains("Patch")) {
+        // Reset Finish button to default "Finish"
+        wizard()->setButtonText(QWizard::FinishButton, tr("&Finish"));
+    }
+
+    QWizardPage::cleanupPage();
+}
+
 void PluginPage::validatePluginSelection()
 {
     // Count selected plugins

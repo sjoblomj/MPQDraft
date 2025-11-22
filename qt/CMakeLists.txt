@@ -22,6 +22,7 @@ set(SOURCES
     src/common/pluginloader.cpp
     src/common/gamedata.cpp
     src/common/gamedetection.cpp
+    src/common/sempq_creator.cpp
 )
 
 set(HEADERS
@@ -36,6 +37,7 @@ set(HEADERS
     src/common/patcher.h
     src/common/gamedata.h
     src/common/gamedetection.h
+    src/common/sempq_creator.h
 )
 
 # Resource files
