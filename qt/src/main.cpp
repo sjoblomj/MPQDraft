@@ -15,9 +15,10 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     
     // Set application metadata
+    // Use same organization name as original MFC app for registry compatibility on Windows
+    QApplication::setOrganizationName("Team MoPaQ");
     QApplication::setApplicationName("MPQDraft");
     QApplication::setApplicationVersion("1.0");
-    QApplication::setOrganizationName("MPQDraft");
     
     // Create and show main window
     MainWindow mainWindow;

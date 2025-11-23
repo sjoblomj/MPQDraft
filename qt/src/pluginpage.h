@@ -43,6 +43,10 @@ private:
     void loadPluginsFromDirectory();
     bool addPlugin(const QString &path, bool showMessages = true);
     void validatePluginSelection();
+    void saveSettings();
+    void loadSettings();
+
+    QString lastPluginDirectory;
 
     QListWidget *pluginListWidget;
     QPushButton *browseButton;

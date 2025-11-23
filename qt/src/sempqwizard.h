@@ -57,6 +57,8 @@ public:
 
     // Override to validate page completion
     bool isComplete() const override;
+    void initializePage() override;
+    void cleanupPage() override;
 
 private slots:
     void onBrowseMPQClicked();
@@ -68,6 +70,8 @@ private:
     void validateMPQPath();
     void validateIconPath();
     void updateIconPreview();
+    void saveSettings();
+    void loadSettings();
 
     QLineEdit *sempqNameEdit;
     QLineEdit *mpqPathEdit;
@@ -114,6 +118,8 @@ public:
 
     // Override to validate page completion
     bool isComplete() const override;
+    void initializePage() override;
+    void cleanupPage() override;
 
 private slots:
     void onGameSelectionChanged(QListWidgetItem *current, QListWidgetItem *previous);
@@ -133,6 +139,8 @@ private:
     void updateCustomRegistryPlaceholders();
     void clearWhitespaceOnlyFields();
     const GameComponent* getReferenceComponent() const;
+    void saveSettings();
+    void loadSettings();
 
     QTabWidget *tabWidget;
 

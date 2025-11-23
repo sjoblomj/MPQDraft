@@ -12,6 +12,7 @@
 #include <QLabel>
 #include <QFileInfo>
 #include <QIcon>
+#include <QSettings>
 
 PluginPage::PluginPage(QWidget *parent)
     : QWizardPage(parent)
@@ -118,6 +119,9 @@ bool PluginPage::isComplete() const
 
 void PluginPage::initializePage()
 {
+    // Load settings first
+    loadSettings();
+
     // Set the button text based on which wizard is using this page
     QString windowTitle = wizard()->windowTitle();
 
@@ -146,6 +150,84 @@ void PluginPage::cleanupPage()
     }
 
     QWizardPage::cleanupPage();
+}
+
+void PluginPage::saveSettings()
+{
+    QSettings settings;
+    QString wizardName = wizard()->windowTitle().contains("SEMPQ") ? "SEMPQWizard" : "PatchWizard";
+    settings.beginGroup(wizardName + "/Plugin");
+
+    // Save last plugin directory
+    settings.setValue("lastDirectory", lastPluginDirectory);
+
+    // Clear old plugin entries first
+    settings.remove("plugins");
+
+    // Save plugin list with checked state (manual index management)
+    settings.beginGroup("plugins");
+    for (int i = 0; i < pluginListWidget->count(); ++i) {
+        settings.beginGroup(QString::number(i));
+        QListWidgetItem *item = pluginListWidget->item(i);
+        QString pluginPath = item->data(Qt::UserRole).toString();
+        settings.setValue("path", pluginPath);
+        settings.setValue("checked", item->checkState() == Qt::Checked);
+        settings.endGroup();
+    }
+    settings.endGroup();
+
+    settings.endGroup();
+}
+
+void PluginPage::loadSettings()
+{
+    QSettings settings;
+    QString wizardName = wizard()->windowTitle().contains("SEMPQ") ? "SEMPQWizard" : "PatchWizard";
+    settings.beginGroup(wizardName + "/Plugin");
+
+    // Block signals while loading to avoid triggering saves
+    pluginListWidget->blockSignals(true);
+
+    // Restore last plugin directory
+    lastPluginDirectory = settings.value("lastDirectory", QDir::currentPath()).toString();
+
+    // Restore plugin list (manual index management)
+    settings.beginGroup("plugins");
+    int i = 0;
+    while (true) {
+        settings.beginGroup(QString::number(i));
+        if (!settings.contains("path")) {
+            settings.endGroup();
+            break;
+        }
+
+        QString path = settings.value("path").toString();
+        bool checked = settings.value("checked", true).toBool();
+        settings.endGroup();
+
+        // Only add if file still exists
+        if (QFileInfo::exists(path)) {
+            bool added = addPlugin(path, false);  // Don't show messages during load
+            if (added) {
+                // Find the item we just added and set its check state
+                for (int j = 0; j < pluginListWidget->count(); ++j) {
+                    QListWidgetItem *item = pluginListWidget->item(j);
+                    if (item->data(Qt::UserRole).toString() == path) {
+                        item->setCheckState(checked ? Qt::Checked : Qt::Unchecked);
+                        break;
+                    }
+                }
+            }
+        }
+
+        ++i;
+    }
+    settings.endGroup();
+
+    // Unblock signals
+    pluginListWidget->blockSignals(false);
+
+    settings.endGroup();
 }
 
 void PluginPage::validatePluginSelection()
@@ -212,6 +294,7 @@ void PluginPage::onItemChanged(QListWidgetItem *item)
     Q_UNUSED(item);
     validatePluginSelection();
     emit completeChanged();
+    saveSettings();  // Save whenever items change (check state, etc.)
 }
 
 void PluginPage::loadPluginsFromDirectory()
@@ -338,16 +421,26 @@ bool PluginPage::addPlugin(const QString &path, bool showMessages)
 
 void PluginPage::onBrowseClicked()
 {
+    // Use last directory if available
+    QString startDir = lastPluginDirectory.isEmpty() ? QDir::currentPath() : lastPluginDirectory;
+
     QStringList fileNames = QFileDialog::getOpenFileNames(
         this,
         "Select Plugin Files",
-        QString(),
+        startDir,
         "MPQDraft Plugins (*.qdp *.dll);;All Files (*.*)"
     );
+
+    // Save the directory for next time
+    if (!fileNames.isEmpty()) {
+        lastPluginDirectory = QFileInfo(fileNames.first()).absolutePath();
+    }
 
     for (const QString &fileName : fileNames) {
         addPlugin(fileName, true);  // Show messages and auto-check when user adds plugin
     }
+
+    saveSettings();  // Save after adding plugins
 }
 
 void PluginPage::onRemoveClicked()
@@ -375,6 +468,7 @@ void PluginPage::onRemoveClicked()
     }
 
     validatePluginSelection();
+    saveSettings();  // Save after removing plugins
 }
 
 void PluginPage::onConfigureClicked()

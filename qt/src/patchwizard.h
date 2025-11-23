@@ -53,6 +53,8 @@ public:
 
     // Override to validate page completion
     bool isComplete() const override;
+    void initializePage() override;
+    void cleanupPage() override;
 
 private slots:
     void onBrowseClicked();
@@ -62,6 +64,8 @@ private slots:
 private:
     void validateTargetPath();
     void populateInstalledGames();
+    void saveSettings();
+    void loadSettings();
 
     QTabWidget *tabWidget;
 
@@ -91,6 +95,8 @@ public:
     QStringList getSelectedMPQs() const;
     bool isComplete() const override;
     bool validatePage() override;
+    void initializePage() override;
+    void cleanupPage() override;
 
 private slots:
     void onAddClicked();
@@ -104,6 +110,10 @@ private slots:
 private:
     void validateMPQList();
     void addMPQFile(const QString &fileName, bool checked);
+    void saveSettings();
+    void loadSettings();
+
+    QString lastMPQDirectory;
 
     QListWidget *mpqListWidget;
     QPushButton *addButton;

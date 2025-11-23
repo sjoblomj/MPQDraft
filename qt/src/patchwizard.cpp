@@ -20,6 +20,7 @@
 #include <QFrame>
 #include <QListWidget>
 #include <QDebug>
+#include <QSettings>
 
 // Stylesheet for invalid input fields
 static const char* INVALID_FIELD_STYLE = "QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }";
@@ -296,6 +297,15 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
     // Connect text change to completeChanged signal for validation
     connect(customTargetPathEdit, &QLineEdit::textChanged, this, &TargetSelectionPage::completeChanged);
     connect(tabWidget, &QTabWidget::currentChanged, this, &TargetSelectionPage::completeChanged);
+
+    // Connect field changes to save settings
+    connect(gameList, &QListWidget::currentRowChanged, this, &TargetSelectionPage::saveSettings);
+    connect(tabWidget, &QTabWidget::currentChanged, this, &TargetSelectionPage::saveSettings);
+    connect(customTargetPathEdit, &QLineEdit::textChanged, this, &TargetSelectionPage::saveSettings);
+    connect(customParametersEdit, &QLineEdit::textChanged, this, &TargetSelectionPage::saveSettings);
+    connect(customExtendedRedirCheck, &QCheckBox::stateChanged, this, &TargetSelectionPage::saveSettings);
+    connect(customShuntCountSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &TargetSelectionPage::saveSettings);
+    connect(customNoSpawningCheck, &QCheckBox::stateChanged, this, &TargetSelectionPage::saveSettings);
 }
 
 bool TargetSelectionPage::isComplete() const
@@ -316,6 +326,94 @@ bool TargetSelectionPage::isComplete() const
         QFileInfo fileInfo(targetPath);
         return fileInfo.exists() && fileInfo.isFile();
     }
+}
+
+void TargetSelectionPage::initializePage()
+{
+    loadSettings();
+    QWizardPage::initializePage();
+}
+
+void TargetSelectionPage::cleanupPage()
+{
+    QWizardPage::cleanupPage();
+}
+
+void TargetSelectionPage::saveSettings()
+{
+    QSettings settings;
+    settings.beginGroup("PatchWizard/Target");
+
+    // Save current tab
+    settings.setValue("currentTab", tabWidget->currentIndex());
+
+    // Save custom executable settings
+    settings.setValue("customTargetPath", customTargetPathEdit->text());
+    settings.setValue("customParameters", customParametersEdit->text());
+    settings.setValue("customExtendedRedir", customExtendedRedirCheck->isChecked());
+    settings.setValue("customShuntCount", customShuntCountSpinBox->value());
+    settings.setValue("customNoSpawning", customNoSpawningCheck->isChecked());
+
+    // Save selected game (if any)
+    QListWidgetItem *currentItem = gameList->currentItem();
+    if (currentItem) {
+        settings.setValue("selectedGame", currentItem->text());
+    }
+
+    settings.endGroup();
+}
+
+void TargetSelectionPage::loadSettings()
+{
+    QSettings settings;
+    settings.beginGroup("PatchWizard/Target");
+
+    // Block signals while loading to avoid triggering saves
+    tabWidget->blockSignals(true);
+    customTargetPathEdit->blockSignals(true);
+    customParametersEdit->blockSignals(true);
+    customExtendedRedirCheck->blockSignals(true);
+    customShuntCountSpinBox->blockSignals(true);
+    customNoSpawningCheck->blockSignals(true);
+    gameList->blockSignals(true);
+
+    // Restore tab
+    int savedTab = settings.value("currentTab", 0).toInt();
+    tabWidget->setCurrentIndex(savedTab);
+
+    // Restore custom executable settings
+    customTargetPathEdit->setText(settings.value("customTargetPath", "").toString());
+    customParametersEdit->setText(settings.value("customParameters", "").toString());
+    customExtendedRedirCheck->setChecked(settings.value("customExtendedRedir", true).toBool());
+    customShuntCountSpinBox->setValue(settings.value("customShuntCount", 0).toInt());
+    customNoSpawningCheck->setChecked(settings.value("customNoSpawning", false).toBool());
+
+    // Restore selected game
+    QString selectedGame = settings.value("selectedGame", "").toString();
+    if (!selectedGame.isEmpty()) {
+        for (int i = 0; i < gameList->count(); ++i) {
+            if (gameList->item(i)->text() == selectedGame) {
+                gameList->setCurrentRow(i);
+                break;
+            }
+        }
+    }
+
+    // Unblock signals
+    tabWidget->blockSignals(false);
+    customTargetPathEdit->blockSignals(false);
+    customParametersEdit->blockSignals(false);
+    customExtendedRedirCheck->blockSignals(false);
+    customShuntCountSpinBox->blockSignals(false);
+    customNoSpawningCheck->blockSignals(false);
+    gameList->blockSignals(false);
+
+    settings.endGroup();
+
+    // Manually trigger validation to update the page's complete state
+    // This is necessary because we blocked signals during loading
+    validateTargetPath();
+    emit completeChanged();
 }
 
 QString TargetSelectionPage::getTargetPath() const
@@ -618,6 +716,82 @@ bool MPQSelectionPage::validatePage()
     return true;
 }
 
+void MPQSelectionPage::initializePage()
+{
+    loadSettings();
+    QWizardPage::initializePage();
+}
+
+void MPQSelectionPage::cleanupPage()
+{
+    QWizardPage::cleanupPage();
+}
+
+void MPQSelectionPage::saveSettings()
+{
+    QSettings settings;
+    settings.beginGroup("PatchWizard/MPQ");
+
+    // Save last MPQ directory
+    settings.setValue("lastDirectory", lastMPQDirectory);
+
+    // Clear old MPQ entries first
+    settings.remove("mpqs");
+
+    // Save MPQ list with checked state (manual index management)
+    settings.beginGroup("mpqs");
+    for (int i = 0; i < mpqListWidget->count(); ++i) {
+        settings.beginGroup(QString::number(i));
+        QListWidgetItem *item = mpqListWidget->item(i);
+        settings.setValue("path", item->text());
+        settings.setValue("checked", item->checkState() == Qt::Checked);
+        settings.endGroup();
+    }
+    settings.endGroup();
+
+    settings.endGroup();
+}
+
+void MPQSelectionPage::loadSettings()
+{
+    QSettings settings;
+    settings.beginGroup("PatchWizard/MPQ");
+
+    // Block signals while loading to avoid triggering saves
+    mpqListWidget->blockSignals(true);
+
+    // Restore last MPQ directory
+    lastMPQDirectory = settings.value("lastDirectory", QDir::currentPath()).toString();
+
+    // Restore MPQ list (manual index management)
+    settings.beginGroup("mpqs");
+    int i = 0;
+    while (true) {
+        settings.beginGroup(QString::number(i));
+        if (!settings.contains("path")) {
+            settings.endGroup();
+            break;
+        }
+
+        QString path = settings.value("path").toString();
+        bool checked = settings.value("checked", true).toBool();
+        settings.endGroup();
+
+        // Only add if file still exists
+        if (QFileInfo::exists(path)) {
+            addMPQFile(path, checked);
+        }
+
+        ++i;
+    }
+    settings.endGroup();
+
+    // Unblock signals
+    mpqListWidget->blockSignals(false);
+
+    settings.endGroup();
+}
+
 void MPQSelectionPage::validateMPQList()
 {
     int mpqCount = mpqListWidget->count();
@@ -666,6 +840,7 @@ void MPQSelectionPage::onItemChanged()
 {
     validateMPQList();
     emit completeChanged();
+    saveSettings();  // Save whenever items change (check state, order, etc.)
 }
 
 void MPQSelectionPage::addMPQFile(const QString &fileName, bool checked)
@@ -690,12 +865,20 @@ void MPQSelectionPage::addMPQFile(const QString &fileName, bool checked)
 
 void MPQSelectionPage::onAddClicked()
 {
+    // Use last directory if available
+    QString startDir = lastMPQDirectory.isEmpty() ? QDir::currentPath() : lastMPQDirectory;
+
     QStringList fileNames = QFileDialog::getOpenFileNames(
         this,
         "Select MPQ Files",
-        QString(),
+        startDir,
         "MPQ Archives (*.mpq);;All Files (*.*)"
     );
+
+    // Save the directory for next time
+    if (!fileNames.isEmpty()) {
+        lastMPQDirectory = QFileInfo(fileNames.first()).absolutePath();
+    }
 
     // Clear selection before adding new items
     mpqListWidget->clearSelection();
@@ -711,20 +894,27 @@ void MPQSelectionPage::onAddClicked()
     }
 
     validateMPQList();
+    saveSettings();  // Save after adding MPQs
 }
 
 void MPQSelectionPage::onAddFolderClicked()
 {
+    // Use last directory if available
+    QString startDir = lastMPQDirectory.isEmpty() ? QDir::currentPath() : lastMPQDirectory;
+
     QString folderPath = QFileDialog::getExistingDirectory(
         this,
         "Select Folder Containing MPQ Files",
-        QString(),
+        startDir,
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
     );
 
     if (folderPath.isEmpty()) {
         return;  // User cancelled
     }
+
+    // Save the directory for next time
+    lastMPQDirectory = folderPath;
 
     // Find all MPQ files in the selected folder
     QDir dir(folderPath);
@@ -745,6 +935,7 @@ void MPQSelectionPage::onAddFolderClicked()
     }
 
     validateMPQList();
+    saveSettings();  // Save after adding folder
 }
 
 void MPQSelectionPage::onRemoveClicked()
@@ -753,6 +944,7 @@ void MPQSelectionPage::onRemoveClicked()
     for (QListWidgetItem *item : selected) {
         delete item;
     }
+    saveSettings();  // Save after removing MPQs
     validateMPQList();
 }
 
@@ -763,6 +955,7 @@ void MPQSelectionPage::onMoveUpClicked()
         QListWidgetItem *item = mpqListWidget->takeItem(currentRow);
         mpqListWidget->insertItem(currentRow - 1, item);
         mpqListWidget->setCurrentRow(currentRow - 1);
+        saveSettings();  // Save after reordering
     }
 }
 
@@ -773,6 +966,7 @@ void MPQSelectionPage::onMoveDownClicked()
         QListWidgetItem *item = mpqListWidget->takeItem(currentRow);
         mpqListWidget->insertItem(currentRow + 1, item);
         mpqListWidget->setCurrentRow(currentRow + 1);
+        saveSettings();  // Save after reordering
     }
 }
 

@@ -19,6 +19,7 @@
 #include <QFrame>
 #include <QApplication>
 #include <QTimer>
+#include <QSettings>
 
 // Stylesheet for invalid input fields
 static const char* INVALID_FIELD_STYLE = "QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }";
@@ -158,6 +159,11 @@ SEMPQSettingsPage::SEMPQSettingsPage(QWidget *parent)
     connect(sempqNameEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::completeChanged);
     connect(mpqPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::completeChanged);
 
+    // Connect field changes to save settings
+    connect(sempqNameEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::saveSettings);
+    connect(mpqPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::saveSettings);
+    connect(iconPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::saveSettings);
+
     SEMPQSettingsPage::onIconPathChanged();
 }
 
@@ -166,6 +172,55 @@ bool SEMPQSettingsPage::isComplete() const
     // Page is complete if both required fields are non-empty
     return !sempqNameEdit->text().trimmed().isEmpty() &&
            !mpqPathEdit->text().trimmed().isEmpty();
+}
+
+void SEMPQSettingsPage::initializePage()
+{
+    loadSettings();
+    QWizardPage::initializePage();
+}
+
+void SEMPQSettingsPage::cleanupPage()
+{
+    QWizardPage::cleanupPage();
+}
+
+void SEMPQSettingsPage::saveSettings()
+{
+    QSettings settings;
+    settings.beginGroup("SEMPQWizard/Settings");
+
+    settings.setValue("sempqName", sempqNameEdit->text());
+    settings.setValue("mpqPath", mpqPathEdit->text());
+    settings.setValue("iconPath", iconPathEdit->text());
+
+    settings.endGroup();
+}
+
+void SEMPQSettingsPage::loadSettings()
+{
+    QSettings settings;
+    settings.beginGroup("SEMPQWizard/Settings");
+
+    // Block signals while loading to avoid triggering saves
+    sempqNameEdit->blockSignals(true);
+    mpqPathEdit->blockSignals(true);
+    iconPathEdit->blockSignals(true);
+
+    sempqNameEdit->setText(settings.value("sempqName", "").toString());
+    mpqPathEdit->setText(settings.value("mpqPath", "").toString());
+    iconPathEdit->setText(settings.value("iconPath", "").toString());
+
+    // Unblock signals
+    sempqNameEdit->blockSignals(false);
+    mpqPathEdit->blockSignals(false);
+    iconPathEdit->blockSignals(false);
+
+    settings.endGroup();
+
+    // Trigger validation and icon preview update
+    onMPQPathChanged();
+    onIconPathChanged();
 }
 
 QString SEMPQSettingsPage::getSEMPQName() const
@@ -914,6 +969,22 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     connect(tabWidget, &QTabWidget::currentChanged, this, &SEMPQTargetPage::onTabChanged);
     connect(extendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
 
+    // Connect field changes to save settings
+    connect(gameList, &QListWidget::currentRowChanged, this, &SEMPQTargetPage::saveSettings);
+    connect(tabWidget, &QTabWidget::currentChanged, this, &SEMPQTargetPage::saveSettings);
+    connect(parametersEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::saveSettings);
+    connect(extendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::saveSettings);
+    connect(customRegKeyEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::saveSettings);
+    connect(customRegValueEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::saveSettings);
+    connect(customRegExeEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::saveSettings);
+    connect(customRegTargetFileEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::saveSettings);
+    connect(customRegShuntCountSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &SEMPQTargetPage::saveSettings);
+    connect(customRegIsFullPathCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::saveSettings);
+    connect(customRegNoSpawningCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::saveSettings);
+    connect(customPathEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::saveSettings);
+    connect(customTargetShuntCountSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &SEMPQTargetPage::saveSettings);
+    connect(customTargetNoSpawningCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::saveSettings);
+
     // Initialize Custom Registry placeholders with default game (Diablo)
     updateCustomRegistryPlaceholders();
 }
@@ -1185,6 +1256,17 @@ bool SEMPQTargetPage::isComplete() const
     }
 }
 
+void SEMPQTargetPage::initializePage()
+{
+    loadSettings();
+    QWizardPage::initializePage();
+}
+
+void SEMPQTargetPage::cleanupPage()
+{
+    QWizardPage::cleanupPage();
+}
+
 const GameComponent* SEMPQTargetPage::getReferenceComponent() const
 {
     // If a game is selected in Supported Games tab, use that
@@ -1216,6 +1298,136 @@ void SEMPQTargetPage::clearWhitespaceOnlyFields()
     if (customRegTargetFileEdit->text().trimmed().isEmpty()) {
         customRegTargetFileEdit->clear();
     }
+}
+
+void SEMPQTargetPage::saveSettings()
+{
+    QSettings settings;
+    settings.beginGroup("SEMPQWizard/Target");
+
+    // Save current tab
+    settings.setValue("currentTab", tabWidget->currentIndex());
+
+    // Save common settings
+    settings.setValue("parameters", parametersEdit->text());
+    settings.setValue("extendedRedir", extendedRedirCheckbox->isChecked());
+
+    // Save selected game (if any)
+    if (selectedComponent) {
+        settings.setValue("selectedGame", gameList->currentItem()->text());
+    }
+
+    // Save Custom Registry settings
+    settings.setValue("customRegKey", customRegKeyEdit->text());
+    settings.setValue("customRegValue", customRegValueEdit->text());
+    settings.setValue("customRegExe", customRegExeEdit->text());
+    settings.setValue("customRegTargetFile", customRegTargetFileEdit->text());
+    settings.setValue("customRegShuntCount", customRegShuntCountSpinBox->value());
+    settings.setValue("customRegIsFullPath", customRegIsFullPathCheckbox->isChecked());
+    settings.setValue("customRegNoSpawning", customRegNoSpawningCheckbox->isChecked());
+
+    // Save Custom Target settings
+    settings.setValue("customTargetPath", customPathEdit->text());
+    settings.setValue("customTargetShuntCount", customTargetShuntCountSpinBox->value());
+    settings.setValue("customTargetNoSpawning", customTargetNoSpawningCheckbox->isChecked());
+
+    settings.endGroup();
+}
+
+void SEMPQTargetPage::loadSettings()
+{
+    QSettings settings;
+    settings.beginGroup("SEMPQWizard/Target");
+
+    // Block signals while loading to avoid triggering saves
+    tabWidget->blockSignals(true);
+    parametersEdit->blockSignals(true);
+    extendedRedirCheckbox->blockSignals(true);
+    gameList->blockSignals(true);
+    customRegKeyEdit->blockSignals(true);
+    customRegValueEdit->blockSignals(true);
+    customRegExeEdit->blockSignals(true);
+    customRegTargetFileEdit->blockSignals(true);
+    customRegShuntCountSpinBox->blockSignals(true);
+    customRegIsFullPathCheckbox->blockSignals(true);
+    customRegNoSpawningCheckbox->blockSignals(true);
+    customPathEdit->blockSignals(true);
+    customTargetShuntCountSpinBox->blockSignals(true);
+    customTargetNoSpawningCheckbox->blockSignals(true);
+
+    // Restore tab
+    int savedTab = settings.value("currentTab", 0).toInt();
+    tabWidget->setCurrentIndex(savedTab);
+
+    // Restore common settings
+    parametersEdit->setText(settings.value("parameters", "").toString());
+
+    // Save the extended redir value to restore later (after game selection updates it)
+    bool savedExtendedRedir = settings.value("extendedRedir", true).toBool();
+
+    // Restore selected game
+    QString selectedGame = settings.value("selectedGame", "").toString();
+    if (!selectedGame.isEmpty()) {
+        for (int i = 0; i < gameList->count(); ++i) {
+            if (gameList->item(i)->text() == selectedGame) {
+                gameList->setCurrentRow(i);
+                break;
+            }
+        }
+    }
+
+    // Restore Custom Registry settings
+    customRegKeyEdit->setText(settings.value("customRegKey", "").toString());
+    customRegValueEdit->setText(settings.value("customRegValue", "").toString());
+    customRegExeEdit->setText(settings.value("customRegExe", "").toString());
+    customRegTargetFileEdit->setText(settings.value("customRegTargetFile", "").toString());
+    customRegShuntCountSpinBox->setValue(settings.value("customRegShuntCount", 0).toInt());
+    customRegIsFullPathCheckbox->setChecked(settings.value("customRegIsFullPath", false).toBool());
+    customRegNoSpawningCheckbox->setChecked(settings.value("customRegNoSpawning", false).toBool());
+
+    // Restore Custom Target settings
+    customPathEdit->setText(settings.value("customTargetPath", "").toString());
+    customTargetShuntCountSpinBox->setValue(settings.value("customTargetShuntCount", 0).toInt());
+    customTargetNoSpawningCheckbox->setChecked(settings.value("customTargetNoSpawning", false).toBool());
+
+    // Unblock signals
+    tabWidget->blockSignals(false);
+    parametersEdit->blockSignals(false);
+    extendedRedirCheckbox->blockSignals(false);
+    gameList->blockSignals(false);
+    customRegKeyEdit->blockSignals(false);
+    customRegValueEdit->blockSignals(false);
+    customRegExeEdit->blockSignals(false);
+    customRegTargetFileEdit->blockSignals(false);
+    customRegShuntCountSpinBox->blockSignals(false);
+    customRegIsFullPathCheckbox->blockSignals(false);
+    customRegNoSpawningCheckbox->blockSignals(false);
+    customPathEdit->blockSignals(false);
+    customTargetShuntCountSpinBox->blockSignals(false);
+    customTargetNoSpawningCheckbox->blockSignals(false);
+
+    settings.endGroup();
+
+    // Manually trigger updates that would have been triggered by signals
+    // This is necessary because we blocked signals during loading
+    if (gameList->currentItem()) {
+        onGameSelectionChanged(gameList->currentItem(), nullptr);
+    }
+
+    if (savedTab == 1) {
+        // Custom Registry tab
+        onCustomRegistryChanged();
+    } else if (savedTab == 2) {
+        // Custom Target tab
+        onCustomPathChanged();
+    }
+    onTabChanged(savedTab);
+
+    // Restore extended redir checkbox AFTER all updates (which overwrite it with defaults)
+    // Block signals to avoid triggering the warning dialog
+    extendedRedirCheckbox->blockSignals(true);
+    extendedRedirCheckbox->setChecked(savedExtendedRedir);
+    extendedRedirCheckbox->blockSignals(false);
 }
 
 void SEMPQTargetPage::updateCustomRegistryPlaceholders()
