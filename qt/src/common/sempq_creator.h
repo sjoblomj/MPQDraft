@@ -40,6 +40,7 @@ struct SEMPQCreationParams
     bool useRegistry;
     QString registryKey;
     QString registryValue;
+    bool valueIsFullPath;  // If true, registry value contains full path to .exe (not just directory)
     QString targetPath;
     QString targetFileName;
     QString spawnFileName;

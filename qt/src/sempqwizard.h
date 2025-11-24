@@ -92,8 +92,11 @@ class SEMPQTargetPage : public QWizardPage
 public:
     explicit SEMPQTargetPage(QWidget *parent = nullptr);
 
-    // Returns true if using registry-based target (Mode 1)
+    // Returns true if using registry-based target (Mode 1 or Mode 2)
     bool isRegistryBased() const;
+
+    // Returns the current tab index (0=Supported Games, 1=Custom Registry, 2=Custom Target)
+    int getCurrentTabIndex() const;
 
     // Mode 1: Registry-based - Supported Games (returns nullptr if not Mode 1)
     const GameComponent* getSelectedComponent() const;
@@ -128,6 +131,7 @@ private slots:
     void onCustomRegistryChanged();
     void onTabChanged(int index);
     void onExtendedRedirChanged(int state);
+    void onIsFullPathChanged(int state);
     void onPasteRegKeyClicked();
     void onPasteRegValueClicked();
     void onPasteExeFileClicked();

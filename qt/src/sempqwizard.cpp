@@ -518,11 +518,11 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     regValueHelp->setToolTip(
         "<b>Registry Value Name</b><br><br>"
         "The name of the registry value that contains the game's installation path.<br><br>"
-        "<b>Common examples:</b><br>"
-        "• InstallPath<br>"
-        "• InstallLocation<br>"
-        "• Path<br>"
-        "• GamePath<br><br>"
+        "<b>Common examples:</b>"
+        "<ul>"
+        "<li>InstallPath</li>"
+        "<li>Directory</li>"
+        "<li>DiabloInstall</li></ul>"
         "Look in the registry key you specified above to find the exact value name.");
     regValueHelp->setCursor(Qt::WhatsThisCursor);
     regValueLabelLayout->addWidget(regValueHelp);
@@ -562,7 +562,8 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
         "The name of the game's executable file that will be launched.<br><br>"
         "<b>Example:</b> StarCraft.exe<br><br>"
         "This file will be combined with the path from the registry to create the full "
-        "path to the game executable. Make sure to include the .exe extension.");
+        "path to the game executable. Make sure to include the .exe extension.<br><br>"
+        "<b>Note:</b> This field is unused when 'Registry value contains full path to executable' is checked.");
     exeFileHelp->setCursor(Qt::WhatsThisCursor);
     exeFileLabelLayout->addWidget(exeFileHelp);
     exeFileLabelLayout->addStretch();
@@ -603,7 +604,8 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
         "For example, if the executable is 'StarCraft.exe', the target is also 'StarCraft.exe'.<br><br>"
         "<b>Special case:</b> Some games use a launcher that starts a different executable. "
         "For example, Diablo II has 'Diablo II.exe' (launcher) and 'Game.exe' (actual game). "
-        "In such cases, the Executable Filename is 'Diablo II.exe' and the Target File Name is 'Game.exe'.");
+        "In such cases, the Executable Filename is 'Diablo II.exe' and the Target File Name is 'Game.exe'.<br><br>"
+        "<b>Note:</b> This field is unused when 'Registry value contains full path to executable' is checked.");
     targetFileHelp->setCursor(Qt::WhatsThisCursor);
     targetFileLabelLayout->addWidget(targetFileHelp);
     targetFileLabelLayout->addStretch();
@@ -623,7 +625,47 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     customRegLayout->addLayout(targetFileInputLayout);
 
-    customRegLayout->addSpacing(5);
+    customRegLayout->addSpacing(10);
+
+    // Checkbox for "Value is full path"
+    QHBoxLayout *isFullPathLayout = new QHBoxLayout();
+    customRegIsFullPathCheckbox = new QCheckBox(
+        "Registry value contains full path to executable",
+        customRegContentWidget);
+    connect(customRegIsFullPathCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onIsFullPathChanged);
+    isFullPathLayout->addWidget(customRegIsFullPathCheckbox);
+
+    QLabel *isFullPathHelp = new QLabel(customRegContentWidget);
+    isFullPathHelp->setText(" ? ");
+    isFullPathHelp->setStyleSheet(
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    isFullPathHelp->setToolTip(
+        "<b>Registry Value Contains Full Path</b><br><br>"
+        "Controls how the registry value is interpreted when the SEMPQ runs on the end user's machine.<br><br>"
+        "<b>Unchecked (default):</b> The registry value contains only the installation directory. "
+        "The Executable Filename and Target File Name will be appended to this directory path.<br><br>"
+        "<b>Example:</b> If the registry contains 'C:\\Program Files\\StarCraft' and the Executable Filename "
+        "is 'StarCraft.exe', the final path will be 'C:\\Program Files\\StarCraft\\StarCraft.exe'.<br><br>"
+        "<b>Checked:</b> The registry value already contains the complete path to the executable file. "
+        "The Executable Filename and Target File Name fields are ignored.<br><br>"
+        "<b>Example:</b> If the registry contains 'C:\\Program Files\\StarCraft\\StarCraft.exe', "
+        "this path will be used directly.<br><br>"
+        "Most games store only the directory path, so leave this unchecked unless you've verified "
+        "that the registry value includes the .exe filename.");
+    isFullPathHelp->setCursor(Qt::WhatsThisCursor);
+    isFullPathLayout->addWidget(isFullPathHelp);
+
+    isFullPathRefLabel = new QLabel(customRegContentWidget);
+    isFullPathRefLabel->setStyleSheet("QLabel { color: #808080; }");  // Gray text
+    isFullPathLayout->addWidget(isFullPathRefLabel);
+
+    isFullPathLayout->addStretch();
+    customRegLayout->addLayout(isFullPathLayout);
+
+    customRegLayout->addSpacing(10);
 
     // Shunt Count
     QHBoxLayout *shuntCountLabelLayout = new QHBoxLayout();
@@ -664,42 +706,6 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     shuntCountInputLayout->addStretch();
     customRegLayout->addLayout(shuntCountInputLayout);
-
-    customRegLayout->addSpacing(10);
-
-    // Checkbox for "Value is full path"
-    QHBoxLayout *isFullPathLayout = new QHBoxLayout();
-    customRegIsFullPathCheckbox = new QCheckBox(
-        "Registry value contains full path to executable",
-        customRegContentWidget);
-    isFullPathLayout->addWidget(customRegIsFullPathCheckbox);
-
-    QLabel *isFullPathHelp = new QLabel(customRegContentWidget);
-    isFullPathHelp->setText(" ? ");
-    isFullPathHelp->setStyleSheet(
-        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
-        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
-        "max-width: 16px; min-height: 16px; max-height: 16px; "
-        "qproperty-alignment: AlignCenter; }");
-    isFullPathHelp->setToolTip(
-        "<b>Registry Value Contains Full Path</b><br><br>"
-        "<b>Unchecked (default):</b> The registry value contains only the installation directory "
-        "(e.g., 'C:\\Program Files\\StarCraft'). MPQDraft will append the executable filename "
-        "to this path.<br><br>"
-        "<b>Checked:</b> The registry value contains the complete path to the executable file "
-        "(e.g., 'C:\\Program Files\\StarCraft\\StarCraft.exe'). MPQDraft will use this path "
-        "directly without appending anything.<br><br>"
-        "Most games store only the directory path, so leave this unchecked unless you've verified "
-        "that the registry value includes the .exe filename.");
-    isFullPathHelp->setCursor(Qt::WhatsThisCursor);
-    isFullPathLayout->addWidget(isFullPathHelp);
-
-    isFullPathRefLabel = new QLabel(customRegContentWidget);
-    isFullPathRefLabel->setStyleSheet("QLabel { color: #808080; }");  // Gray text
-    isFullPathLayout->addWidget(isFullPathRefLabel);
-
-    isFullPathLayout->addStretch();
-    customRegLayout->addLayout(isFullPathLayout);
 
     customRegLayout->addSpacing(10);
 
@@ -995,6 +1001,11 @@ bool SEMPQTargetPage::isRegistryBased() const
     return (index == 0 || index == 1);  // Tab 0: Supported Games, Tab 1: Custom Registry
 }
 
+int SEMPQTargetPage::getCurrentTabIndex() const
+{
+    return tabWidget->currentIndex();
+}
+
 const GameComponent* SEMPQTargetPage::getSelectedComponent() const
 {
     if (!isRegistryBased()) {
@@ -1075,15 +1086,9 @@ uint32_t SEMPQTargetPage::getCustomRegistryFlags() const
 
 bool SEMPQTargetPage::getExtendedRedir() const
 {
-    int index = tabWidget->currentIndex();
-
-    if (index == 0 && selectedComponent) {
-        // Tab 0: Supported Games - use the component's default
-        return selectedComponent->extendedRedir;
-    } else {
-        // Tab 1: Custom Registry or Tab 2: Custom Target - use the checkbox
-        return extendedRedirCheckbox->isChecked();
-    }
+    // Always return the checkbox value - it's initialized to the component's default
+    // but the user can change it
+    return extendedRedirCheckbox->isChecked();
 }
 
 void SEMPQTargetPage::onGameSelectionChanged(QListWidgetItem *current, QListWidgetItem *previous)
@@ -1237,6 +1242,22 @@ void SEMPQTargetPage::onExtendedRedirChanged(int state)
     }
 }
 
+void SEMPQTargetPage::onIsFullPathChanged(int state)
+{
+    Q_UNUSED(state);
+
+    // Enable/disable the filename fields based on checkbox state
+    bool isFullPath = customRegIsFullPathCheckbox->isChecked();
+
+    customRegExeEdit->setEnabled(!isFullPath);
+    customRegTargetFileEdit->setEnabled(!isFullPath);
+    pasteExeFileButton->setEnabled(!isFullPath);
+    pasteTargetFileButton->setEnabled(!isFullPath);
+
+    // Trigger validation update
+    emit completeChanged();
+}
+
 bool SEMPQTargetPage::isComplete() const
 {
     int index = tabWidget->currentIndex();
@@ -1246,10 +1267,18 @@ bool SEMPQTargetPage::isComplete() const
         return selectedComponent != nullptr;
     } else if (index == 1) {
         // Tab 1: Custom Registry - Must have all required fields filled
-        return !customRegKeyEdit->text().trimmed().isEmpty() &&
-               !customRegValueEdit->text().trimmed().isEmpty() &&
-               !customRegExeEdit->text().trimmed().isEmpty() &&
-               !customRegTargetFileEdit->text().trimmed().isEmpty();
+        bool hasKeyAndValue = !customRegKeyEdit->text().trimmed().isEmpty() &&
+                              !customRegValueEdit->text().trimmed().isEmpty();
+
+        // If "full path" is checked, filename fields are not required
+        if (customRegIsFullPathCheckbox->isChecked()) {
+            return hasKeyAndValue;
+        } else {
+            // If "full path" is unchecked, filename fields are required
+            return hasKeyAndValue &&
+                   !customRegExeEdit->text().trimmed().isEmpty() &&
+                   !customRegTargetFileEdit->text().trimmed().isEmpty();
+        }
     } else {
         // Tab 2: Custom Target - Must have a custom path entered
         return !customPathEdit->text().isEmpty();
@@ -1428,6 +1457,9 @@ void SEMPQTargetPage::loadSettings()
     extendedRedirCheckbox->blockSignals(true);
     extendedRedirCheckbox->setChecked(savedExtendedRedir);
     extendedRedirCheckbox->blockSignals(false);
+
+    // Update the enabled state of filename fields based on isFullPath checkbox
+    onIsFullPathChanged(0);
 }
 
 void SEMPQTargetPage::updateCustomRegistryPlaceholders()
@@ -2004,10 +2036,17 @@ void SEMPQCreationWorker::run()
     qDebug() << "Plugins:" << params.pluginPaths; // TODO: Cleanup
 
     // Get target information based on mode
-    const GameComponent* component = targetPage->getSelectedComponent();
-    if (component)
+    int targetTabIndex = targetPage->getCurrentTabIndex();
+
+    if (targetTabIndex == 0)
     {
         // Mode 1: Supported Games (Registry-based)
+        const GameComponent* component = targetPage->getSelectedComponent();
+        if (!component) {
+            qDebug() << "ERROR: No component selected in Supported Games tab";
+            return;
+        }
+
         // Need to find the parent SupportedGame to get registry info
         params.useRegistry = true;
 
@@ -2031,24 +2070,29 @@ void SEMPQCreationWorker::run()
         }
 
         params.targetFileName = getTargetFileName(*component);
+        params.spawnFileName = getFileName(*component);
         params.shuntCount = component->shuntCount;
+        params.valueIsFullPath = false;  // Supported games always use directory + filename
         params.flags = 0;
-        if (component->extendedRedir)
+        if (targetPage->getExtendedRedir())
             params.flags |= MPQD_EXTENDED_REDIR;
 
         qDebug() << "Target Mode: Supported Game (Registry-based)"; // TODO: Cleanup
         qDebug() << "Registry Key:" << params.registryKey; // TODO: Cleanup
         qDebug() << "Registry Value:" << params.registryValue; // TODO: Cleanup
+        qDebug() << "Spawn File Name:" << params.spawnFileName; // TODO: Cleanup
         qDebug() << "Target File Name:" << params.targetFileName; // TODO: Cleanup
         qDebug() << "Shunt Count:" << params.shuntCount; // TODO: Cleanup
         qDebug() << "Extended Redir:" << (params.flags & MPQD_EXTENDED_REDIR ? "Yes" : "No"); // TODO: Cleanup
     }
-    else if (targetPage->isRegistryBased())
+    else if (targetTabIndex == 1)
     {
         // Mode 2: Custom Registry
         params.useRegistry = true;
         params.registryKey = targetPage->getCustomRegistryKey();
         params.registryValue = targetPage->getCustomRegistryValue();
+        params.valueIsFullPath = targetPage->getCustomRegistryIsFullPath();
+        params.spawnFileName = targetPage->getCustomRegistryExe();
         params.targetFileName = targetPage->getCustomRegistryTargetFile();
         params.shuntCount = targetPage->getCustomRegistryShuntCount();
         params.flags = targetPage->getCustomRegistryFlags();
@@ -2056,12 +2100,14 @@ void SEMPQCreationWorker::run()
         qDebug() << "Target Mode: Custom Registry"; // TODO: Cleanup
         qDebug() << "Registry Key:" << params.registryKey; // TODO: Cleanup
         qDebug() << "Registry Value:" << params.registryValue; // TODO: Cleanup
+        qDebug() << "Value Is Full Path:" << (params.valueIsFullPath ? "Yes" : "No"); // TODO: Cleanup
+        qDebug() << "Spawn File Name:" << params.spawnFileName; // TODO: Cleanup
         qDebug() << "Target File Name:" << params.targetFileName; // TODO: Cleanup
         qDebug() << "Shunt Count:" << params.shuntCount; // TODO: Cleanup
         qDebug() << "Extended Redir:" << (params.flags & MPQD_EXTENDED_REDIR ? "Yes" : "No"); // TODO: Cleanup
         qDebug() << "No Spawning:" << (params.flags & MPQD_NO_SPAWNING ? "Yes" : "No"); // TODO: Cleanup
     }
-    else
+    else if (targetTabIndex == 2)
     {
         // Mode 3: Custom Target (Hardcoded Path)
         params.useRegistry = false;
@@ -2078,6 +2124,11 @@ void SEMPQCreationWorker::run()
         qDebug() << "Shunt Count:" << params.shuntCount; // TODO: Cleanup
         qDebug() << "Extended Redir:" << (params.flags & MPQD_EXTENDED_REDIR ? "Yes" : "No"); // TODO: Cleanup
         qDebug() << "No Spawning:" << (params.flags & MPQD_NO_SPAWNING ? "Yes" : "No"); // TODO: Cleanup
+    }
+    else
+    {
+        qDebug() << "ERROR: Unknown target tab index:" << targetTabIndex;
+        return;
     }
 
     qDebug() << "================================="; // TODO: Cleanup
