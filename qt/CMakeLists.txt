@@ -19,10 +19,10 @@ set(SOURCES
     src/patchwizard.cpp
     src/sempqwizard.cpp
     src/pluginpage.cpp
-    src/common/pluginloader.cpp
-    src/common/gamedata.cpp
     src/common/gamedetection.cpp
     src/common/sempq_creator.cpp
+    src/core/pluginmanager.cpp
+    src/core/gamedata.cpp
 )
 
 set(HEADERS
@@ -31,13 +31,13 @@ set(HEADERS
     src/sempqwizard.h
     src/pluginpage.h
     src/gamedata_qt.h
-    src/common/pluginloader.h
     src/common/mpqdraftplugin.h
     src/common/common.h
     src/common/patcher.h
-    src/common/gamedata.h
     src/common/gamedetection.h
     src/common/sempq_creator.h
+    src/core/pluginmanager.h
+    src/core/gamedata.h
 )
 
 # Resource files
@@ -71,6 +71,7 @@ endif()
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
 )
 
 # Compiler flags for MinGW cross-compilation

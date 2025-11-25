@@ -15,9 +15,8 @@
 #include <QListWidget>
 #include <QPushButton>
 #include <QLabel>
-#include <QMap>
-#include <QSet>
-#include "common/pluginloader.h"
+#include "core/pluginmanager.h"
+#include "common/SempqCreatorMock.h"  // For MPQDRAFTPLUGINMODULE
 
 class PluginPage : public QWizardPage
 {
@@ -28,6 +27,7 @@ public:
     ~PluginPage();
 
     QStringList getSelectedPlugins() const;
+    std::vector<MPQDRAFTPLUGINMODULE> getSelectedPluginModules() const;
     bool isComplete() const override;
     void initializePage() override;
     void cleanupPage() override;
@@ -40,7 +40,6 @@ private slots:
     void onItemChanged(QListWidgetItem *item);
 
 private:
-    void loadPluginsFromDirectory();
     bool addPlugin(const QString &path, bool showMessages = true);
     void validatePluginSelection();
     void saveSettings();
@@ -54,11 +53,8 @@ private:
     QPushButton *configureButton;
     QLabel *statusLabel;
 
-    // Map of plugin paths to their loaded info
-    QMap<QString, PluginInfo*> loadedPlugins;
-
-    // Set of plugin paths that failed to load
-    QSet<QString> failedPlugins;
+    // Plugin business logic manager (Qt-free)
+    PluginManager *pluginManager;
 };
 
 #endif // PLUGINPAGE_H

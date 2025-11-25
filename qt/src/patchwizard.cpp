@@ -5,7 +5,7 @@
 #include "patchwizard.h"
 #include "pluginpage.h"
 #include "common/patcher.h"
-#include "common/gamedata.h"
+#include "core/gamedata.h"
 #include "gamedata_qt.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>

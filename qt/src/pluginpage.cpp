@@ -15,7 +15,8 @@
 #include <QSettings>
 
 PluginPage::PluginPage(QWidget *parent)
-    : QWizardPage(parent)
+    : QWizardPage(parent),
+      pluginManager(new PluginManager())
 {
     setTitle("Select Plugins");
     setSubTitle("Choose plugins to load. Plugins can add custom patching functionality.");
@@ -59,20 +60,12 @@ PluginPage::PluginPage(QWidget *parent)
 
     contentLayout->addLayout(buttonLayout);
     mainLayout->addLayout(contentLayout);
-
-    // Load plugins from default directory
-    loadPluginsFromDirectory();
 }
 
 PluginPage::~PluginPage()
 {
-    // Clean up loaded plugins
-    for (PluginInfo *info : loadedPlugins) {
-        if (info->hDLLModule) {
-            FreeLibrary(info->hDLLModule);
-        }
-        delete info;
-    }
+    // PluginManager handles cleanup automatically
+    delete pluginManager;
 }
 
 QStringList PluginPage::getSelectedPlugins() const
@@ -87,34 +80,53 @@ QStringList PluginPage::getSelectedPlugins() const
     return selected;
 }
 
-bool PluginPage::isComplete() const
+std::vector<MPQDRAFTPLUGINMODULE> PluginPage::getSelectedPluginModules() const
 {
-    // Count selected plugins and modules
-    int selectedCount = 0;
-    int totalModules = 0;
+    std::vector<MPQDRAFTPLUGINMODULE> modules;
 
     for (int i = 0; i < pluginListWidget->count(); ++i) {
         QListWidgetItem *item = pluginListWidget->item(i);
         if (item->checkState() == Qt::Checked) {
-            selectedCount++;
+            QString path = item->data(Qt::UserRole).toString();
+            std::string pathStr = path.toStdString();
 
-            // Each plugin counts as 1 module (the plugin DLL itself)
-            totalModules++;
+            // Get plugin info from the manager
+            const PluginInfo* info = pluginManager->getPluginInfo(pathStr);
 
-            // Get the plugin info to count auxiliary modules
-            QString pluginPath = item->data(Qt::UserRole).toString();
-            PluginInfo *info = loadedPlugins.value(pluginPath, nullptr);
-            if (info && info->pPlugin) {
-                DWORD numModules = 0;
-                if (info->pPlugin->GetModules(nullptr, &numModules)) {
-                    totalModules += numModules;
-                }
+            if (info) {
+                // Create module structure with real plugin metadata
+                MPQDRAFTPLUGINMODULE module;
+                module.dwComponentID = info->dwPluginID;  // Real plugin ID!
+                module.dwModuleID = 0;  // Main plugin module has ID 0
+                module.bExecute = 1;    // Mark as executable
+
+                // Copy the file path
+                strncpy(module.szModuleFileName, pathStr.c_str(), MPQDRAFT_MAX_PATH - 1);
+                module.szModuleFileName[MPQDRAFT_MAX_PATH - 1] = '\0';
+
+                modules.push_back(module);
             }
         }
     }
 
-    // Page is complete if we don't exceed the limits
-    return selectedCount <= MAX_MPQDRAFT_PLUGINS && totalModules <= MAX_AUXILIARY_MODULES;
+    return modules;
+}
+
+bool PluginPage::isComplete() const
+{
+    // Get list of selected plugin paths
+    std::vector<std::string> selectedPaths;
+    for (int i = 0; i < pluginListWidget->count(); ++i) {
+        QListWidgetItem *item = pluginListWidget->item(i);
+        if (item->checkState() == Qt::Checked) {
+            QString pluginPath = item->data(Qt::UserRole).toString();
+            selectedPaths.push_back(pluginPath.toStdString());
+        }
+    }
+
+    // Delegate validation to PluginManager
+    PluginManager::ValidationResult result = pluginManager->validateSelection(selectedPaths);
+    return result.valid;
 }
 
 void PluginPage::initializePage()
@@ -232,56 +244,23 @@ void PluginPage::loadSettings()
 
 void PluginPage::validatePluginSelection()
 {
-    // Count selected plugins
-    int selectedCount = 0;
-    int totalModules = 0;
-
+    // Get list of selected plugin paths
+    std::vector<std::string> selectedPaths;
     for (int i = 0; i < pluginListWidget->count(); ++i) {
         QListWidgetItem *item = pluginListWidget->item(i);
         if (item->checkState() == Qt::Checked) {
-            selectedCount++;
-
-            // Each plugin counts as 1 module (the plugin DLL itself)
-            totalModules++;
-
-            // Get the plugin info to count auxiliary modules
             QString pluginPath = item->data(Qt::UserRole).toString();
-            PluginInfo *info = loadedPlugins.value(pluginPath, nullptr);
-
-#ifdef _WIN32
-            // TODO
-            // On Windows, we can actually call GetModules to get the count
-            if (info && info->pPlugin) {
-                DWORD numModules = 0;
-                if (info->pPlugin->GetModules(nullptr, &numModules)) {
-                    totalModules += numModules;
-                }
-            }
-#else
-            // On non-Windows, we can't load plugins, so we can't count modules
-            // This validation will only work properly on Windows
-#endif
+            selectedPaths.push_back(pluginPath.toStdString());
         }
     }
 
-    // Check limits
-    bool hasError = false;
-    QString errorMsg;
+    // Delegate validation to PluginManager
+    PluginManager::ValidationResult result = pluginManager->validateSelection(selectedPaths);
 
-    if (selectedCount > MAX_MPQDRAFT_PLUGINS) {
-        errorMsg = QString("<font color='#d32f2f'><b>Warning:</b> Too many plugins selected (%1/%2). "
-                          "Please deselect some plugins.</font>")
-                      .arg(selectedCount).arg(MAX_MPQDRAFT_PLUGINS);
-        hasError = true;
-    } else if (totalModules > MAX_AUXILIARY_MODULES) {
-        errorMsg = QString("<font color='#d32f2f'><b>Warning:</b> Too many plugin modules (%1/%2). "
-                          "Plugins and their auxiliary modules exceed the limit. "
-                          "Please deselect some plugins.</font>")
-                      .arg(totalModules).arg(MAX_AUXILIARY_MODULES);
-        hasError = true;
-    }
-
-    if (hasError) {
+    // Update UI based on validation result
+    if (!result.valid) {
+        QString errorMsg = QString("<font color='#d32f2f'><b>Warning:</b> %1</font>")
+                              .arg(QString::fromStdString(result.errorMessage));
         statusLabel->setText(errorMsg);
         statusLabel->show();
     } else {
@@ -297,121 +276,71 @@ void PluginPage::onItemChanged(QListWidgetItem *item)
     saveSettings();  // Save whenever items change (check state, etc.)
 }
 
-void PluginPage::loadPluginsFromDirectory()
+bool PluginPage::addPlugin(const QString &path, bool showMessages)
 {
-    // Look for plugins in the "plugins" subdirectory
-    QDir pluginDir("plugins");
-    if (!pluginDir.exists()) {
-        return;
-    }
-
-    // Find all .qdp files (MPQDraft plugin files)
-    QStringList filters;
-    filters << "*.qdp" << "*.dll";
-    QStringList pluginFiles = pluginDir.entryList(filters, QDir::Files);
-
-    int failedCount = 0;
-    for (const QString &fileName : pluginFiles) {
-        QString fullPath = pluginDir.absoluteFilePath(fileName);
-        if (!addPlugin(fullPath, false)) {  // Don't show messages during auto-load
-            failedCount++;
+    // Check if already in list widget (avoid duplicates in UI)
+    for (int i = 0; i < pluginListWidget->count(); ++i) {
+        QListWidgetItem *item = pluginListWidget->item(i);
+        if (item->data(Qt::UserRole).toString() == path) {
+            return true;  // Already in list
         }
     }
 
-    // Show a single summary message if any plugins failed to load
-    if (failedCount > 0) {
-        QMessageBox::warning(this, "Plugin Loading Failed",
-                           QString("Failed to load %1 plugin(s) from the plugins directory.\n\n"
-                                  "The failed plugins are shown in red in the list. "
-                                  "They may be corrupted or missing required dependencies.")
-                           .arg(failedCount));
-    }
-}
+    // Delegate plugin loading to PluginManager
+    std::string stdPath = path.toStdString();
+    std::string errorMessage;
+    bool success = pluginManager->addPlugin(stdPath, errorMessage);
 
-bool PluginPage::addPlugin(const QString &path, bool showMessages)
-{
-    // Don't add duplicates - silently filter them out
-    if (loadedPlugins.contains(path) || failedPlugins.contains(path)) {
-        return true;  // Already handled
-    }
-
-    // Try to load the plugin
-    PluginInfo *info = new PluginInfo();
-    bool loadSuccess = LoadPluginInfo(path.toStdString().c_str(), *info);
-
-    if (!loadSuccess) {
-#ifdef _WIN32
-        // On Windows, this is a real error - the plugin DLL couldn't be loaded
-        delete info;
-
-        // Mark as failed and add to list in red
-        failedPlugins.insert(path);
-
+    if (!success) {
+        // Plugin failed to load - add to list in red
         QString displayName = QFileInfo(path).fileName() + " (failed to load)";
         QListWidgetItem *item = new QListWidgetItem(displayName, pluginListWidget);
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
         item->setCheckState(Qt::Unchecked);
-        item->setData(Qt::UserRole, path);  // Store full path
-        item->setForeground(Qt::red);  // Make it red
-
-        // Add Plugin icon
-        QIcon pluginIcon(":/icons/plugin.svg");
-        item->setIcon(pluginIcon);
+        item->setData(Qt::UserRole, path);
+        item->setForeground(Qt::red);
+        item->setIcon(QIcon(":/icons/plugin.svg"));
 
         if (showMessages) {
             QMessageBox::warning(this, "Failed to Load Plugin",
-                               QString("Failed to load plugin from:\n%1\n\n"
-                                      "The file may not be a valid MPQDraft plugin, or it may be "
-                                      "missing required dependencies.")
-                               .arg(path));
+                               QString("Failed to load plugin from:\n%1\n\n%2")
+                               .arg(path)
+                               .arg(QString::fromStdString(errorMessage)));
         }
         return false;
-#else
-        // On Linux, plugins can't be loaded (they're Windows DLLs)
-        // But we can still add them to the list for testing the UI
-        if (showMessages) {
-            QMessageBox::information(this, "Plugin Loading Not Available",
-                                    QString("Plugin loading is only available on Windows.\n\n"
-                                           "This is a development build for GUI testing. "
-                                           "The plugin will be added to the list, but cannot be "
-                                           "configured or validated.\n\n"
-                                           "File: %1")
-                                    .arg(QFileInfo(path).fileName()));
-        }
-
-        // Populate the existing PluginInfo as a dummy entry for UI testing
-        info->strFileName = path.toStdString();
-        info->strPluginName = QFileInfo(path).fileName().toStdString();
-        info->dwPluginID = 0;
-        info->hDLLModule = nullptr;
-        info->pPlugin = nullptr;
-        // Fall through to add it to the list
-#endif
     }
 
-    // Add to our map
-    loadedPlugins[path] = info;
+    // Plugin loaded successfully - get info and add to list
+    const PluginInfo *info = pluginManager->getPluginInfo(stdPath);
+    if (!info) {
+        return false;  // Shouldn't happen
+    }
 
-    // Add to list widget
     QString displayName = QString::fromStdString(info->strPluginName);
+
 #ifndef _WIN32
-    // On Linux, mark dummy entries as not loaded
+    // On Linux, show informational message on first manual add
+    if (showMessages) {
+        QMessageBox::information(this, "Plugin Loading Not Available",
+                                QString("Plugin loading is only available on Windows.\n\n"
+                                       "This is a development build for GUI testing. "
+                                       "The plugin will be added to the list, but cannot be "
+                                       "configured or validated.\n\n"
+                                       "File: %1")
+                                .arg(QFileInfo(path).fileName()));
+    }
+    // Mark dummy entries as not loaded
     if (!info->pPlugin) {
         displayName += " (not loaded)";
     }
 #endif
+
     QListWidgetItem *item = new QListWidgetItem(displayName, pluginListWidget);
     item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-    // Check the plugin by default when added by user (showMessages=true)
-    // Leave unchecked when auto-loaded from directory (showMessages=false)
     item->setCheckState(showMessages ? Qt::Checked : Qt::Unchecked);
-    item->setData(Qt::UserRole, path);  // Store full path
+    item->setData(Qt::UserRole, path);
+    item->setIcon(QIcon(":/icons/plugin.svg"));
 
-    // Add Plugin icon
-    QIcon pluginIcon(":/icons/plugin.svg");
-    item->setIcon(pluginIcon);
-
-    // Select the item if it was added by the user (showMessages=true)
     if (showMessages) {
         pluginListWidget->setCurrentItem(item);
     }
@@ -450,18 +379,8 @@ void PluginPage::onRemoveClicked()
     for (QListWidgetItem *item : selectedItems) {
         QString pluginPath = item->data(Qt::UserRole).toString();
 
-        // Remove from loaded plugins map and clean up
-        if (loadedPlugins.contains(pluginPath)) {
-            PluginInfo *info = loadedPlugins[pluginPath];
-            if (info->hDLLModule) {
-                FreeLibrary(info->hDLLModule);
-            }
-            delete info;
-            loadedPlugins.remove(pluginPath);
-        }
-
-        // Remove from failed plugins set if it's there
-        failedPlugins.remove(pluginPath);
+        // Delegate removal to PluginManager
+        pluginManager->removePlugin(pluginPath.toStdString());
 
         // Remove from list widget
         delete item;
@@ -473,30 +392,24 @@ void PluginPage::onRemoveClicked()
 
 void PluginPage::onConfigureClicked()
 {
-#ifdef _WIN32
     QListWidgetItem *currentItem = pluginListWidget->currentItem();
     if (!currentItem) {
         return;
     }
 
     QString pluginPath = currentItem->data(Qt::UserRole).toString();
-    PluginInfo *info = loadedPlugins.value(pluginPath);
 
-    if (!info || !info->pPlugin) {
-        return;
-    }
-
+#ifdef _WIN32
     // Get the native window handle for the plugin to use
     // This is how we bridge Qt and the Windows plugin API
-    HWND hwnd = (HWND)winId();
+    void *hwnd = (void*)winId();
 
-    // Call the plugin's Configure method
-    if (!info->pPlugin->Configure(hwnd)) {
+    // Delegate to PluginManager
+    if (!pluginManager->configurePlugin(pluginPath.toStdString(), hwnd)) {
         QMessageBox::warning(this, "Configuration Failed",
                            "Failed to configure the plugin.");
     }
 #else
-    // TODO
     QMessageBox::information(this, "Not Available",
                             "Plugin configuration is only available on Windows.\n\n"
                             "This is a development build for GUI testing.");
@@ -515,8 +428,8 @@ void PluginPage::onItemSelectionChanged()
     if (selectedCount == 1) {
         QListWidgetItem *item = pluginListWidget->currentItem();
         QString pluginPath = item->data(Qt::UserRole).toString();
-        // Only enable if the plugin loaded successfully
-        enableConfigure = !failedPlugins.contains(pluginPath);
+        // Only enable if the plugin loaded successfully (not failed)
+        enableConfigure = !pluginManager->isPluginFailed(pluginPath.toStdString());
     }
     configureButton->setEnabled(enableConfigure);
 }

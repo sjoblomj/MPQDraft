@@ -1,7 +1,7 @@
 #ifndef GAMEDETECTION_H
 #define GAMEDETECTION_H
 
-#include "gamedata.h"
+#include "../core/gamedata.h"
 #include <string>
 #include <vector>
 
