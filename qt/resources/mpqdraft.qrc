@@ -33,6 +33,7 @@
         <file>icons/not-found.png</file>
         <file>icons/StarDraft.png</file>
         <file>icons/paste.svg</file>
+        <file>icons/save.svg</file>
     </qresource>
 </RCC>
 

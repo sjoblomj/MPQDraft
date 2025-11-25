@@ -54,21 +54,28 @@ public:
     QString getSEMPQName() const;
     QString getMPQPath() const;
     QString getIconPath() const;
+    QString getOutputPath() const;
 
     // Override to validate page completion
     bool isComplete() const override;
+    bool validatePage() override;
     void initializePage() override;
     void cleanupPage() override;
 
 private slots:
     void onBrowseMPQClicked();
     void onBrowseIconClicked();
+    void onBrowseOutputClicked();
     void onMPQPathChanged();
     void onIconPathChanged();
+    void onOutputPathChanged();
 
 private:
     void validateMPQPath();
     void validateIconPath();
+    void validateOutputPath();
+    bool isMPQPathValid() const;
+    bool isOutputPathValid() const;
     void updateIconPreview();
     void saveSettings();
     void loadSettings();
@@ -76,10 +83,13 @@ private:
     QLineEdit *sempqNameEdit;
     QLineEdit *mpqPathEdit;
     QLineEdit *iconPathEdit;
+    QLineEdit *outputPathEdit;
     QPushButton *browseMPQButton;
     QPushButton *browseIconButton;
+    QPushButton *browseOutputButton;
     QLabel *mpqIconLabel;
     QLabel *iconPreviewLabel;
+    QLabel *outputIconLabel;
 };
 
 //=============================================================================

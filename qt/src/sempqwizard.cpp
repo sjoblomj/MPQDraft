@@ -20,6 +20,8 @@
 #include <QApplication>
 #include <QTimer>
 #include <QSettings>
+#include <QRegularExpression>
+#include <QDir>
 
 // Stylesheet for invalid input fields
 static const char* INVALID_FIELD_STYLE = "QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }";
@@ -114,7 +116,7 @@ SEMPQSettingsPage::SEMPQSettingsPage(QWidget *parent)
     QHBoxLayout *mpqInputLayout = new QHBoxLayout();
     mpqPathEdit = new QLineEdit(this);
     mpqPathEdit->setPlaceholderText("Select the MPQ file to package");
-    browseMPQButton = new QPushButton("Browse for &MPQ...", this);
+    browseMPQButton = new QPushButton("Open &MPQ...", this);
     connect(browseMPQButton, &QPushButton::clicked, this, &SEMPQSettingsPage::onBrowseMPQClicked);
     connect(mpqPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::onMPQPathChanged);
     mpqInputLayout->addWidget(mpqPathEdit);
@@ -123,6 +125,37 @@ SEMPQSettingsPage::SEMPQSettingsPage(QWidget *parent)
 
     mpqSectionLayout->addLayout(mpqVerticalLayout);
     layout->addLayout(mpqSectionLayout);
+
+    layout->addSpacing(20);
+
+    // Output path with save icon to the left of both label and input
+    QHBoxLayout *outputSectionLayout = new QHBoxLayout();
+
+    // Save icon on the left
+    outputIconLabel = new QLabel(this);
+    QPixmap savePixmap(":/icons/save.svg");
+    outputIconLabel->setPixmap(savePixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    outputIconLabel->setFixedSize(64, 64);
+    outputIconLabel->setAlignment(Qt::AlignTop);
+    outputSectionLayout->addWidget(outputIconLabel);
+
+    // Vertical layout for label and input
+    QVBoxLayout *outputVerticalLayout = new QVBoxLayout();
+    QLabel *outputLabel = new QLabel("Output Path:", this);
+    outputVerticalLayout->addWidget(outputLabel);
+
+    QHBoxLayout *outputInputLayout = new QHBoxLayout();
+    outputPathEdit = new QLineEdit(this);
+    outputPathEdit->setPlaceholderText("Where to save the SEMPQ file");
+    browseOutputButton = new QPushButton("&Save SEMPQ...", this);
+    connect(browseOutputButton, &QPushButton::clicked, this, &SEMPQSettingsPage::onBrowseOutputClicked);
+    connect(outputPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::onOutputPathChanged);
+    outputInputLayout->addWidget(outputPathEdit);
+    outputInputLayout->addWidget(browseOutputButton);
+    outputVerticalLayout->addLayout(outputInputLayout);
+
+    outputSectionLayout->addLayout(outputVerticalLayout);
+    layout->addLayout(outputSectionLayout);
 
     layout->addSpacing(20);
 
@@ -153,25 +186,67 @@ SEMPQSettingsPage::SEMPQSettingsPage(QWidget *parent)
     iconSectionLayout->addLayout(iconVerticalLayout);
     layout->addLayout(iconSectionLayout);
 
+    // Make all browse buttons the same width
+    int maxWidth = qMax(browseMPQButton->sizeHint().width(),
+                   qMax(browseOutputButton->sizeHint().width(),
+                        browseIconButton->sizeHint().width()));
+    browseMPQButton->setFixedWidth(maxWidth);
+    browseOutputButton->setFixedWidth(maxWidth);
+    browseIconButton->setFixedWidth(maxWidth);
+
     layout->addStretch();
 
     // Connect text changes to completeChanged signal for validation
     connect(sempqNameEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::completeChanged);
     connect(mpqPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::completeChanged);
+    connect(outputPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::completeChanged);
 
     // Connect field changes to save settings
     connect(sempqNameEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::saveSettings);
     connect(mpqPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::saveSettings);
     connect(iconPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::saveSettings);
+    connect(outputPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::saveSettings);
 
     SEMPQSettingsPage::onIconPathChanged();
 }
 
 bool SEMPQSettingsPage::isComplete() const
 {
-    // Page is complete if both required fields are non-empty
+    // Page is complete if all required fields are non-empty AND valid
     return !sempqNameEdit->text().trimmed().isEmpty() &&
-           !mpqPathEdit->text().trimmed().isEmpty();
+           !mpqPathEdit->text().trimmed().isEmpty() &&
+           !outputPathEdit->text().trimmed().isEmpty() &&
+           isMPQPathValid() &&
+           isOutputPathValid();
+}
+
+bool SEMPQSettingsPage::validatePage()
+{
+    // Check if the output file already exists and prompt for overwrite
+    QString outputPath = outputPathEdit->text().trimmed();
+    QFileInfo outputFileInfo(outputPath);
+
+    if (outputFileInfo.exists())
+    {
+        QMessageBox msgBox(this);
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.setWindowTitle("File Already Exists");
+        msgBox.setText(QString("The file '%1' already exists.").arg(outputPath));
+        msgBox.setInformativeText("Do you want to overwrite it?");
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::No);
+
+        int result = msgBox.exec();
+
+        if (result == QMessageBox::No)
+        {
+            // User chose not to overwrite - stay on this page
+            return false;
+        }
+    }
+
+    // Allow proceeding to next page
+    return true;
 }
 
 void SEMPQSettingsPage::initializePage()
@@ -193,6 +268,7 @@ void SEMPQSettingsPage::saveSettings()
     settings.setValue("sempqName", sempqNameEdit->text());
     settings.setValue("mpqPath", mpqPathEdit->text());
     settings.setValue("iconPath", iconPathEdit->text());
+    settings.setValue("outputPath", outputPathEdit->text());
 
     settings.endGroup();
 }
@@ -206,21 +282,25 @@ void SEMPQSettingsPage::loadSettings()
     sempqNameEdit->blockSignals(true);
     mpqPathEdit->blockSignals(true);
     iconPathEdit->blockSignals(true);
+    outputPathEdit->blockSignals(true);
 
     sempqNameEdit->setText(settings.value("sempqName", "").toString());
     mpqPathEdit->setText(settings.value("mpqPath", "").toString());
     iconPathEdit->setText(settings.value("iconPath", "").toString());
+    outputPathEdit->setText(settings.value("outputPath", "").toString());
 
     // Unblock signals
     sempqNameEdit->blockSignals(false);
     mpqPathEdit->blockSignals(false);
     iconPathEdit->blockSignals(false);
+    outputPathEdit->blockSignals(false);
 
     settings.endGroup();
 
     // Trigger validation and icon preview update
     onMPQPathChanged();
     onIconPathChanged();
+    onOutputPathChanged();
 }
 
 QString SEMPQSettingsPage::getSEMPQName() const
@@ -236,6 +316,11 @@ QString SEMPQSettingsPage::getMPQPath() const
 QString SEMPQSettingsPage::getIconPath() const
 {
     return iconPathEdit->text();
+}
+
+QString SEMPQSettingsPage::getOutputPath() const
+{
+    return outputPathEdit->text();
 }
 
 void SEMPQSettingsPage::validateMPQPath()
@@ -297,10 +382,31 @@ void SEMPQSettingsPage::onBrowseIconClicked()
     }
 }
 
+void SEMPQSettingsPage::onBrowseOutputClicked()
+{
+    QString fileName = QFileDialog::getSaveFileName(
+        this,
+        "Save SEMPQ File As",
+        QString(),
+        "Executable Files (*.exe);;All Files (*.*)"
+    );
+
+    if (!fileName.isEmpty()) {
+        outputPathEdit->setText(fileName);
+        outputPathEdit->selectAll();
+        outputPathEdit->setFocus();
+    }
+}
+
 void SEMPQSettingsPage::onIconPathChanged()
 {
     updateIconPreview();
     validateIconPath();
+}
+
+void SEMPQSettingsPage::onOutputPathChanged()
+{
+    validateOutputPath();
 }
 
 void SEMPQSettingsPage::validateIconPath()
@@ -331,6 +437,109 @@ void SEMPQSettingsPage::validateIconPath()
             iconPathEdit->setToolTip("");
         }
     }
+}
+
+void SEMPQSettingsPage::validateOutputPath()
+{
+    QString outputPath = outputPathEdit->text().trimmed();
+
+    if (outputPath.isEmpty()) {
+        outputPathEdit->setStyleSheet("");
+        outputPathEdit->setToolTip("");
+        return;
+    }
+
+    // Check for illegal characters in the path
+    // Windows: < > : " | ? * and control characters (0-31)
+    // Unix: only null character is truly illegal, but we'll check for common issues
+    QRegularExpression illegalChars;
+    // Windows illegal characters
+    illegalChars.setPattern("[<>\"|?*\\x00-\\x1F]");
+
+    QRegularExpressionMatch match = illegalChars.match(outputPath);
+    if (match.hasMatch()) {
+        outputPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
+        outputPathEdit->setToolTip(QString("Path contains illegal character: '%1'").arg(match.captured(0)));
+        return;
+    }
+
+    // Check if the directory exists (not the file itself, just the parent directory)
+    QFileInfo fileInfo(outputPath);
+    QDir parentDir = fileInfo.absoluteDir();
+
+    if (!parentDir.exists()) {
+        outputPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
+        outputPathEdit->setToolTip("Directory does not exist");
+        return;
+    }
+
+    // Check if we have write permission to the directory
+    QFileInfo dirInfo(parentDir.absolutePath());
+    if (!dirInfo.isWritable()) {
+        outputPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
+        outputPathEdit->setToolTip("No write permission to directory");
+        return;
+    }
+
+    // If file exists, show a warning style (yellow) but don't mark as invalid
+    if (fileInfo.exists()) {
+        outputPathEdit->setStyleSheet("QLineEdit { border: 2px solid #ffa500; background-color: #fff4e0; }");
+        outputPathEdit->setToolTip("Warning: File already exists and will be overwritten");
+    } else {
+        outputPathEdit->setStyleSheet("");
+        outputPathEdit->setToolTip("");
+    }
+}
+
+bool SEMPQSettingsPage::isMPQPathValid() const
+{
+    QString mpqPath = mpqPathEdit->text().trimmed();
+
+    if (mpqPath.isEmpty()) {
+        return false;
+    }
+
+    QFileInfo fileInfo(mpqPath);
+    if (!fileInfo.exists() || !fileInfo.isFile()) {
+        return false;
+    }
+
+    return true;
+}
+
+bool SEMPQSettingsPage::isOutputPathValid() const
+{
+    QString outputPath = outputPathEdit->text().trimmed();
+
+    if (outputPath.isEmpty()) {
+        return false;
+    }
+
+    // Check for illegal characters
+    QRegularExpression illegalChars;
+    illegalChars.setPattern("[<>\"|?*\\x00-\\x1F]");
+
+    QRegularExpressionMatch match = illegalChars.match(outputPath);
+    if (match.hasMatch()) {
+        return false;
+    }
+
+    // Check if the directory exists
+    QFileInfo fileInfo(outputPath);
+    QDir parentDir = fileInfo.absoluteDir();
+
+    if (!parentDir.exists()) {
+        return false;
+    }
+
+    // Check if we have write permission to the directory
+    QFileInfo dirInfo(parentDir.absolutePath());
+    if (!dirInfo.isWritable()) {
+        return false;
+    }
+
+    // File existence is just a warning, not an error
+    return true;
 }
 
 void SEMPQSettingsPage::updateIconPreview()
@@ -1736,10 +1945,7 @@ void SEMPQProgressPage::initializePage()
             }
 
             // Set the status label to show the output path
-            QString sempqName = settingsPage->getSEMPQName();
-            QString outputPath = sempqName;
-            if (!outputPath.endsWith(".exe", Qt::CaseInsensitive))
-                outputPath += ".exe";
+            QString outputPath = settingsPage->getOutputPath();
             statusLabel->setText(QString("Writing to file: %1").arg(outputPath));
         }
     }
@@ -2014,11 +2220,7 @@ void SEMPQCreationWorker::run()
     params.sempqName = settingsPage->getSEMPQName();
     params.mpqPath = settingsPage->getMPQPath();
     params.iconPath = settingsPage->getIconPath();
-
-    // Generate output path from SEMPQ name
-    params.outputPath = params.sempqName;
-    if (!params.outputPath.endsWith(".exe", Qt::CaseInsensitive))
-        params.outputPath += ".exe";
+    params.outputPath = settingsPage->getOutputPath();
 
     // Get target settings
     params.parameters = targetPage->getParameters();
