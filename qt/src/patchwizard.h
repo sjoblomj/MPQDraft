@@ -60,6 +60,7 @@ private slots:
     void onBrowseClicked();
     void onTargetPathChanged();
     void onGameSelectionChanged(QListWidgetItem *current, QListWidgetItem *previous);
+    void onGameListContextMenu(const QPoint &pos);
 
 private:
     void validateTargetPath();

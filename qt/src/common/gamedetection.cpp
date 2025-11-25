@@ -137,17 +137,6 @@ std::string locateComponent(const std::string& registryKey, const std::string& r
     (void)registryKey;
     (void)registryValue;
 
-    // TODO: Remove this hardcoded test data
-    if (fileName == "Starcraft.exe") {
-        return "/home/sjoblomj/bin/starcraft/StarCraft.exe";
-    } else if (fileName == "Diablo II.exe") {
-        return "/home/sjoblomj/bin/d2/Diablo2.exe";
-    } else if (fileName == "StarEdit.exe") {
-        return "/home/sjoblomj/bin/starcraft/StarEdit.exe";
-    } else if (fileName == "Warcraft II BNE.exe") {
-        return "/home/sjoblomj/jj/games/blizzard-files/WarCraft II/WarCraft II BNE/Warcraft II BNE.exe";
-    }
-
     return std::string();
 #endif
 }
@@ -164,16 +153,6 @@ std::vector<const SupportedGame*> getInstalledGames() {
             installedGames.push_back(&game);
         }
     }
-
-#ifndef _WIN32
-    // On non-Windows, hardcode test games for development
-    // TODO: Remove this hardcoded test data
-    for (const SupportedGame& game : supportedGames) {
-        if (game.gameName == "Starcraft" || game.gameName == "Diablo II" || game.gameName == "Warcraft II BNE") {
-            installedGames.push_back(&game);
-        }
-    }
-#endif
 
     return installedGames;
 }

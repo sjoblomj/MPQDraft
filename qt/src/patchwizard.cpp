@@ -5,6 +5,7 @@
 #include "patchwizard.h"
 #include "pluginpage.h"
 #include "common/patcher.h"
+#include "common/gamedata.h"
 #include "gamedata_qt.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -21,6 +22,9 @@
 #include <QListWidget>
 #include <QDebug>
 #include <QSettings>
+#include <QComboBox>
+#include <QScrollBar>
+#include <QMenu>
 
 // Stylesheet for invalid input fields
 static const char* INVALID_FIELD_STYLE = "QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }";
@@ -112,7 +116,9 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
 
     gameList = new QListWidget(detectedGamesTab);
     gameList->setIconSize(QSize(32, 32));
+    gameList->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(gameList, &QListWidget::currentItemChanged, this, &TargetSelectionPage::onGameSelectionChanged);
+    connect(gameList, &QListWidget::customContextMenuRequested, this, &TargetSelectionPage::onGameListContextMenu);
     detectedLayout->addWidget(gameList);
 
     // Populate the list with detected games
@@ -124,24 +130,43 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
     // Tab 2: Custom Executable
     //=========================================================================
     QWidget *customExeTab = new QWidget(tabWidget);
-    QVBoxLayout *customLayout = new QVBoxLayout(customExeTab);
+    QVBoxLayout *customTabLayout = new QVBoxLayout(customExeTab);
+    customTabLayout->setContentsMargins(0, 0, 0, 0);
+
+    // Add scroll area
+    QScrollArea *customScrollArea = new QScrollArea(customExeTab);
+    customScrollArea->setWidgetResizable(true);
+    customScrollArea->setFrameShape(QFrame::NoFrame);
+    customScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+    // Set background to match tab background (white)
+    QPalette scrollPalette = customScrollArea->palette();
+    scrollPalette.setColor(QPalette::Window, Qt::white);
+    customScrollArea->setPalette(scrollPalette);
+    customScrollArea->setAutoFillBackground(true);
+
+    customTabLayout->addWidget(customScrollArea);
+
+    QWidget *customScrollWidget = new QWidget();
+    customScrollArea->setWidget(customScrollWidget);
+    QVBoxLayout *customLayout = new QVBoxLayout(customScrollWidget);
 
     QLabel *customLabel = new QLabel(
         "Browse for an executable and configure patching options manually.",
-        customExeTab);
+        customScrollWidget);
     customLabel->setWordWrap(true);
     customLayout->addWidget(customLabel);
 
     customLayout->addSpacing(10);
 
     // Target path
-    QLabel *targetLabel = new QLabel("<b>Executable Path:</b>", customExeTab);
+    QLabel *targetLabel = new QLabel("<b>Executable Path:</b>", customScrollWidget);
     customLayout->addWidget(targetLabel);
 
     QHBoxLayout *targetLayout = new QHBoxLayout();
-    customTargetPathEdit = new QLineEdit(customExeTab);
+    customTargetPathEdit = new QLineEdit(customScrollWidget);
     customTargetPathEdit->setPlaceholderText("Path to game executable (e.g., StarCraft.exe)");
-    customBrowseButton = new QPushButton("Bro&wse...", customExeTab);
+    customBrowseButton = new QPushButton("Bro&wse...", customScrollWidget);
     connect(customBrowseButton, &QPushButton::clicked, this, &TargetSelectionPage::onBrowseClicked);
     connect(customTargetPathEdit, &QLineEdit::textChanged, this, &TargetSelectionPage::onTargetPathChanged);
     targetLayout->addWidget(customTargetPathEdit);
@@ -151,24 +176,24 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
     customLayout->addSpacing(15);
 
     // Advanced Settings - collapsible section
-    QPushButton *advancedToggle = new QPushButton("Advanced &Settings", customExeTab);
+    QPushButton *advancedToggle = new QPushButton("Advanced &Settings", customScrollWidget);
     advancedToggle->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
     advancedToggle->setFlat(true);
     advancedToggle->setStyleSheet("QPushButton { text-align: left; font-weight: bold; }");
     advancedToggle->setCursor(Qt::PointingHandCursor);
     customLayout->addWidget(advancedToggle);
 
-    advancedWidget = new QWidget(customExeTab);
+    advancedWidget = new QWidget(customScrollWidget);
     advancedWidget->setVisible(false);  // Hidden by default
     QVBoxLayout *advancedLayout = new QVBoxLayout(advancedWidget);
     advancedLayout->setContentsMargins(20, 0, 0, 0);  // Indent the content
 
     // Connect toggle button - capture pointer to widget
     QWidget *advancedWidgetPtr = advancedWidget;
-    connect(advancedToggle, &QPushButton::clicked, [advancedToggle, advancedWidgetPtr, customExeTab]() {
+    connect(advancedToggle, &QPushButton::clicked, [advancedToggle, advancedWidgetPtr, customScrollWidget]() {
         bool isVisible = advancedWidgetPtr->isVisible();
         advancedWidgetPtr->setVisible(!isVisible);
-        advancedToggle->setIcon(customExeTab->style()->standardIcon(
+        advancedToggle->setIcon(customScrollWidget->style()->standardIcon(
             isVisible ? QStyle::SP_ArrowRight : QStyle::SP_ArrowDown));
     });
 
@@ -290,6 +315,334 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
 
     customLayout->addWidget(advancedWidget);
 
+    customLayout->addSpacing(15);
+
+    // Remember Application - collapsible section
+    QPushButton *rememberAppToggle = new QPushButton("&Remember Application", customScrollWidget);
+    rememberAppToggle->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
+    rememberAppToggle->setFlat(true);
+    rememberAppToggle->setStyleSheet("QPushButton { text-align: left; font-weight: bold; }");
+    rememberAppToggle->setCursor(Qt::PointingHandCursor);
+    customLayout->addWidget(rememberAppToggle);
+
+    QWidget *rememberAppWidget = new QWidget(customScrollWidget);
+    rememberAppWidget->setVisible(false);  // Hidden by default
+    QVBoxLayout *rememberAppLayout = new QVBoxLayout(rememberAppWidget);
+    rememberAppLayout->setContentsMargins(20, 0, 0, 0);  // Indent the content
+
+    // Connect toggle button
+    connect(rememberAppToggle, &QPushButton::clicked, [rememberAppToggle, rememberAppWidget, customScrollWidget]() {
+        bool isVisible = rememberAppWidget->isVisible();
+        rememberAppWidget->setVisible(!isVisible);
+        rememberAppToggle->setIcon(customScrollWidget->style()->standardIcon(
+            isVisible ? QStyle::SP_ArrowRight : QStyle::SP_ArrowDown));
+    });
+
+    // Information box with icon
+    QWidget *infoWidget = new QWidget(rememberAppWidget);
+    infoWidget->setStyleSheet(
+        "QWidget { "
+        "background-color: #d1ecf1; "
+        "border: 1px solid #17a2b8; "
+        "border-radius: 4px; "
+        "}");
+    QHBoxLayout *infoLayout = new QHBoxLayout(infoWidget);
+    infoLayout->setContentsMargins(10, 10, 10, 10);
+    infoLayout->setSpacing(8);
+
+    // Info icon (save-to-list.svg scaled to 64x64)
+    QLabel *infoIcon = new QLabel(infoWidget);
+    QPixmap infoPixmap(":/icons/save-to-list.svg");
+    infoIcon->setPixmap(infoPixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    infoIcon->setAlignment(Qt::AlignTop);
+    infoIcon->setStyleSheet("QLabel { background-color: transparent; border: none; }");
+    infoIcon->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    infoLayout->addWidget(infoIcon);
+
+    // Info text
+    QLabel *rememberAppLabel = new QLabel(
+            "Save the above custom executable configuration to make it appear in the Detected Games list. "
+            "You can override settings for pre-configured games or add entirely new applications. "
+            "The data is saved to the Windows Registry.<br><br>"
+            "Choose an existing game from the dropdown to override its settings, or type a new name to add "
+            "a custom application.", infoWidget);
+    rememberAppLabel->setWordWrap(true);
+    rememberAppLabel->setStyleSheet("QLabel { color: #0c5460; background-color: transparent; border: none; }");
+    infoLayout->addWidget(rememberAppLabel, 1);  // Stretch factor of 1 to take remaining space
+
+    rememberAppLayout->addWidget(infoWidget);
+
+    rememberAppLayout->addSpacing(10);
+
+    // Horizontal layout for dropdown and image
+    QHBoxLayout *dropdownImageLayout = new QHBoxLayout();
+
+    // Left side: Application Name dropdown
+    QVBoxLayout *dropdownLayout = new QVBoxLayout();
+    QLabel *appNameLabel = new QLabel("Application Name:", rememberAppWidget);
+    dropdownLayout->addWidget(appNameLabel);
+
+    QComboBox *appNameCombo = new QComboBox(rememberAppWidget);
+    appNameCombo->setEditable(true);
+    appNameCombo->setInsertPolicy(QComboBox::NoInsert);
+
+    // Populate with all game components from gamedata
+    std::vector<SupportedGame> games = getSupportedGames();
+    for (const auto &game : games) {
+        for (const auto &component : game.components) {
+            QString displayName;
+            // Display format: "Game Name - Component Name" or just "Game Name" for single component
+            if (game.components.size() == 1) {
+                displayName = QString::fromStdString(game.gameName);
+            } else {
+                displayName = QString::fromStdString(game.gameName) + " - " + QString::fromStdString(component.componentName);
+            }
+            appNameCombo->addItem(displayName);
+        }
+    }
+
+    dropdownLayout->addWidget(appNameCombo);
+    dropdownImageLayout->addLayout(dropdownLayout);
+
+    dropdownImageLayout->addSpacing(10);
+
+    // Right side: Image label (64x64)
+    QLabel *rememberAppImageLabel = new QLabel(rememberAppWidget);
+    rememberAppImageLabel->setFixedSize(64, 64);
+    rememberAppImageLabel->setAlignment(Qt::AlignCenter);
+    rememberAppImageLabel->setStyleSheet("QLabel { border: 1px solid #ccc; }");
+    dropdownImageLayout->addWidget(rememberAppImageLabel);
+
+    rememberAppLayout->addLayout(dropdownImageLayout);
+
+    rememberAppLayout->addSpacing(10);
+
+    // Icon path input (hidden by default, but takes up space)
+    QLabel *iconPathLabel = new QLabel("Application icon:", rememberAppWidget);
+    rememberAppLayout->addWidget(iconPathLabel);
+
+    QHBoxLayout *iconPathLayout = new QHBoxLayout();
+    QLineEdit *iconPathEdit = new QLineEdit(rememberAppWidget);
+    iconPathEdit->setPlaceholderText("Path to icon file (optional)");
+    QPushButton *browseIconButton = new QPushButton("Browse &Icon...", rememberAppWidget);
+    iconPathLayout->addWidget(iconPathEdit);
+    iconPathLayout->addWidget(browseIconButton);
+    rememberAppLayout->addLayout(iconPathLayout);
+
+    // Hide icon controls by default but keep their space in layout
+    iconPathLabel->hide();
+    iconPathEdit->hide();
+    browseIconButton->hide();
+
+    // Set size policy to maintain space when hidden
+    QSizePolicy spLabel = iconPathLabel->sizePolicy();
+    spLabel.setRetainSizeWhenHidden(true);
+    iconPathLabel->setSizePolicy(spLabel);
+
+    QSizePolicy spEdit = iconPathEdit->sizePolicy();
+    spEdit.setRetainSizeWhenHidden(true);
+    iconPathEdit->setSizePolicy(spEdit);
+
+    QSizePolicy spButton = browseIconButton->sizePolicy();
+    spButton.setRetainSizeWhenHidden(true);
+    browseIconButton->setSizePolicy(spButton);
+
+    rememberAppLayout->addSpacing(10);
+
+    // Save button (taller)
+    QPushButton *saveAppButton = new QPushButton("Save", rememberAppWidget);
+    saveAppButton->setMinimumHeight(40);
+    saveAppButton->setEnabled(false);  // Start disabled
+    rememberAppLayout->addWidget(saveAppButton);
+
+    // Browse icon button
+    connect(browseIconButton, &QPushButton::clicked, [iconPathEdit, this]() {
+        QString fileName = QFileDialog::getOpenFileName(
+            this,
+            "Select Icon",
+            QString(),
+            "Images (*.png *.jpg *.jpeg *.bmp *.gif *.svg *.ico);;All Files (*.*)"
+        );
+        if (!fileName.isEmpty()) {
+            iconPathEdit->setText(fileName);
+        }
+    });
+
+    // Validate both executable path and icon path
+    auto validateSaveButton = [this, iconPathEdit, rememberAppImageLabel, saveAppButton, appNameCombo]() {
+        QString appName = appNameCombo->currentText().trimmed();
+        if (appName.isEmpty()) {
+            saveAppButton->setEnabled(false);
+            return;
+        }
+
+        // Check if this is a pre-configured game
+        const auto &games = getSupportedGames();
+        bool isPreConfigured = false;
+        for (const auto &game : games) {
+            for (const auto &component : game.components) {
+                QString displayName;
+                if (game.components.size() == 1) {
+                    displayName = QString::fromStdString(game.gameName);
+                } else {
+                    displayName = QString::fromStdString(game.gameName) + " - " + QString::fromStdString(component.componentName);
+                }
+                if (displayName == appName) {
+                    isPreConfigured = true;
+                    break;
+                }
+            }
+            if (isPreConfigured) break;
+        }
+
+        // For pre-configured games, we don't need to validate the executable path
+        // (it will use the default path from gamedata)
+        bool executableValid = isPreConfigured;
+        if (!isPreConfigured) {
+            // For custom applications, check executable path
+            QString executablePath = customTargetPathEdit->text().trimmed();
+            if (!executablePath.isEmpty()) {
+                QFileInfo execFileInfo(executablePath);
+                executableValid = execFileInfo.exists() && execFileInfo.isFile();
+            }
+        }
+
+        // Check icon path (only relevant for custom applications)
+        QString iconPath = iconPathEdit->text().trimmed();
+        bool iconValid = true;  // Empty is valid
+        if (!iconPath.isEmpty()) {
+            QFileInfo iconFileInfo(iconPath);
+            if (!iconFileInfo.exists() || !iconFileInfo.isFile()) {
+                iconValid = false;
+                iconPathEdit->setStyleSheet("QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }");
+            } else {
+                iconPathEdit->setStyleSheet("");
+                // Try to load as image
+                QPixmap pixmap(iconPath);
+                if (!pixmap.isNull()) {
+                    rememberAppImageLabel->setPixmap(pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                }
+            }
+        } else {
+            iconPathEdit->setStyleSheet("");
+        }
+
+        // Enable save button if executable is valid (or pre-configured) and icon is valid
+        saveAppButton->setEnabled(executableValid && iconValid);
+    };
+
+    connect(iconPathEdit, &QLineEdit::textChanged, validateSaveButton);
+    connect(customTargetPathEdit, &QLineEdit::textChanged, validateSaveButton);
+    connect(appNameCombo, &QComboBox::currentTextChanged, validateSaveButton);
+
+    // Helper lambda to generate display name for a component
+    auto getDisplayName = [](const SupportedGame &game, const GameComponent &component) -> QString {
+        // Display format: "Game Name - Component Name" or just "Game Name" for single component
+        if (game.components.size() == 1) {
+            return QString::fromStdString(game.gameName);
+        } else {
+            return QString::fromStdString(game.gameName) + " - " + QString::fromStdString(component.componentName);
+        }
+    };
+
+    // Update image and visibility when dropdown changes
+    connect(appNameCombo, &QComboBox::currentTextChanged, [games, getDisplayName, iconPathLabel, iconPathEdit, browseIconButton, validateSaveButton, rememberAppImageLabel](const QString &text) {
+        // Find component by display name and load its icon
+        bool isPreConfigured = false;
+        for (const auto &game : games) {
+            for (const auto &component : game.components) {
+                if (getDisplayName(game, component) == text) {
+                    QPixmap pixmap(QString::fromStdString(component.iconPath));
+                    if (!pixmap.isNull()) {
+                        rememberAppImageLabel->setPixmap(pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                    }
+                    isPreConfigured = true;
+                    break;
+                }
+            }
+            if (isPreConfigured) break;
+        }
+
+        if (isPreConfigured) {
+            // Hide icon controls and clear icon path
+            iconPathLabel->hide();
+            iconPathEdit->hide();
+            browseIconButton->hide();
+            iconPathEdit->setText("");
+        } else {
+            // Show icon controls for custom application
+            iconPathLabel->show();
+            iconPathEdit->show();
+            browseIconButton->show();
+            // Clear the image if no custom icon is set
+            if (iconPathEdit->text().trimmed().isEmpty()) {
+                rememberAppImageLabel->clear();
+            } else {
+                validateSaveButton();
+            }
+        }
+    });
+
+    // Set initial image if there's a default selection
+    if (appNameCombo->count() > 0) {
+        QString initialText = appNameCombo->currentText();
+        for (const auto &game : games) {
+            for (const auto &component : game.components) {
+                if (getDisplayName(game, component) == initialText) {
+                    QPixmap pixmap(QString::fromStdString(component.iconPath));
+                    if (!pixmap.isNull()) {
+                        rememberAppImageLabel->setPixmap(pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                    }
+                    break;
+                }
+            }
+        }
+        // Run initial validation to enable Save button if appropriate
+        validateSaveButton();
+    }
+
+    // Save button action
+    connect(saveAppButton, &QPushButton::clicked, [this, appNameCombo, iconPathEdit]() {
+        QString appName = appNameCombo->currentText().trimmed();
+        if (appName.isEmpty()) {
+            return;
+        }
+
+        // Get values from Custom Executable tab
+        QString executablePath = customTargetPathEdit->text().trimmed();
+        QString parameters = customParametersEdit->text();
+        int shuntCount = customShuntCountSpinBox->value();
+        bool extendedRedir = customExtendedRedirCheck->isChecked();
+        bool noSpawning = customNoSpawningCheck->isChecked();
+        QString iconPath = iconPathEdit->text().trimmed();
+
+        // Save to QSettings
+        QSettings settings;
+        settings.beginGroup("CustomApplications");
+        settings.beginGroup(appName);
+        settings.setValue("executablePath", executablePath);
+        settings.setValue("parameters", parameters);
+        settings.setValue("shuntCount", shuntCount);
+        settings.setValue("extendedRedir", extendedRedir);
+        settings.setValue("noSpawning", noSpawning);
+        if (!iconPath.isEmpty()) {
+            settings.setValue("iconPath", iconPath);
+        } else {
+            settings.remove("iconPath");
+        }
+        settings.endGroup();
+        settings.endGroup();
+
+        // Refresh the game list to show the new/updated application
+        populateInstalledGames();
+
+        // Show success message
+        QMessageBox::information(this, "Application Saved",
+            QString("'%1' has been saved successfully and added to the Detected Games list.").arg(appName));
+    });
+
+    customLayout->addWidget(rememberAppWidget);
+
     customLayout->addStretch();
 
     tabWidget->addTab(customExeTab, "Custom &Executable");
@@ -313,8 +666,16 @@ bool TargetSelectionPage::isComplete() const
     int currentTab = tabWidget->currentIndex();
 
     if (currentTab == 0) {
-        // Detected Games tab - complete if a game is selected
-        return gameList->currentItem() != nullptr;
+        // Detected Games tab - complete if a game is selected and path is valid
+        QListWidgetItem *current = gameList->currentItem();
+        if (!current) {
+            return false;
+        }
+
+        // Check if the executable path is valid
+        QString executablePath = current->data(Qt::UserRole + 1).toString();
+        QFileInfo fileInfo(executablePath);
+        return fileInfo.exists() && fileInfo.isFile();
     } else {
         // Custom Executable tab - complete if target path is valid
         QString targetPath = customTargetPathEdit->text().trimmed();
@@ -438,7 +799,11 @@ QString TargetSelectionPage::getParameters() const
     int currentTab = tabWidget->currentIndex();
 
     if (currentTab == 0) {
-        // Detected Games tab - no parameters (could be extended in future)
+        // Detected Games tab - get parameters from selected item
+        QListWidgetItem *currentItem = gameList->currentItem();
+        if (currentItem) {
+            return currentItem->data(Qt::UserRole + 5).toString();
+        }
         return QString();
     } else {
         // Custom Executable tab
@@ -468,10 +833,11 @@ int TargetSelectionPage::getShuntCount() const
     int currentTab = tabWidget->currentIndex();
 
     if (currentTab == 0) {
-        // Detected Games tab - shunt count is stored in the game data
-        // We need to retrieve it from the component
-        // For now, return 0 as detected games have their shunt count in the game data
-        // This will be handled by the wizard when it looks up the component
+        // Detected Games tab - get from stored data
+        QListWidgetItem *current = gameList->currentItem();
+        if (current) {
+            return current->data(Qt::UserRole + 2).toInt();
+        }
         return 0;
     } else {
         // Custom Executable tab
@@ -484,8 +850,11 @@ bool TargetSelectionPage::useNoSpawning() const
     int currentTab = tabWidget->currentIndex();
 
     if (currentTab == 0) {
-        // Detected Games tab - get from game data flags
-        // For now, return false as this is handled by the component's flags
+        // Detected Games tab - get from stored data
+        QListWidgetItem *current = gameList->currentItem();
+        if (current) {
+            return current->data(Qt::UserRole + 3).toBool();
+        }
         return false;
     } else {
         // Custom Executable tab
@@ -523,49 +892,215 @@ void TargetSelectionPage::onTargetPathChanged()
 
 void TargetSelectionPage::populateInstalledGames()
 {
+    gameList->clear();
+
     // Get list of installed games
     QVector<const SupportedGame*> installedGames = getInstalledGamesQt();
 
-    if (installedGames.isEmpty()) {
-        // No games detected - show a message
-        QListWidgetItem *item = new QListWidgetItem(gameList);
-        item->setText("No supported games detected");
-        item->setIcon(QIcon(":/icons/not-found.png"));
-        item->setFlags(Qt::NoItemFlags);  // Make it non-selectable
-        item->setForeground(QBrush(QColor(128, 128, 128)));  // Gray text
-        return;
-    }
+    // Load custom applications from QSettings
+    QSettings settings;
+    settings.beginGroup("CustomApplications");
+    QStringList customAppNames = settings.childGroups();
+    settings.endGroup();
+
+    // Track which custom apps have been processed (to handle overrides)
+    QSet<QString> processedCustomApps;
 
     // Populate game list with detected games and their components
     for (const SupportedGame* game : installedGames) {
         for (const GameComponent& component : game->components) {
-            // Verify that the component actually exists on disk
-            QString componentPath = locateComponentQt(getRegistryKey(*game), getRegistryValue(*game), getFileName(component));
-            if (componentPath.isEmpty()) {
-                continue;  // Skip components that don't exist
-            }
-
-            QListWidgetItem *item = new QListWidgetItem(gameList);
-
-            // Display format: "Game Name - Component Name" or just "Game Name" for single component
+            // Generate display name
             QString displayText;
             if (game->components.size() == 1) {
                 displayText = getGameName(*game);
             } else {
                 displayText = QString("%1 - %2").arg(getGameName(*game), getComponentName(component));
             }
+
+            // Check if there's an override in QSettings
+            bool hasOverride = customAppNames.contains(displayText);
+            if (hasOverride) {
+                processedCustomApps.insert(displayText);
+            }
+
+            QString componentPath;
+            QString iconPath;
+            QString parameters;
+            bool extendedRedir;
+            int shuntCount;
+            bool noSpawning;
+            bool isModified = false;
+            bool pathInvalid = false;
+
+            if (hasOverride) {
+                // Load from QSettings
+                settings.beginGroup("CustomApplications");
+                settings.beginGroup(displayText);
+                componentPath = settings.value("executablePath").toString();
+                iconPath = settings.value("iconPath").toString();
+                parameters = settings.value("parameters").toString();
+                extendedRedir = settings.value("extendedRedir", component.extendedRedir).toBool();
+                shuntCount = settings.value("shuntCount", component.shuntCount).toInt();
+                noSpawning = settings.value("noSpawning", (component.flags & MPQD_NO_SPAWNING) != 0).toBool();
+                settings.endGroup();
+                settings.endGroup();
+
+                isModified = true;
+
+                // Verify path exists
+                QFileInfo fileInfo(componentPath);
+                if (!fileInfo.exists() || !fileInfo.isFile()) {
+                    pathInvalid = true;
+                }
+            } else {
+                // Use default values from gamedata
+                componentPath = locateComponentQt(getRegistryKey(*game), getRegistryValue(*game), getFileName(component));
+                if (componentPath.isEmpty()) {
+                    continue;  // Skip components that don't exist
+                }
+
+                // Verify that the path actually exists
+                QFileInfo fileInfo(componentPath);
+                if (!fileInfo.exists() || !fileInfo.isFile()) {
+                    pathInvalid = true;
+                }
+
+                iconPath = getIconPath(component);
+                parameters = QString();  // No parameters for default games
+                extendedRedir = component.extendedRedir;
+                shuntCount = component.shuntCount;
+                noSpawning = (component.flags & MPQD_NO_SPAWNING) != 0;
+            }
+
+            QListWidgetItem *item = new QListWidgetItem(gameList);
             item->setText(displayText);
 
             // Set icon
-            QIcon icon(getIconPath(component));
+            QIcon icon(iconPath.isEmpty() ? getIconPath(component) : iconPath);
             item->setIcon(icon);
 
-            // Store the extended redir flag in UserRole
-            item->setData(Qt::UserRole, component.extendedRedir);
-
-            // Store the full path in UserRole+1
+            // Store data in item
+            item->setData(Qt::UserRole, extendedRedir);
             item->setData(Qt::UserRole + 1, componentPath);
+            item->setData(Qt::UserRole + 2, shuntCount);
+            item->setData(Qt::UserRole + 3, noSpawning);
+            item->setData(Qt::UserRole + 4, isModified);  // Track if this is from QSettings
+            item->setData(Qt::UserRole + 5, parameters);  // Command-line parameters
+
+            // Color coding and tooltips
+            if (pathInvalid) {
+                item->setForeground(QBrush(QColor(255, 0, 0)));  // Red
+                QFont font = item->font();
+                font.setItalic(true);
+                item->setFont(font);
+                if (isModified) {
+                    item->setToolTip("Executable not found - Right click to reset");
+                } else {
+                    item->setToolTip("Executable not found");
+                }
+            } else if (isModified) {
+                item->setForeground(QBrush(QColor(0, 0, 255)));  // Blue
+                QFont font = item->font();
+                font.setItalic(true);
+                item->setFont(font);
+                item->setToolTip("Default values modified - Right click to reset");
+            }
         }
+    }
+
+    // Add novel custom applications (not in gamedata.cpp)
+    // First, get all supported games to check if an app is in gamedata.cpp
+    std::vector<SupportedGame> allGames = getSupportedGames();
+
+    for (const QString& appName : customAppNames) {
+        if (processedCustomApps.contains(appName)) {
+            continue;  // Already processed as an override
+        }
+
+        settings.beginGroup("CustomApplications");
+        settings.beginGroup(appName);
+        QString componentPath = settings.value("executablePath").toString();
+        QString iconPath = settings.value("iconPath").toString();
+        QString parameters = settings.value("parameters").toString();
+        bool extendedRedir = settings.value("extendedRedir", true).toBool();
+        int shuntCount = settings.value("shuntCount", 0).toInt();
+        bool noSpawning = settings.value("noSpawning", false).toBool();
+        settings.endGroup();
+        settings.endGroup();
+
+        // Check if this app is in gamedata.cpp (but not detected on system)
+        bool isInGameData = false;
+        QString defaultIconPath;
+        for (const SupportedGame& game : allGames) {
+            for (const GameComponent& component : game.components) {
+                QString displayText;
+                if (game.components.size() == 1) {
+                    displayText = QString::fromStdString(game.gameName);
+                } else {
+                    displayText = QString::fromStdString(game.gameName) + " - " + QString::fromStdString(component.componentName);
+                }
+
+                if (displayText == appName) {
+                    isInGameData = true;
+                    defaultIconPath = QString::fromStdString(component.iconPath);
+                    break;
+                }
+            }
+            if (isInGameData) break;
+        }
+
+        QListWidgetItem *item = new QListWidgetItem(gameList);
+        item->setText(appName);
+
+        // Set icon
+        if (!iconPath.isEmpty()) {
+            item->setIcon(QIcon(iconPath));
+        } else if (!defaultIconPath.isEmpty()) {
+            item->setIcon(QIcon(defaultIconPath));
+        } else {
+            item->setIcon(QIcon(":/icons/not-found.png"));
+        }
+
+        // Store data
+        item->setData(Qt::UserRole, extendedRedir);
+        item->setData(Qt::UserRole + 1, componentPath);
+        item->setData(Qt::UserRole + 2, shuntCount);
+        item->setData(Qt::UserRole + 3, noSpawning);
+        item->setData(Qt::UserRole + 4, true);  // Is from QSettings
+        item->setData(Qt::UserRole + 5, parameters);  // Command-line parameters
+
+        // Verify path exists
+        QFileInfo fileInfo(componentPath);
+        if (!fileInfo.exists() || !fileInfo.isFile()) {
+            QFont font = item->font();
+            font.setItalic(true);
+            item->setFont(font);
+            item->setForeground(QBrush(QColor(255, 0, 0)));  // Red
+            if (isInGameData) {
+                item->setToolTip("Executable not found - Right click to reset");
+            } else {
+                item->setToolTip("Executable not found - Right click to remove");
+            }
+        } else {
+            QFont font = item->font();
+            font.setItalic(true);
+            item->setFont(font);
+            item->setForeground(QBrush(QColor(0, 0, 255)));  // Blue
+            if (isInGameData) {
+                item->setToolTip("Default values modified - Right click to reset");
+            } else {
+                item->setToolTip("Custom application - Right click to remove");
+            }
+        }
+    }
+
+    // Show message if no games at all
+    if (gameList->count() == 0) {
+        QListWidgetItem *item = new QListWidgetItem(gameList);
+        item->setText("No supported games detected");
+        item->setIcon(QIcon(":/icons/not-found.png"));
+        item->setFlags(Qt::NoItemFlags);  // Make it non-selectable
+        item->setForeground(QBrush(QColor(128, 128, 128)));  // Gray text
     }
 }
 
@@ -579,6 +1114,66 @@ void TargetSelectionPage::onGameSelectionChanged(QListWidgetItem *current, QList
 
     // Emit completeChanged to update wizard buttons
     emit completeChanged();
+}
+
+void TargetSelectionPage::onGameListContextMenu(const QPoint &pos)
+{
+    QListWidgetItem *item = gameList->itemAt(pos);
+    if (!item) {
+        return;
+    }
+
+    // Only show context menu for items from QSettings (UserRole + 4 == true)
+    bool isFromSettings = item->data(Qt::UserRole + 4).toBool();
+    if (!isFromSettings) {
+        return;
+    }
+
+    QString appName = item->text();
+
+    // Check if this is a default game (exists in gamedata.cpp)
+    std::vector<SupportedGame> allGames = getSupportedGames();
+    bool isDefaultGame = false;
+
+    for (const SupportedGame& game : allGames) {
+        for (const GameComponent& component : game.components) {
+            QString displayText;
+            if (game.components.size() == 1) {
+                displayText = QString::fromStdString(game.gameName);
+            } else {
+                displayText = QString::fromStdString(game.gameName) + " - " + QString::fromStdString(component.componentName);
+            }
+
+            if (displayText == appName) {
+                isDefaultGame = true;
+                break;
+            }
+        }
+        if (isDefaultGame) break;
+    }
+
+    // Create context menu
+    QMenu contextMenu(this);
+    QAction *action;
+
+    if (isDefaultGame) {
+        action = contextMenu.addAction("Reset to default values");
+    } else {
+        action = contextMenu.addAction("Remove from list");
+    }
+
+    // Show menu and handle action
+    QAction *selectedAction = contextMenu.exec(gameList->mapToGlobal(pos));
+    if (selectedAction == action) {
+        // Remove from QSettings
+        QSettings settings;
+        settings.beginGroup("CustomApplications");
+        settings.remove(appName);
+        settings.endGroup();
+
+        // Refresh the game list
+        populateInstalledGames();
+    }
 }
 
 void TargetSelectionPage::onBrowseClicked()
@@ -601,6 +1196,7 @@ void TargetSelectionPage::onBrowseClicked()
         }
     }
 }
+
 
 //=============================================================================
 // Page 2: MPQ Selection
