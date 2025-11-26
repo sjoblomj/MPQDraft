@@ -2,10 +2,13 @@
     SEMPQ Creator - Mock implementation for Qt GUI
 */
 
-#include "sempq_creator.h"
-#include <QThread>
-#include <QRandomGenerator>
-#include <QFileInfo>
+#include "SempqCreatorMock.h"
+#include <thread>
+#include <chrono>
+#include <random>
+#include <fstream>
+#include <sys/stat.h>
+#include <algorithm>
 
 // Progress range constants (matching original MFC code)
 constexpr int WRITE_STUB_INITIAL_PROGRESS = 0;
@@ -14,18 +17,29 @@ constexpr int WRITE_PLUGINS_PROGRESS_SIZE = 15;
 constexpr int WRITE_MPQ_INITIAL_PROGRESS = 20;
 constexpr int WRITE_MPQ_PROGRESS_SIZE = 80;
 
-SEMPQCreator::SEMPQCreator()
+// Helper: Check if file exists
+static bool fileExists(const std::string& path)
 {
+    struct stat buffer;
+    return (stat(path.c_str(), &buffer) == 0);
 }
 
-SEMPQCreator::~SEMPQCreator()
+// Helper: Get file size
+static size_t getFileSize(const std::string& path)
 {
+    struct stat buffer;
+    if (stat(path.c_str(), &buffer) != 0)
+        return 0;
+    return buffer.st_size;
 }
 
 void SEMPQCreator::simulateWork(int minMs, int maxMs)
 {
-    int duration = QRandomGenerator::global()->bounded(minMs, maxMs + 1);
-    QThread::msleep(duration);
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(minMs, maxMs);
+    int duration = dis(gen);
+    std::this_thread::sleep_for(std::chrono::milliseconds(duration));
 }
 
 bool SEMPQCreator::createSEMPQ(
@@ -54,8 +68,7 @@ bool SEMPQCreator::createSEMPQ(
     }
 
     // Check if MPQ file exists
-    QFileInfo mpqInfo(QString::fromStdString(params.mpqPath));
-    if (!mpqInfo.exists())
+    if (!fileExists(params.mpqPath))
     {
         errorMessage = "The MPQ " + params.mpqPath + " does not exist.";
         return false;
@@ -84,6 +97,7 @@ bool SEMPQCreator::writeStubToSEMPQ(
     CancellationCheck cancellationCheck,
     std::string& errorMessage)
 {
+    (void)params;  // Suppress unused parameter warning
     progressCallback(WRITE_STUB_INITIAL_PROGRESS, "Writing Executable Code...\n");
 
     // Simulate extracting the stub executable from resources
@@ -167,17 +181,16 @@ bool SEMPQCreator::writeMPQToSEMPQ(
     progressCallback(WRITE_MPQ_INITIAL_PROGRESS, "Writing MPQ Data...\n");
 
     // Get MPQ file size to simulate realistic progress
-    QFileInfo mpqInfo(QString::fromStdString(params.mpqPath));
-    qint64 mpqSize = mpqInfo.size();
+    size_t mpqSize = getFileSize(params.mpqPath);
 
     // Simulate copying MPQ data in chunks (256KB chunks like the original)
-    const qint64 chunkSize = 256 * 1024;
-    qint64 transferred = 0;
+    const size_t chunkSize = 256 * 1024;
+    size_t transferred = 0;
 
     while (transferred < mpqSize)
     {
         // Simulate reading and writing a chunk
-        qint64 currentChunk = qMin(chunkSize, mpqSize - transferred);
+        size_t currentChunk = std::min(chunkSize, mpqSize - transferred);
 
         // Simulate work proportional to chunk size (smaller chunks = less time)
         int workTime = (int)((currentChunk * 2000) / chunkSize);  // 500-2000ms per chunk

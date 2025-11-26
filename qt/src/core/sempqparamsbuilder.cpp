@@ -10,7 +10,7 @@
 
 #include "sempqparamsbuilder.h"
 #include "gamedata.h"
-#include "../common/sempq_creator.h"
+#include "../common/SempqCreatorMock.h"
 #include "../common/common.h"
 
 bool SEMPQParamsBuilder::buildParams(

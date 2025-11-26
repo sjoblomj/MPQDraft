@@ -8,8 +8,8 @@
     3. Writing MPQ Data (20% - 100%)
 */
 
-#ifndef SEMPQ_CREATOR_H
-#define SEMPQ_CREATOR_H
+#ifndef SEMPQ_CREATOR_MOCK_H
+#define SEMPQ_CREATOR_MOCK_H
 
 #include <string>
 #include <vector>
@@ -54,13 +54,10 @@ struct SEMPQCreationParams
     std::vector<MPQDRAFTPLUGINMODULE> pluginModules;
 };
 
-// SEMPQ Creator class
+// SEMPQ Creator class (Mock implementation)
 class SEMPQCreator
 {
 public:
-    SEMPQCreator();
-    ~SEMPQCreator();
-
     // Create a SEMPQ file with the given parameters
     // Returns true on success, false on failure
     // Calls progressCallback periodically with progress updates
@@ -101,5 +98,4 @@ private:
     void simulateWork(int minMs, int maxMs);
 };
 
-#endif // SEMPQ_CREATOR_H
-
+#endif // SEMPQ_CREATOR_MOCK_H
