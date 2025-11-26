@@ -11,6 +11,7 @@
 
 #include "stdafx_gui.h"
 #include "../MPQDraft.h"
+#include "../SEMPQCreator.h"
 #include "resource.h"
 #include "ProgressWnd.h"
 #include "SEMPQWizard.h"
@@ -503,343 +504,75 @@ BOOL CSEMPQWizard::CreateSEMPQ()
 	if (!pDataSEMPQ)
 		return FALSE;	// Something's weird with the first or second page
 
-	// Now the real fun, in 3 calls
-	BOOL bSuccess = (WriteStubToSEMPQ(wndProgress, strEXEName, *pDataSEMPQ)
-		&& WritePluginsToSEMPQ(wndProgress, strEXEName, modules)
-		&& WriteMPQToSEMPQ(wndProgress, strEXEName, strMPQName));
+	// Convert plugin modules to array
+	DWORD nNumModules = modules.GetCount();
+	MPQDRAFTPLUGINMODULE *pModules = NULL;
+	if (nNumModules > 0)
+	{
+		pModules = new MPQDRAFTPLUGINMODULE[nNumModules];
+		POSITION pos = modules.GetHeadPosition();
+		for (DWORD i = 0; i < nNumModules && pos; i++)
+		{
+			pModules[i] = modules.GetNext(pos);
+		}
+	}
+
+	// Create the SEMPQ using the new MFC-free creator
+	SEMPQCreator creator;
+	char szErrorMessage[512] = {0};
+
+	// Progress callback adapter
+	struct ProgressContext {
+		CProgressWnd* pWnd;
+	};
+	ProgressContext progressCtx = { &wndProgress };
+
+	auto progressCallback = [](int progress, LPCSTR lpszStatusMessage, LPVOID lpUserData) {
+		ProgressContext* pCtx = (ProgressContext*)lpUserData;
+		pCtx->pWnd->SetPos(progress);
+		pCtx->pWnd->SetText(lpszStatusMessage);
+	};
+
+	// Get the custom name for the SEMPQ
+	CString strCustomName;
+	m_firstPage.GetCustomName(strCustomName);
+
+	BOOL bSuccess = creator.CreateSEMPQ(
+		strEXEName,
+		strCustomName,
+		strMPQName,
+		NULL,  // Icon path (not implemented yet)
+		*pDataSEMPQ,
+		pModules,
+		nNumModules,
+		progressCallback,
+		&progressCtx,
+		NULL,  // No cancellation check
+		szErrorMessage
+	);
+
+	// Clean up
+	if (pModules)
+		delete[] pModules;
 
 	::MessageBeep(MB_ICONEXCLAMATION);
 	if (!bSuccess)
+	{
 		::DeleteFile(strEXEName);
+		if (szErrorMessage[0])
+		{
+			MessageBox(szErrorMessage, strSEMPQError, MB_OK | MB_ICONSTOP);
+		}
+	}
 
 	FreeStubData(pDataSEMPQ);
 
 	return bSuccess;
 }
 
-DWORD CSEMPQWizard::GetStubDataWriteOffset(const CString &strStubFileName)
-{
-	// Manually finding the address of the stub data in an executable is to 
-	// be avoided, where possible. Fortunately, there's a clever way to get 
-	// this information through Windows: the LOAD_LIBRARY_AS_DATAFILE flag.
-	// When this flag is used to load a module, the file is mapped into 
-	// memory as a single chunk, in exactly the same format as the file 
-	// itself. Some Windows functions (including the resource functions) are 
-	// able to operate on a file loaded in this way. In this case, the RVA of 
-	// the resource corresponds exactly to the file offset.
-	ASSERT(strStubFileName.GetLength());
-
-	// Open the stub binary
-	HMODULE hStub = LoadLibraryEx(strStubFileName, 
-		NULL, LOAD_LIBRARY_AS_DATAFILE);
-	if (!hStub)
-		return 0;
-
-	DWORD dwRetVal = 0;
-
-	// The three steps to getting a resource pointer: find, load, and lock
-	HRSRC hStubData = FindResource(hStub, "STUBDATA", "BIN");
-	if (hStubData)
-	{
-		HGLOBAL hStubDataGlobal = LoadResource(hStub, hStubData);
-		if (hStubDataGlobal)
-		{
-			LPVOID lpvStubData = LockResource(hStubDataGlobal);
-			DWORD dwStubDataSize = SizeofResource(hStub, hStubData);
-
-			if (lpvStubData && dwStubDataSize >= STUBDATASIZE)
-				// Got it
-				// Note that in Windows modules always begin at 64 KB offsets,
-				// which leaves these 16 bits in the HMODULE free for Windows 
-				// to use for flags (though I only know of one bit that is 
-				// used in that way); consequently, we must filter out these 
-				// flags before we subtract.
-				dwRetVal = (DWORD)((UINT_PTR)lpvStubData 
-					- ((UINT_PTR)hStub & ~(UINT_PTR)0xFFFF));
-		}
-	}
-
-	FreeLibrary(hStub);
-
-	return dwRetVal;
-}
-
-BOOL CSEMPQWizard::WriteStubToSEMPQ(CProgressWnd &wndProgress, 
-	const CString &strEXEName, const STUBDATA &dataSEMPQ)
-{
-	// Load the strings we'll need
-	CString strSEMPQError, strMessage;
-	strSEMPQError.LoadString(IDS_SEMPQFAILED);
-	strMessage.LoadString(IDS_WRITINGEXE);
-
-	wndProgress.SetText(strMessage);
-	wndProgress.SetPos(WRITE_STUB_INITIAL_PROGRESS);
-
-	// We've got a couple tasks to do here. First, we need to create the SEMPQ
-	// file and write the unmodified version of the stub.
-	if (!ExtractResource(NULL, MAKEINTRESOURCE(IDR_SEMPQSTUB), 
-		"EXE", strEXEName))
-	{
-		strMessage.Format(IDS_CANTCREATEFILE, strEXEName);
-		MessageBox(strMessage, strSEMPQError, MB_OK | MB_ICONSTOP);
-
-		return FALSE;
-	}
-
-	// Next, create the new stub data that contains the info for our mod
-	DWORD dwStubDataOffset = GetStubDataWriteOffset(strEXEName);
-	if (!dwStubDataOffset)
-	{
-		strMessage.Format(IDS_INTERNALERROR);
-		MessageBox(strMessage, strSEMPQError, MB_OK | MB_ICONSTOP);
-
-		return FALSE;
-	}
-
-	// Open the file, and...
-	HANDLE hSEMPQ = ::CreateFile(strEXEName, 
-		GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
-	if (!hSEMPQ)
-	{				
-		strMessage.Format(IDS_CANTOPENFILE, strEXEName);
-		MessageBox(strMessage, strSEMPQError, MB_OK | MB_ICONSTOP);
-
-		return FALSE;
-	}
-
-	// Write the stub data
-	BOOL bRetVal = FALSE;
-	DWORD dwBytesWritten;
-	if (::SetFilePointer(hSEMPQ, dwStubDataOffset, NULL, FILE_BEGIN) == dwStubDataOffset
-		&& ::WriteFile(hSEMPQ, &dataSEMPQ, dataSEMPQ.cbSize, &dwBytesWritten, NULL)
-		&& (dwBytesWritten == dataSEMPQ.cbSize))
-		bRetVal = TRUE;	// Success
-	else
-	{
-		strMessage.Format(IDS_CANTWRITE, strEXEName);
-		MessageBox(strMessage, strSEMPQError, MB_OK | MB_ICONSTOP);
-	}
-
-	::CloseHandle(hSEMPQ);
-
-	return bRetVal;
-}
-
-BOOL CSEMPQWizard::WritePluginsToSEMPQ(CProgressWnd &wndProgress, 
-	const CString &strEXEName, const CPluginPage::PluginModuleList &modules)
-{
-	// Load the strings and set the text/progress of the dialog
-	CString strSEMPQError, strMessage;
-	strSEMPQError.LoadString(IDS_SEMPQFAILED);
-	strMessage.LoadString(IDS_WRITINGPLUGINS);
-
-	wndProgress.SetText(strMessage);
-	wndProgress.SetPos(WRITE_PLUGINS_INITIAL_PROGRESS);
-
-	// This is pretty straightforward: open, write the modules, close
-	EFSHANDLEFORWRITE hEFSFile = OpenEFSFileForWrite(strEXEName, 0);
-	if (!hEFSFile)
-		return FALSE;
-
-	BOOL bRetVal = FALSE, bCancel = FALSE;
-	int iCurModule;
-	for (iCurModule = 0; iCurModule < modules.GetCount(); iCurModule++)
-	{
-		const MPQDRAFTPLUGINMODULE &module = modules[iCurModule];
-		if (!AddToEFSFile(hEFSFile, module.szModuleFileName, 
-			module.dwComponentID,
-			module.dwModuleID, 
-			module.bExecute, 0))
-			break;
-
-		// Update the progress bar
-		wndProgress.SetPos((int)(((float)iCurModule 
-			* (float)WRITE_PLUGINS_PROGRESS_SIZE / (float)modules.GetCount()) 
-			+ (float)WRITE_PLUGINS_INITIAL_PROGRESS));
-
-		// Now, this is a bit different from the function to write the stub. 
-		// Because both this step and the next have the potential to take a 
-		// while (imagine an assload of plugin modules), we need to dispatch 
-		// messages, or the UI is going to be completely unresponsive, 
-		// including the cancel button. Pump messages and check the cancel 
-		// button in between files, here.
-		wndProgress.PeekAndPump();
-		if (wndProgress.Cancelled())
-		{
-			bCancel = TRUE;
-			break;	// Abort
-		}
-	}
-
-	// Success is whether we were able to write all modules
-	if (iCurModule == modules.GetCount())
-		bRetVal = TRUE;
-	else if (!bCancel)
-	{
-		strMessage.Format(IDS_CANTWRITE, strEXEName);
-		MessageBox(strMessage, strSEMPQError, MB_OK | MB_ICONSTOP);
-	}
-	// Else bRetVal remains FALSE, in the case of cancellation
-
-	CloseEFSFileForWrite(hEFSFile);
-
-	return bRetVal;
-}
-
-BOOL CSEMPQWizard::WriteMPQToSEMPQ(CProgressWnd &wndProgress, 
-	const CString &strEXEName, const CString &strMPQName)
-{
-	CString strSEMPQError, strMessage;
-	strSEMPQError.LoadString(IDS_SEMPQFAILED);
-
-	// This is a trivial function that simply opens both files and passes 
-	// things on to the function that actually does the copying. There is no 
-	// strategic reason for this division, only an aesthetic one: the code 
-	// becomes really ugly if we do all of this in one function.
-	HANDLE hSEMPQ = ::CreateFile(strEXEName, 
-		GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
-	if (hSEMPQ == INVALID_HANDLE_VALUE)
-	{
-		strMessage.Format(IDS_CANTCREATEFILE, strEXEName);
-		MessageBox(strMessage, strSEMPQError, MB_OK | MB_ICONSTOP);
-
-		return FALSE;
-	}
-
-	BOOL bRetVal = FALSE;
-	HANDLE hMPQ = ::CreateFile(strMPQName, GENERIC_READ, 
-		FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-	if (hMPQ != INVALID_HANDLE_VALUE)
-	{
-		bRetVal = WriteMPQToSEMPQ(wndProgress, strMPQName, 
-			strEXEName, hSEMPQ, hMPQ);
-
-		::CloseHandle(hMPQ);
-	}
-	else
-	{
-		strMessage.Format(IDS_CANTOPENMPQ, strMPQName);
-		MessageBox(strMessage, strSEMPQError, MB_OK | MB_ICONSTOP);
-	}
-
-	::CloseHandle(hSEMPQ);
-
-	return bRetVal;
-}
-
-BOOL CSEMPQWizard::WriteMPQToSEMPQ(CProgressWnd &wndProgress, 
-	const CString &strMPQName, const CString &strEXEName, 
-	HANDLE hSEMPQ, HANDLE hMPQ)
-{
-	ASSERT(hSEMPQ != INVALID_HANDLE_VALUE);
-	ASSERT(hMPQ != INVALID_HANDLE_VALUE);
-
-	// Load the strings and set up the progress dialog
-	CString strSEMPQError, strMessage;
-	strSEMPQError.LoadString(IDS_SEMPQFAILED);
-	strMessage.LoadString(IDS_WRITINGMPQ);
-
-	wndProgress.SetText(strMessage);
-	wndProgress.SetPos(WRITE_MPQ_INITIAL_PROGRESS);
-
-	DWORD dwMPQOffset = ::GetFileSize(hSEMPQ, NULL),
-		dwMPQSize = ::GetFileSize(hMPQ, NULL), 
-		dwRemaining = dwMPQSize, dwTransferred = 0;
-
-	// Storm searches for MPQs in a file one sector (512 bytes) at a time, so 
-	// our archive must be written on a sector boundary. Under anything but 
-	// FUBAR conditions, this condition should automatically be met, as 
-	// executables must have sizes that are multiples of either 512 or 4096 
-	// bytes, and the EFS code is also smart enough to ensure this.
-	ASSERT((dwMPQOffset % 512) == 0);
-
-	// 96 is the size of an empty MPQ with a 4-entry hash table (I can't 
-	// recall if the minimum hash table size is 4 or 16, off the top of my 
-	// head.
-	if (dwMPQSize < 96)
-	{
-		strMessage.Format(IDS_BADMPQ, strMPQName);
-		MessageBox(strMessage, strSEMPQError, MB_OK | MB_ICONSTOP);
-
-		return FALSE;
-	}
-
-	// Allocate the read buffer
-	const DWORD dwMaxBufferSize = 256 * 1024;
-	DWORD dwBufferSize = min(dwRemaining, dwMaxBufferSize);
-
-	LPBYTE lpbyReadBuffer = NULL;
-	try
-	{ lpbyReadBuffer = new BYTE[dwBufferSize]; }
-	catch (...)
-	{ }
-
-	if (!lpbyReadBuffer)
-	{
-		strMessage.Format(IDS_CANTMALLOC, dwBufferSize);
-		MessageBox(strMessage, strSEMPQError, MB_OK | MB_ICONSTOP);
-
-		return FALSE;
-	}
-
-	// This is a very simple pump in, pump out function: we read in a buffer 
-	// full from the MPQ, write it out to the SEMPQ.
-	::SetFilePointer(hSEMPQ, 0, NULL, FILE_END);
-	::SetFilePointer(hMPQ, 0, NULL, FILE_BEGIN);
-
-	BOOL bRetVal = FALSE, bCancel = FALSE;
-	while (dwRemaining)
-	{
-		DWORD dwBlockSize = min(dwRemaining, dwBufferSize), dwBytesRead;
-
-		// In and out
-		if (!::ReadFile(hMPQ, lpbyReadBuffer, dwBlockSize, &dwBytesRead, NULL)
-			|| (dwBytesRead < dwBlockSize)
-			|| !::WriteFile(hSEMPQ, lpbyReadBuffer, dwBlockSize, &dwBytesRead, NULL)
-			|| (dwBytesRead < dwBlockSize))
-			break;
-
-		// Same as before: make sure we process UI messages. We have to do 
-		// this before modifying the counters, because we rely on the counters
-		// to determine whether we completed successfully.
-		wndProgress.PeekAndPump();
-		if (wndProgress.Cancelled())
-		{
-			bCancel = TRUE;
-			break;
-		}
-
-		dwTransferred += dwBlockSize;
-		dwRemaining -= dwBlockSize;
-
-		// Finally, update the progress bar
-		wndProgress.SetPos((int)(((float)dwTransferred 
-			* WRITE_MPQ_PROGRESS_SIZE 
-			/ (float)dwMPQSize) + WRITE_MPQ_INITIAL_PROGRESS));
-	}
-
-	// Did we finish, or was there an error?
-	if (!dwRemaining)
-	{
-		::SetEndOfFile(hSEMPQ);
-
-		bRetVal = TRUE;
-	}
-	else if (!bCancel)
-	{
-		strMessage.Format(IDS_CANTWRITE, strEXEName);
-		MessageBox(strMessage, strSEMPQError, MB_OK | MB_ICONSTOP);
-	}
-	// Else the user cancelled
-
-	delete [] lpbyReadBuffer;
-
-	return bRetVal;
-}
-
 STUBDATA *CSEMPQWizard::CreateStubData()
 {
-	CString strCustomName, strProgramPath, strParameters, 
+	CString strCustomName, strProgramPath, strParameters,
 		strSEMPQError, strMessage;
 	strSEMPQError.LoadString(IDS_SEMPQFAILED);
 
@@ -858,110 +591,51 @@ STUBDATA *CSEMPQWizard::CreateStubData()
 	if (m_secondPage.RedirOpenFileEx())
 		dwFlags |= MPQD_EXTENDED_REDIR;
 
-	// Compute the size for the stub data. We need this for both verifying 
-	// that it will all fit, and so we can get all the offsets correct.
-	DWORD cbRegKeyName = 0, cbRegValueName = 0, 
-		cbTargetPathName = 0, cbTargetFileName = 0,
-		cbSpawnFileName = 0, cbArgs = strParameters.GetLength() + 1;
-	char szTargetPath[MAX_PATH];
+	// Prepare parameters for the MFC-free CreateStubData function
+	LPCSTR lpszRegistryKey = NULL;
+	LPCSTR lpszRegistryValue = NULL;
+	LPCSTR lpszProgramPath = NULL;
 	LPCSTR lpszTargetFileName = NULL;
+	LPCSTR lpszSpawnFileName = NULL;
+	int nShuntCount = 0;
 
 	// Are we using a supported app, or a custom one?
 	if (lpProgram && lpFile)
 	{
-		// A built-in one
-		cbRegKeyName = strlen(lpProgram->szRegistryKey) + 1;
-		cbRegValueName = strlen(lpProgram->szRegistryValue) + 1;
-
-		cbTargetFileName = strlen(lpFile->szTargetFileName) + 1;
-		cbSpawnFileName = strlen(lpFile->szFileName) + 1;
+		// A built-in one (registry-based)
+		lpszRegistryKey = lpProgram->szRegistryKey;
+		lpszRegistryValue = lpProgram->szRegistryValue;
+		lpszTargetFileName = lpFile->szTargetFileName;
+		lpszSpawnFileName = lpFile->szFileName;
+		nShuntCount = lpFile->nShuntCount;
 	}
 	else
 	{
-		// Custom one
-		// Create the target path
-		strcpy(szTargetPath, strProgramPath);
-		PathRemoveFileSpec(szTargetPath);
-		lpszTargetFileName = PathFindFileName(strProgramPath);
-
-		cbTargetPathName = strlen(szTargetPath) + 1;
-		cbTargetFileName = cbSpawnFileName = strlen(lpszTargetFileName) + 1;
+		// Custom one (path-based)
+		lpszProgramPath = strProgramPath;
 	}
 
-	// Compute the offsets of the strings
-	DWORD nRegKeyOffset = sizeof(PATCHTARGETEX),
-		nRegValueOffset = nRegKeyOffset + cbRegKeyName,
-		nTargetPathOffset = nRegValueOffset + cbRegValueName,
-		nTargetFileOffset = nTargetPathOffset + cbTargetPathName,
-		nSpawnFileOffset = nTargetFileOffset + cbTargetFileName,
-		nArgsOffset = nSpawnFileOffset + cbSpawnFileName,
-		nStubSize = sizeof(STUBDATA) + nArgsOffset + cbArgs - nRegKeyOffset;
+	// Call the MFC-free CreateStubData function
+	char szErrorMessage[512] = {0};
+	STUBDATA *pDataSEMPQ = SEMPQCreator::CreateStubData(
+		strCustomName,
+		lpszRegistryKey,
+		lpszRegistryValue,
+		lpszProgramPath,
+		lpszTargetFileName,
+		lpszSpawnFileName,
+		strParameters,
+		nShuntCount,
+		dwFlags,
+		szErrorMessage
+	);
 
-	// It shouldn't be possible for this to happen, but who knows
-	ASSERT(nStubSize <= STUBDATASIZE);
-
-	// Allocate space for all the data
-	STUBDATA *pDataSEMPQ = (STUBDATA *)new BYTE[nStubSize];
 	if (!pDataSEMPQ)
 	{
-		strMessage.Format(IDS_CANTMALLOC, nStubSize);
-		MessageBox(strMessage, strSEMPQError, MB_OK | MB_ICONSTOP);
-
+		// Show error message
+		MessageBox(szErrorMessage, strSEMPQError, MB_OK | MB_ICONSTOP);
 		return NULL;
 	}
-
-	// Set up the basic stub data fields
-	pDataSEMPQ->dwDummy = ::GetTickCount();
-	pDataSEMPQ->cbSize = nStubSize;
-	pDataSEMPQ->patchTarget.grfFlags = dwFlags;
-	strcpy(pDataSEMPQ->szCustomName, strCustomName);
-
-	// Set up the string pointers for the patch target
-	PATCHTARGETEX &patchTarget = pDataSEMPQ->patchTarget;
-
-	patchTarget.lpszRegistryKey = (LPCSTR)nRegKeyOffset;
-	patchTarget.lpszRegistryValue = (LPCSTR)nRegValueOffset;
-
-	patchTarget.lpszTargetPath = (LPCSTR)nTargetPathOffset;
-	patchTarget.lpszTargetFileName = (LPCSTR)nTargetFileOffset;
-	patchTarget.lpszSpawnFileName = (LPCSTR)nSpawnFileOffset;
-
-	patchTarget.lpszArguments = (LPCSTR)nArgsOffset;
-
-	// Actually create the patch target strings and other data
-	if (lpProgram && lpFile)
-	{
-		pDataSEMPQ->patchTarget.bUseRegistry = TRUE;
-
-		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nRegKeyOffset, 
-			lpProgram->szRegistryKey);
-		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nRegValueOffset, 
-			lpProgram->szRegistryValue);
-		pDataSEMPQ->patchTarget.bValueIsFileName = FALSE;
-
-		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nSpawnFileOffset, 
-			lpFile->szFileName);
-		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nTargetFileOffset, 
-			lpFile->szTargetFileName);
-
-		pDataSEMPQ->patchTarget.nShuntCount = lpFile->nShuntCount;
-	}
-	else
-	{
-		pDataSEMPQ->patchTarget.bUseRegistry = FALSE;
-
-		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nTargetPathOffset, 
-			szTargetPath);
-
-		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nTargetFileOffset, 
-			lpszTargetFileName);
-		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nSpawnFileOffset, 
-			lpszTargetFileName);
-
-		pDataSEMPQ->patchTarget.nShuntCount = 0;
-	}
-
-	strcpy((LPSTR)&pDataSEMPQ->patchTarget + nArgsOffset, strParameters);
 
 	return pDataSEMPQ;
 }

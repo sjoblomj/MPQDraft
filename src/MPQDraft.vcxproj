@@ -184,6 +184,9 @@
     <ClCompile Include="app\PluginLoader.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="app\SEMPQCreator.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="app\gui\stdafx_gui.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx_gui.h</PrecompiledHeaderFile>
@@ -194,6 +197,7 @@
     <ClInclude Include="common\QDebug.h" />
     <ClInclude Include="common\QResource.h" />
     <ClInclude Include="app\resource_ids.h" />
+    <ClInclude Include="app\SEMPQCreator.h" />
     <ClInclude Include="app\cli\stdafx_cli.h" />
     <ClInclude Include="app\cli\MPQDraftCLI.h" />
     <ClInclude Include="app\cli\CommandParser.h" />

@@ -240,44 +240,10 @@ protected:
 	// returned by CreateStubData.
 	void FreeStubData(STUBDATA *lpStubData);
 
-	// Gets the full list of modules that need to be written to the SEMPQ. 
-	// This function calls CSEMPQWizardPage3::GetSelectedPluginModules, then 
+	// Gets the full list of modules that need to be written to the SEMPQ.
+	// This function calls CSEMPQWizardPage3::GetSelectedPluginModules, then
 	// adds on any modules required by MPQDraft itself.
 	BOOL GetPluginModules(CPluginPage::PluginModuleList &modules);
-
-	// The stub data, which includes basic parameters for the patch, is 
-	// stored in a resource named "STUBDATA", of type "BIN". For historical 
-	// reasons, overwriting this could not simply be done by writing to the 
-	// module resources, as there was no easy way to do that in 9x. 
-	// Consequently, we have to write directly to the SEMPQ, overwriting the 
-	// stub data resource. Finding where in the EXE the resource is is the job
-	// of this function. In the future this archaic method could be replaced 
-	// by a version that uses the NT resource editing function; this would be 
-	// especially appropriate if we also have to edit the resources to write 
-	// an icon. Or heck, the stub data itself could be made into a plugin 
-	// module, and taken out of the resources completely, as the motivation 
-	// for using a resource (yes, there was one) is now gone.
-	// A return value of 0 indicates failure.
-	DWORD GetStubDataWriteOffset(const CString &strStubFileName);
-
-	// Extracts the SEMPQ stub to the SEMPQ file name from the MPQDraft 
-	// resources, and then updates the stub data block with the stub data 
-	// produced by GetStubData.
-	BOOL WriteStubToSEMPQ(CProgressWnd &wndProgress, 
-		const CString &strEXEName, const STUBDATA &dataSEMPQ);
-
-	// Appends the list of modules compiled by GetPluginModules to the end of 
-	// the newly written SEMPQ (which is just the stub at this point). Updates
-	// the progress dialog with the current progress, and watches for 
-	// cancellation.
-	BOOL WritePluginsToSEMPQ(CProgressWnd &wndProgress, 
-		const CString &strEXEName, 
-		const CPluginPage::PluginModuleList &modules);
-	// Appends the selected MPQ to the end of the SEMPQ. Updates
-	// the progress dialog with the current progress, and watches for 
-	// cancellation.
-	BOOL WriteMPQToSEMPQ(CProgressWnd &wndProgress, const CString &strEXEName, const CString &strMPQName);
-	BOOL WriteMPQToSEMPQ(CProgressWnd &wndProgress, const CString &strMPQName, const CString &strEXEName, HANDLE hSEMPQ, HANDLE hMPQ);
 
 // Generated message map functions
 protected:

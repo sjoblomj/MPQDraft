@@ -42,6 +42,9 @@
     <ClCompile Include="..\Common\QResource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="app\SEMPQCreator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="app\gui\stdafx_gui.cpp">
       <Filter>Source Files\gui</Filter>
     </ClCompile>
@@ -133,6 +136,9 @@
     </ClInclude>
     <ClInclude Include="gui\SEMPQWizard.h">
       <Filter>Header Files\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="app\SEMPQCreator.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="app\gui\stdafx_gui.h">
       <Filter>Header Files\gui</Filter>
