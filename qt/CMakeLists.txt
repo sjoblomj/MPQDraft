@@ -23,6 +23,7 @@ set(SOURCES
     src/common/sempq_creator.cpp
     src/core/pluginmanager.cpp
     src/core/gamedata.cpp
+    src/core/sempqparamsbuilder.cpp
 )
 
 set(HEADERS
@@ -38,6 +39,7 @@ set(HEADERS
     src/common/sempq_creator.h
     src/core/pluginmanager.h
     src/core/gamedata.h
+    src/core/sempqparamsbuilder.h
 )
 
 # Resource files

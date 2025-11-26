@@ -6,6 +6,7 @@
 #include "pluginpage.h"
 #include "gamedata_qt.h"
 #include "common/sempq_creator.h"
+#include "core/sempqparamsbuilder.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFileDialog>
@@ -2212,132 +2213,84 @@ void SEMPQCreationWorker::run()
         return;
     }
 
-    // Extract parameters from wizard pages
-    QString errorMessage;
-    SEMPQCreationParams params;
+    // Extract basic settings from wizard pages
+    SEMPQBasicSettings basicSettings;
+    basicSettings.sempqName = settingsPage->getSEMPQName().toStdString();
+    basicSettings.mpqPath = settingsPage->getMPQPath().toStdString();
+    basicSettings.iconPath = settingsPage->getIconPath().toStdString();
+    basicSettings.outputPath = settingsPage->getOutputPath().toStdString();
+    basicSettings.parameters = targetPage->getParameters().toStdString();
 
-    // Get basic settings
-    params.sempqName = settingsPage->getSEMPQName();
-    params.mpqPath = settingsPage->getMPQPath();
-    params.iconPath = settingsPage->getIconPath();
-    params.outputPath = settingsPage->getOutputPath();
+    // Extract target settings from wizard pages
+    SEMPQTargetSettings targetSettings;
+    targetSettings.extendedRedir = targetPage->getExtendedRedir();
 
-    // Get target settings
-    params.parameters = targetPage->getParameters();
-
-    // Get plugins
-    params.pluginPaths = pluginPage->getSelectedPlugins();
-
-    // Print all user choices to console
-    qDebug() << "=== SEMPQ Creation Parameters ==="; // TODO: Cleanup
-    qDebug() << "SEMPQ Name:" << params.sempqName; // TODO: Cleanup
-    qDebug() << "Output Path:" << params.outputPath; // TODO: Cleanup
-    qDebug() << "MPQ Path:" << params.mpqPath; // TODO: Cleanup
-    qDebug() << "Icon Path:" << params.iconPath; // TODO: Cleanup
-    qDebug() << "Parameters:" << params.parameters; // TODO: Cleanup
-    qDebug() << "Plugins:" << params.pluginPaths; // TODO: Cleanup
-
-    // Get target information based on mode
     int targetTabIndex = targetPage->getCurrentTabIndex();
-
-    if (targetTabIndex == 0)
-    {
+    if (targetTabIndex == 0) {
         // Mode 1: Supported Games (Registry-based)
-        const GameComponent* component = targetPage->getSelectedComponent();
-        if (!component) {
-            qDebug() << "ERROR: No component selected in Supported Games tab";
-            return;
-        }
-
-        // Need to find the parent SupportedGame to get registry info
-        params.useRegistry = true;
-
-        // Find the parent game by searching through all supported games
-        QVector<SupportedGame> games = getSupportedGamesQt();
-        for (const SupportedGame& game : games)
-        {
-            for (const GameComponent& comp : game.components)
-            {
-                // Compare by component name and file name to find the match
-                if (comp.componentName == component->componentName &&
-                    comp.fileName == component->fileName)
-                {
-                    params.registryKey = getRegistryKey(game);
-                    params.registryValue = getRegistryValue(game);
-                    break;
-                }
-            }
-            if (!params.registryKey.isEmpty())
-                break;
-        }
-
-        params.targetFileName = getTargetFileName(*component);
-        params.spawnFileName = getFileName(*component);
-        params.shuntCount = component->shuntCount;
-        params.valueIsFullPath = false;  // Supported games always use directory + filename
-        params.flags = 0;
-        if (targetPage->getExtendedRedir())
-            params.flags |= MPQD_EXTENDED_REDIR;
-
-        qDebug() << "Target Mode: Supported Game (Registry-based)"; // TODO: Cleanup
-        qDebug() << "Registry Key:" << params.registryKey; // TODO: Cleanup
-        qDebug() << "Registry Value:" << params.registryValue; // TODO: Cleanup
-        qDebug() << "Spawn File Name:" << params.spawnFileName; // TODO: Cleanup
-        qDebug() << "Target File Name:" << params.targetFileName; // TODO: Cleanup
-        qDebug() << "Shunt Count:" << params.shuntCount; // TODO: Cleanup
-        qDebug() << "Extended Redir:" << (params.flags & MPQD_EXTENDED_REDIR ? "Yes" : "No"); // TODO: Cleanup
+        targetSettings.mode = SEMPQTargetMode::SUPPORTED_GAME;
+        targetSettings.selectedComponent = targetPage->getSelectedComponent();
     }
-    else if (targetTabIndex == 1)
-    {
+    else if (targetTabIndex == 1) {
         // Mode 2: Custom Registry
-        params.useRegistry = true;
-        params.registryKey = targetPage->getCustomRegistryKey();
-        params.registryValue = targetPage->getCustomRegistryValue();
-        params.valueIsFullPath = targetPage->getCustomRegistryIsFullPath();
-        params.spawnFileName = targetPage->getCustomRegistryExe();
-        params.targetFileName = targetPage->getCustomRegistryTargetFile();
-        params.shuntCount = targetPage->getCustomRegistryShuntCount();
-        params.flags = targetPage->getCustomRegistryFlags();
-
-        qDebug() << "Target Mode: Custom Registry"; // TODO: Cleanup
-        qDebug() << "Registry Key:" << params.registryKey; // TODO: Cleanup
-        qDebug() << "Registry Value:" << params.registryValue; // TODO: Cleanup
-        qDebug() << "Value Is Full Path:" << (params.valueIsFullPath ? "Yes" : "No"); // TODO: Cleanup
-        qDebug() << "Spawn File Name:" << params.spawnFileName; // TODO: Cleanup
-        qDebug() << "Target File Name:" << params.targetFileName; // TODO: Cleanup
-        qDebug() << "Shunt Count:" << params.shuntCount; // TODO: Cleanup
-        qDebug() << "Extended Redir:" << (params.flags & MPQD_EXTENDED_REDIR ? "Yes" : "No"); // TODO: Cleanup
-        qDebug() << "No Spawning:" << (params.flags & MPQD_NO_SPAWNING ? "Yes" : "No"); // TODO: Cleanup
+        targetSettings.mode = SEMPQTargetMode::CUSTOM_REGISTRY;
+        targetSettings.customRegistryKey = targetPage->getCustomRegistryKey().toStdString();
+        targetSettings.customRegistryValue = targetPage->getCustomRegistryValue().toStdString();
+        targetSettings.customRegistryExe = targetPage->getCustomRegistryExe().toStdString();
+        targetSettings.customRegistryTargetFile = targetPage->getCustomRegistryTargetFile().toStdString();
+        targetSettings.customRegistryShuntCount = targetPage->getCustomRegistryShuntCount();
+        targetSettings.customRegistryIsFullPath = targetPage->getCustomRegistryIsFullPath();
+        targetSettings.customRegistryFlags = targetPage->getCustomRegistryFlags();
     }
-    else if (targetTabIndex == 2)
-    {
+    else if (targetTabIndex == 2) {
         // Mode 3: Custom Target (Hardcoded Path)
-        params.useRegistry = false;
-        params.targetPath = targetPage->getCustomTargetPath();
-        params.shuntCount = targetPage->getCustomTargetShuntCount();
-        params.flags = 0;
-        if (targetPage->getExtendedRedir())
-            params.flags |= MPQD_EXTENDED_REDIR;
-        if (targetPage->getCustomTargetNoSpawning())
-            params.flags |= MPQD_NO_SPAWNING;
-
-        qDebug() << "Target Mode: Custom Target (Hardcoded Path)"; // TODO: Cleanup
-        qDebug() << "Target Path:" << params.targetPath; // TODO: Cleanup
-        qDebug() << "Shunt Count:" << params.shuntCount; // TODO: Cleanup
-        qDebug() << "Extended Redir:" << (params.flags & MPQD_EXTENDED_REDIR ? "Yes" : "No"); // TODO: Cleanup
-        qDebug() << "No Spawning:" << (params.flags & MPQD_NO_SPAWNING ? "Yes" : "No"); // TODO: Cleanup
+        targetSettings.mode = SEMPQTargetMode::CUSTOM_PATH;
+        targetSettings.customTargetPath = targetPage->getCustomTargetPath().toStdString();
+        targetSettings.customTargetShuntCount = targetPage->getCustomTargetShuntCount();
+        targetSettings.customTargetNoSpawning = targetPage->getCustomTargetNoSpawning();
     }
-    else
-    {
-        qDebug() << "ERROR: Unknown target tab index:" << targetTabIndex;
+    else {
+        emit creationComplete(false, QString("Internal error: unknown target tab index %1").arg(targetTabIndex));
         return;
     }
 
+    // Get plugin modules with full metadata (component IDs, module IDs, etc.)
+    std::vector<MPQDRAFTPLUGINMODULE> pluginModules = pluginPage->getSelectedPluginModules();
+
+    // Build SEMPQ creation parameters
+    std::string errorMessage;
+    SEMPQCreationParams params;
+    if (!SEMPQParamsBuilder::buildParams(basicSettings, targetSettings, pluginModules, params, errorMessage)) {
+        emit creationComplete(false, QString::fromStdString(errorMessage));
+        return;
+    }
+
+    // Print all parameters to console for debugging
+    qDebug() << "=== SEMPQ Creation Parameters ===";
+    qDebug() << "SEMPQ Name:" << QString::fromStdString(params.sempqName);
+    qDebug() << "Output Path:" << QString::fromStdString(params.outputPath);
+    qDebug() << "MPQ Path:" << QString::fromStdString(params.mpqPath);
+    qDebug() << "Icon Path:" << QString::fromStdString(params.iconPath);
+    qDebug() << "Parameters:" << QString::fromStdString(params.parameters);
+    qDebug() << "Plugins:" << static_cast<int>(params.pluginModules.size()) << "plugin(s)";
+    qDebug() << "Use Registry:" << (params.useRegistry ? "Yes" : "No");
+    if (params.useRegistry) {
+        qDebug() << "Registry Key:" << QString::fromStdString(params.registryKey);
+        qDebug() << "Registry Value:" << QString::fromStdString(params.registryValue);
+        qDebug() << "Value Is Full Path:" << (params.valueIsFullPath ? "Yes" : "No");
+        qDebug() << "Spawn File Name:" << QString::fromStdString(params.spawnFileName);
+        qDebug() << "Target File Name:" << QString::fromStdString(params.targetFileName);
+    } else {
+        qDebug() << "Target Path:" << QString::fromStdString(params.targetPath);
+    }
+    qDebug() << "Shunt Count:" << params.shuntCount;
+    qDebug() << "Extended Redir:" << (params.flags & MPQD_EXTENDED_REDIR ? "Yes" : "No");
+    qDebug() << "No Spawning:" << (params.flags & MPQD_NO_SPAWNING ? "Yes" : "No");
     qDebug() << "================================="; // TODO: Cleanup
 
-    // Create progress callback
-    auto progressCallback = [this](int progress, const QString& statusText) {
-        emit progressUpdate(progress, statusText);
+    // Create progress callback (converts std::string to QString)
+    auto progressCallback = [this](int progress, const std::string& statusText) {
+        emit progressUpdate(progress, QString::fromStdString(statusText));
     };
 
     // Create cancellation check
@@ -2347,13 +2300,10 @@ void SEMPQCreationWorker::run()
 
     bool success = creator->createSEMPQ(params, progressCallback, cancellationCheck, errorMessage);
 
-    if (success)
-    {
-        emit creationComplete(true, QString("SEMPQ file '%1' created successfully!").arg(params.outputPath));
-    }
-    else
-    {
-        emit creationComplete(false, errorMessage);
+    if (success) {
+        emit creationComplete(true, QString("SEMPQ file '%1' created successfully!").arg(QString::fromStdString(params.outputPath)));
+    } else {
+        emit creationComplete(false, QString::fromStdString(errorMessage));
     }
 }
 
