@@ -499,153 +499,89 @@ BOOL CSEMPQWizard::CreateSEMPQ()
 		return FALSE;
 	}
 
-	// Create the SEMPQ stub data (which loads info from the second page)
-	STUBDATA *pDataSEMPQ = CreateStubData();
-	if (!pDataSEMPQ)
-		return FALSE;	// Something's weird with the first or second page
-
-	// Convert plugin modules to array
-	DWORD nNumModules = modules.GetCount();
-	MPQDRAFTPLUGINMODULE *pModules = NULL;
-	if (nNumModules > 0)
-	{
-		pModules = new MPQDRAFTPLUGINMODULE[nNumModules];
-		POSITION pos = modules.GetHeadPosition();
-		for (DWORD i = 0; i < nNumModules && pos; i++)
-		{
-			pModules[i] = modules.GetNext(pos);
-		}
-	}
-
-	// Create the SEMPQ using the new MFC-free creator
-	SEMPQCreator creator;
-	char szErrorMessage[512] = {0};
-
-	// Progress callback adapter
-	struct ProgressContext {
-		CProgressWnd* pWnd;
-	};
-	ProgressContext progressCtx = { &wndProgress };
-
-	auto progressCallback = [](int progress, LPCSTR lpszStatusMessage, LPVOID lpUserData) {
-		ProgressContext* pCtx = (ProgressContext*)lpUserData;
-		pCtx->pWnd->SetPos(progress);
-		pCtx->pWnd->SetText(lpszStatusMessage);
-	};
+	// Build SEMPQCreationParams from wizard pages
+	SEMPQCreationParams params;
 
 	// Get the custom name for the SEMPQ
 	CString strCustomName;
 	m_firstPage.GetCustomName(strCustomName);
 
-	BOOL bSuccess = creator.CreateSEMPQ(
-		strEXEName,
-		strCustomName,
-		strMPQName,
-		NULL,  // Icon path (not implemented yet)
-		*pDataSEMPQ,
-		pModules,
-		nNumModules,
-		progressCallback,
-		&progressCtx,
-		NULL,  // No cancellation check
-		szErrorMessage
-	);
+	params.outputPath = std::string((LPCSTR)strEXEName);
+	params.sempqName = std::string((LPCSTR)strCustomName);
+	params.mpqPath = std::string((LPCSTR)strMPQName);
+	params.iconPath = "";  // Icon path not implemented yet
 
-	// Clean up
-	if (pModules)
-		delete[] pModules;
+	// Get the second page info we need
+	const PROGRAMENTRY *lpProgram = m_secondPage.GetSelectedProgram();
+	const PROGRAMFILEENTRY *lpFile = m_secondPage.GetSelectedFile();
+	CString strProgramPath, strParameters;
+	m_secondPage.GetProgramPath(strProgramPath);
+	m_secondPage.GetParameters(strParameters);
+
+	// Compile the flags
+	DWORD dwFlags = 0;
+	if (m_secondPage.RedirOpenFileEx())
+		dwFlags |= MPQD_EXTENDED_REDIR;
+	params.flags = dwFlags;
+	params.parameters = std::string((LPCSTR)strParameters);
+
+	// Are we using a supported app (registry-based), or a custom one (path-based)?
+	if (lpProgram && lpFile)
+	{
+		// A built-in one (registry-based)
+		params.useRegistry = true;
+		params.registryKey = std::string(lpProgram->szRegistryKey);
+		params.registryValue = std::string(lpProgram->szRegistryValue);
+		params.valueIsFullPath = false;
+		params.targetFileName = std::string(lpFile->szTargetFileName);
+		params.spawnFileName = std::string(lpFile->szFileName);
+		params.shuntCount = lpFile->nShuntCount;
+	}
+	else
+	{
+		// Custom one (path-based)
+		params.useRegistry = false;
+		params.targetPath = std::string((LPCSTR)strProgramPath);
+		// Extract filename from path
+		CString strFileName = strProgramPath;
+		PathStripPath(strFileName.GetBuffer());
+		strFileName.ReleaseBuffer();
+		params.targetFileName = std::string((LPCSTR)strFileName);
+		params.spawnFileName = params.targetFileName;
+		params.shuntCount = 0;
+	}
+
+	// Copy plugin modules (with full metadata including component/module IDs)
+	for (INT_PTR i = 0; i < modules.GetSize(); i++)
+	{
+		params.pluginModules.push_back(modules.GetAt(i));
+	}
+
+	// Create the SEMPQ using the modernized creator
+	SEMPQCreator creator;
+
+	// Progress callback adapter
+	auto progressCallback = [&wndProgress](int progress, const std::string& statusText) {
+		wndProgress.SetPos(progress);
+		wndProgress.SetText(statusText.c_str());
+	};
+
+	std::string errorMessage;
+	bool bSuccess = creator.createSEMPQ(params, progressCallback, nullptr, errorMessage);
 
 	::MessageBeep(MB_ICONEXCLAMATION);
 	if (!bSuccess)
 	{
 		::DeleteFile(strEXEName);
-		if (szErrorMessage[0])
+		if (!errorMessage.empty())
 		{
-			MessageBox(szErrorMessage, strSEMPQError, MB_OK | MB_ICONSTOP);
+			MessageBox(errorMessage.c_str(), strSEMPQError, MB_OK | MB_ICONSTOP);
 		}
 	}
 
-	FreeStubData(pDataSEMPQ);
-
-	return bSuccess;
+	return bSuccess ? TRUE : FALSE;
 }
 
-STUBDATA *CSEMPQWizard::CreateStubData()
-{
-	CString strCustomName, strProgramPath, strParameters,
-		strSEMPQError, strMessage;
-	strSEMPQError.LoadString(IDS_SEMPQFAILED);
-
-	// Get the first page info we need
-	m_firstPage.GetCustomName(strCustomName);
-
-	// Get the second page info we need
-	const PROGRAMENTRY *lpProgram = m_secondPage.GetSelectedProgram();
-	const PROGRAMFILEENTRY *lpFile = m_secondPage.GetSelectedFile();
-
-	m_secondPage.GetProgramPath(strProgramPath);
-	m_secondPage.GetParameters(strParameters);
-
-	// Compile the flags (trivial, as we have only one flag ATM)
-	DWORD dwFlags = 0;
-	if (m_secondPage.RedirOpenFileEx())
-		dwFlags |= MPQD_EXTENDED_REDIR;
-
-	// Prepare parameters for the MFC-free CreateStubData function
-	LPCSTR lpszRegistryKey = NULL;
-	LPCSTR lpszRegistryValue = NULL;
-	LPCSTR lpszProgramPath = NULL;
-	LPCSTR lpszTargetFileName = NULL;
-	LPCSTR lpszSpawnFileName = NULL;
-	int nShuntCount = 0;
-
-	// Are we using a supported app, or a custom one?
-	if (lpProgram && lpFile)
-	{
-		// A built-in one (registry-based)
-		lpszRegistryKey = lpProgram->szRegistryKey;
-		lpszRegistryValue = lpProgram->szRegistryValue;
-		lpszTargetFileName = lpFile->szTargetFileName;
-		lpszSpawnFileName = lpFile->szFileName;
-		nShuntCount = lpFile->nShuntCount;
-	}
-	else
-	{
-		// Custom one (path-based)
-		lpszProgramPath = strProgramPath;
-	}
-
-	// Call the MFC-free CreateStubData function
-	char szErrorMessage[512] = {0};
-	STUBDATA *pDataSEMPQ = SEMPQCreator::CreateStubData(
-		strCustomName,
-		lpszRegistryKey,
-		lpszRegistryValue,
-		lpszProgramPath,
-		lpszTargetFileName,
-		lpszSpawnFileName,
-		strParameters,
-		nShuntCount,
-		dwFlags,
-		szErrorMessage
-	);
-
-	if (!pDataSEMPQ)
-	{
-		// Show error message
-		MessageBox(szErrorMessage, strSEMPQError, MB_OK | MB_ICONSTOP);
-		return NULL;
-	}
-
-	return pDataSEMPQ;
-}
-
-void CSEMPQWizard::FreeStubData(STUBDATA *lpStubData)
-{
-	ASSERT(lpStubData);
-
-	delete [] (LPBYTE)lpStubData;
-}
 
 BOOL CSEMPQWizard::GetPluginModules(CPluginPage::PluginModuleList &modules)
 {

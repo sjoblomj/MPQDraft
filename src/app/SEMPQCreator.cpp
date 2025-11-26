@@ -11,60 +11,74 @@
 #include "SEMPQCreator.h"
 #include "../common/QResource.h"
 #include "../app/resource_ids.h"
+#include "../core/Common.h"
+#include <windows.h>
 #include <stdio.h>
 #include <shlwapi.h>
+
+/////////////////////////////////////////////////////////////////////////////
+// Forward declarations
+/////////////////////////////////////////////////////////////////////////////
+
+static STUBDATA* CreateStubDataFromParams(const SEMPQCreationParams& params, std::string& errorMessage);
 
 /////////////////////////////////////////////////////////////////////////////
 // SEMPQCreator implementation
 /////////////////////////////////////////////////////////////////////////////
 
-BOOL SEMPQCreator::CreateSEMPQ(
-	LPCSTR lpszOutputPath,
-	LPCSTR lpszSEMPQName,
-	LPCSTR lpszMPQPath,
-	LPCSTR lpszIconPath,
-	const STUBDATA& stubData,
-	const MPQDRAFTPLUGINMODULE* lpPluginModules,
-	DWORD nNumPluginModules,
-	SEMPQProgressCallback progressCallback,
-	LPVOID lpUserData,
-	SEMPQCancellationCheck cancellationCheck,
-	LPSTR lpszErrorMessage)
+bool SEMPQCreator::createSEMPQ(
+	const SEMPQCreationParams& params,
+	ProgressCallback progressCallback,
+	CancellationCheck cancellationCheck,
+	std::string& errorMessage)
 {
 	// Validate parameters
-	if (!lpszOutputPath || !lpszMPQPath || !lpszErrorMessage)
+	if (params.outputPath.empty())
 	{
-		if (lpszErrorMessage)
-			strcpy(lpszErrorMessage, "Invalid parameters");
-		return FALSE;
+		errorMessage = "Output path is empty";
+		return false;
+	}
+
+	if (params.sempqName.empty())
+	{
+		errorMessage = "SEMPQ name is empty";
+		return false;
+	}
+
+	if (params.mpqPath.empty())
+	{
+		errorMessage = "MPQ path is empty";
+		return false;
 	}
 
 	// Check if MPQ file exists
-	DWORD dwAttrib = GetFileAttributes(lpszMPQPath);
+	DWORD dwAttrib = GetFileAttributes(params.mpqPath.c_str());
 	if (dwAttrib == INVALID_FILE_ATTRIBUTES || (dwAttrib & FILE_ATTRIBUTE_DIRECTORY))
 	{
-		sprintf(lpszErrorMessage, "The MPQ file does not exist: %s", lpszMPQPath);
-		return FALSE;
+		errorMessage = "The MPQ file does not exist: " + params.mpqPath;
+		return false;
 	}
 
 	// Step 1: Write stub to SEMPQ
-	if (!WriteStubToSEMPQ(lpszOutputPath, stubData, progressCallback, lpUserData, cancellationCheck, lpszErrorMessage))
-		return FALSE;
+	if (!writeStubToSEMPQ(params, progressCallback, cancellationCheck, errorMessage))
+		return false;
 
 	// Step 2: Write plugins to SEMPQ
-	if (!WritePluginsToSEMPQ(lpszOutputPath, lpPluginModules, nNumPluginModules, progressCallback, lpUserData, cancellationCheck, lpszErrorMessage))
-		return FALSE;
+	if (!writePluginsToSEMPQ(params, progressCallback, cancellationCheck, errorMessage))
+		return false;
 
 	// Step 3: Write MPQ to SEMPQ
-	if (!WriteMPQToSEMPQ(lpszOutputPath, lpszMPQPath, progressCallback, lpUserData, cancellationCheck, lpszErrorMessage))
-		return FALSE;
+	if (!writeMPQToSEMPQ(params, progressCallback, cancellationCheck, errorMessage))
+		return false;
 
 	// Success!
-	ReportProgress(WRITE_FINISHED, "SEMPQ created successfully!", progressCallback, lpUserData);
-	return TRUE;
+	if (progressCallback)
+		progressCallback(WRITE_FINISHED, "SEMPQ created successfully!");
+	return true;
 }
 
-DWORD SEMPQCreator::GetStubDataWriteOffset(LPCSTR lpszStubFileName)
+// Helper: Get the offset where stub data should be written in the stub executable
+static DWORD GetStubDataWriteOffset(const std::string& stubFileName)
 {
 	// Manually finding the address of the stub data in an executable is to
 	// be avoided, where possible. Fortunately, there's a clever way to get
@@ -74,11 +88,11 @@ DWORD SEMPQCreator::GetStubDataWriteOffset(LPCSTR lpszStubFileName)
 	// itself. Some Windows functions (including the resource functions) are
 	// able to operate on a file loaded in this way. In this case, the RVA of
 	// the resource corresponds exactly to the file offset.
-	if (!lpszStubFileName || !*lpszStubFileName)
+	if (stubFileName.empty())
 		return 0;
 
 	// Load the stub as a data file
-	HMODULE hStub = LoadLibraryEx(lpszStubFileName, NULL, LOAD_LIBRARY_AS_DATAFILE);
+	HMODULE hStub = LoadLibraryEx(stubFileName.c_str(), NULL, LOAD_LIBRARY_AS_DATAFILE);
 	if (!hStub)
 		return 0;
 
@@ -111,82 +125,98 @@ DWORD SEMPQCreator::GetStubDataWriteOffset(LPCSTR lpszStubFileName)
 	return dwRetVal;
 }
 
-BOOL SEMPQCreator::WriteStubToSEMPQ(
-	LPCSTR lpszEXEName,
-	const STUBDATA& dataSEMPQ,
-	SEMPQProgressCallback progressCallback,
-	LPVOID lpUserData,
-	SEMPQCancellationCheck cancellationCheck,
-	LPSTR lpszErrorMessage)
+bool SEMPQCreator::writeStubToSEMPQ(
+	const SEMPQCreationParams& params,
+	ProgressCallback progressCallback,
+	CancellationCheck cancellationCheck,
+	std::string& errorMessage)
 {
-	ReportProgress(WRITE_STUB_INITIAL_PROGRESS, "Writing Executable Code...", progressCallback, lpUserData);
+	if (progressCallback)
+		progressCallback(WRITE_STUB_INITIAL_PROGRESS, "Writing Executable Code...\n");
+
+	// Create the STUBDATA from parameters
+	STUBDATA* pStubData = CreateStubDataFromParams(params, errorMessage);
+	if (!pStubData)
+		return false;
 
 	// We've got a couple tasks to do here. First, we need to create the SEMPQ
 	// file and write the unmodified version of the stub.
-	if (!ExtractResource(NULL, MAKEINTRESOURCE(IDR_SEMPQSTUB), "EXE", lpszEXEName))
+	if (!ExtractResource(NULL, MAKEINTRESOURCE(IDR_SEMPQSTUB), "EXE", params.outputPath.c_str()))
 	{
-		sprintf(lpszErrorMessage, "Unable to create file: %s", lpszEXEName);
-		return FALSE;
+		errorMessage = "Unable to create file: " + params.outputPath;
+		delete [] (BYTE*)pStubData;
+		return false;
 	}
 
 	// Next, create the new stub data that contains the info for our mod
-	DWORD dwStubDataOffset = GetStubDataWriteOffset(lpszEXEName);
+	DWORD dwStubDataOffset = GetStubDataWriteOffset(params.outputPath);
 	if (!dwStubDataOffset)
 	{
-		strcpy(lpszErrorMessage, "Internal error: unable to locate stub data offset");
-		return FALSE;
+		errorMessage = "Internal error: unable to locate stub data offset";
+		delete [] (BYTE*)pStubData;
+		return false;
 	}
 
 	// Open the file, and...
-	HANDLE hSEMPQ = CreateFile(lpszEXEName,
+	HANDLE hSEMPQ = CreateFile(params.outputPath.c_str(),
 		GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
 	if (hSEMPQ == INVALID_HANDLE_VALUE)
 	{
-		sprintf(lpszErrorMessage, "Unable to open file: %s", lpszEXEName);
-		return FALSE;
+		errorMessage = "Unable to open file: " + params.outputPath;
+		delete [] (BYTE*)pStubData;
+		return false;
 	}
 
 	// Write the stub data
-	BOOL bRetVal = FALSE;
+	bool bRetVal = false;
 	DWORD dwBytesWritten;
 	if (SetFilePointer(hSEMPQ, dwStubDataOffset, NULL, FILE_BEGIN) == dwStubDataOffset
-		&& WriteFile(hSEMPQ, &dataSEMPQ, dataSEMPQ.cbSize, &dwBytesWritten, NULL)
-		&& (dwBytesWritten == dataSEMPQ.cbSize))
-		bRetVal = TRUE;	// Success
+		&& WriteFile(hSEMPQ, pStubData, pStubData->cbSize, &dwBytesWritten, NULL)
+		&& (dwBytesWritten == pStubData->cbSize))
+		bRetVal = true;	// Success
 	else
 	{
-		sprintf(lpszErrorMessage, "Unable to write to file: %s", lpszEXEName);
+		errorMessage = "Unable to write to file: " + params.outputPath;
 	}
 
 	CloseHandle(hSEMPQ);
+	delete [] (BYTE*)pStubData;
 
 	return bRetVal;
 }
 
-BOOL SEMPQCreator::WritePluginsToSEMPQ(
-	LPCSTR lpszEXEName,
-	const MPQDRAFTPLUGINMODULE* lpPluginModules,
-	DWORD nNumPluginModules,
-	SEMPQProgressCallback progressCallback,
-	LPVOID lpUserData,
-	SEMPQCancellationCheck cancellationCheck,
-	LPSTR lpszErrorMessage)
+bool SEMPQCreator::writePluginsToSEMPQ(
+	const SEMPQCreationParams& params,
+	ProgressCallback progressCallback,
+	CancellationCheck cancellationCheck,
+	std::string& errorMessage)
 {
-	ReportProgress(WRITE_PLUGINS_INITIAL_PROGRESS, "Writing Plugins...", progressCallback, lpUserData);
+	if (progressCallback)
+		progressCallback(WRITE_PLUGINS_INITIAL_PROGRESS, "Writing Plugins...\n");
 
-	// This is pretty straightforward: open, write the modules, close
-	EFSHANDLEFORWRITE hEFSFile = OpenEFSFileForWrite(lpszEXEName, 0);
-	if (!hEFSFile)
+	// If no plugins, just skip this step
+	if (params.pluginModules.empty())
 	{
-		strcpy(lpszErrorMessage, "Unable to open EFS file for writing");
-		return FALSE;
+		if (progressCallback)
+			progressCallback(WRITE_MPQ_INITIAL_PROGRESS, "Writing Plugins...\n");
+		return true;
 	}
 
-	BOOL bRetVal = FALSE, bCancel = FALSE;
-	DWORD iCurModule;
-	for (iCurModule = 0; iCurModule < nNumPluginModules; iCurModule++)
+	// This is pretty straightforward: open, write the modules, close
+	EFSHANDLEFORWRITE hEFSFile = OpenEFSFileForWrite(params.outputPath.c_str(), 0);
+	if (!hEFSFile)
 	{
-		const MPQDRAFTPLUGINMODULE& module = lpPluginModules[iCurModule];
+		errorMessage = "Unable to open EFS file for writing";
+		return false;
+	}
+
+	bool bRetVal = false, bCancel = false;
+	size_t iCurModule;
+	for (iCurModule = 0; iCurModule < params.pluginModules.size(); iCurModule++)
+	{
+		const MPQDRAFTPLUGINMODULE& module = params.pluginModules[iCurModule];
+
+		// Use the actual component/module IDs from the plugin module structure
 		if (!AddToEFSFile(hEFSFile, module.szModuleFileName,
 			module.dwComponentID,
 			module.dwModuleID,
@@ -195,25 +225,26 @@ BOOL SEMPQCreator::WritePluginsToSEMPQ(
 
 		// Update the progress bar
 		int progress = (int)(((float)iCurModule
-			* (float)WRITE_PLUGINS_PROGRESS_SIZE / (float)nNumPluginModules)
+			* (float)WRITE_PLUGINS_PROGRESS_SIZE / (float)params.pluginModules.size())
 			+ (float)WRITE_PLUGINS_INITIAL_PROGRESS);
-		ReportProgress(progress, "Writing Plugins...", progressCallback, lpUserData);
+		if (progressCallback)
+			progressCallback(progress, "Writing Plugins...\n");
 
 		// Check for cancellation
-		if (CheckCancellation(cancellationCheck, lpUserData))
+		if (cancellationCheck && cancellationCheck())
 		{
-			bCancel = TRUE;
+			bCancel = true;
 			break;	// Abort
 		}
 	}
 
 	// Success is whether we were able to write all modules
-	if (iCurModule == nNumPluginModules) {
-		bRetVal = TRUE;
+	if (iCurModule == params.pluginModules.size()) {
+		bRetVal = true;
 	} else if (!bCancel) {
-		sprintf(lpszErrorMessage, "Unable to write plugins to file: %s", lpszEXEName);
+		errorMessage = "Unable to write plugins to file: " + params.outputPath;
 	} else {
-		strcpy(lpszErrorMessage, "Operation cancelled by user");
+		errorMessage = "Operation cancelled by user";
 	}
 
 	CloseEFSFileForWrite(hEFSFile);
@@ -221,62 +252,35 @@ BOOL SEMPQCreator::WritePluginsToSEMPQ(
 	return bRetVal;
 }
 
-BOOL SEMPQCreator::WriteMPQToSEMPQ(
-	LPCSTR lpszEXEName,
-	LPCSTR lpszMPQName,
-	SEMPQProgressCallback progressCallback,
-	LPVOID lpUserData,
-	SEMPQCancellationCheck cancellationCheck,
-	LPSTR lpszErrorMessage)
+bool SEMPQCreator::writeMPQToSEMPQ(
+	const SEMPQCreationParams& params,
+	ProgressCallback progressCallback,
+	CancellationCheck cancellationCheck,
+	std::string& errorMessage)
 {
-	// This is a trivial function that simply opens both files and passes
-	// things on to the function that actually does the copying. There is no
-	// strategic reason for this division, only an aesthetic one: the code
-	// becomes really ugly if we do all of this in one function.
-	HANDLE hSEMPQ = CreateFile(lpszEXEName,
+	if (progressCallback)
+		progressCallback(WRITE_MPQ_INITIAL_PROGRESS, "Writing MPQ Data...\n");
+
+	// Open the SEMPQ file for writing
+	HANDLE hSEMPQ = CreateFile(params.outputPath.c_str(),
 		GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
 	if (hSEMPQ == INVALID_HANDLE_VALUE)
 	{
-		sprintf(lpszErrorMessage, "Unable to create file: %s", lpszEXEName);
-		return FALSE;
+		errorMessage = "Unable to open file: " + params.outputPath;
+		return false;
 	}
 
-	BOOL bRetVal = FALSE;
-	HANDLE hMPQ = CreateFile(lpszMPQName, GENERIC_READ,
+	// Open the MPQ file for reading
+	HANDLE hMPQ = CreateFile(params.mpqPath.c_str(), GENERIC_READ,
 		FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 
-	if (hMPQ != INVALID_HANDLE_VALUE) {
-		bRetVal = WriteMPQToSEMPQ(lpszMPQName, lpszEXEName, hSEMPQ, hMPQ,
-			progressCallback, lpUserData, cancellationCheck, lpszErrorMessage);
-
-		CloseHandle(hMPQ);
-	} else {
-		sprintf(lpszErrorMessage, "Unable to open MPQ: %s", lpszMPQName);
+	if (hMPQ == INVALID_HANDLE_VALUE) {
+		errorMessage = "Unable to open MPQ: " + params.mpqPath;
+		CloseHandle(hSEMPQ);
+		return false;
 	}
 
-	CloseHandle(hSEMPQ);
-
-	return bRetVal;
-}
-
-BOOL SEMPQCreator::WriteMPQToSEMPQ(
-	LPCSTR lpszMPQName,
-	LPCSTR lpszEXEName,
-	HANDLE hSEMPQ,
-	HANDLE hMPQ,
-	SEMPQProgressCallback progressCallback,
-	LPVOID lpUserData,
-	SEMPQCancellationCheck cancellationCheck,
-	LPSTR lpszErrorMessage)
-{
-	if (hSEMPQ == INVALID_HANDLE_VALUE || hMPQ == INVALID_HANDLE_VALUE)
-	{
-		strcpy(lpszErrorMessage, "Invalid file handles");
-		return FALSE;
-	}
-
-	ReportProgress(WRITE_MPQ_INITIAL_PROGRESS, "Writing MPQ Data...", progressCallback, lpUserData);
-
+	// Get file sizes
 	DWORD dwMPQOffset = GetFileSize(hSEMPQ, NULL),
 		dwMPQSize = GetFileSize(hMPQ, NULL),
 		dwRemaining = dwMPQSize, dwTransferred = 0;
@@ -288,24 +292,28 @@ BOOL SEMPQCreator::WriteMPQToSEMPQ(
 	// bytes, and the EFS code is also smart enough to ensure this.
 	if ((dwMPQOffset % 512) != 0)
 	{
-		strcpy(lpszErrorMessage, "Internal error: MPQ offset is not sector-aligned");
-		return FALSE;
+		errorMessage = "Internal error: MPQ offset is not sector-aligned";
+		CloseHandle(hMPQ);
+		CloseHandle(hSEMPQ);
+		return false;
 	}
 
-	// 96 is the size of an empty MPQ with a 4-entry hash table (I can't
-	// recall if the minimum hash table size is 4 or 16, off the top of my
-	// head.
+    // 96 is the size of an empty MPQ with a 4-entry hash table (I can't
+    // recall if the minimum hash table size is 4 or 16, off the top of my
+    // head.
 	if (dwMPQSize < 96)
 	{
-		sprintf(lpszErrorMessage, "Invalid MPQ file (too small): %s", lpszMPQName);
-		return FALSE;
+		errorMessage = "Invalid MPQ file (too small): " + params.mpqPath;
+		CloseHandle(hMPQ);
+		CloseHandle(hSEMPQ);
+		return false;
 	}
 
 	// Allocate the read buffer
 	const DWORD dwMaxBufferSize = 256 * 1024;
 	DWORD dwBufferSize = (dwRemaining < dwMaxBufferSize) ? dwRemaining : dwMaxBufferSize;
 
-	LPBYTE lpbyReadBuffer = NULL;
+	LPBYTE lpbyReadBuffer = nullptr;
 	try
 	{ lpbyReadBuffer = new BYTE[dwBufferSize]; }
 	catch (...)
@@ -313,8 +321,10 @@ BOOL SEMPQCreator::WriteMPQToSEMPQ(
 
 	if (!lpbyReadBuffer)
 	{
-		sprintf(lpszErrorMessage, "Unable to allocate memory (%u bytes)", dwBufferSize);
-		return FALSE;
+		errorMessage = "Unable to allocate memory (" + std::to_string(dwBufferSize) + " bytes)";
+		CloseHandle(hMPQ);
+		CloseHandle(hSEMPQ);
+		return false;
 	}
 
 	// This is a very simple pump in, pump out function: we read in a buffer
@@ -322,7 +332,7 @@ BOOL SEMPQCreator::WriteMPQToSEMPQ(
 	SetFilePointer(hSEMPQ, 0, NULL, FILE_END);
 	SetFilePointer(hMPQ, 0, NULL, FILE_BEGIN);
 
-	BOOL bRetVal = FALSE, bCancel = FALSE;
+	bool bRetVal = false, bCancel = false;
 	while (dwRemaining)
 	{
 		DWORD dwBlockSize = (dwRemaining < dwBufferSize) ? dwRemaining : dwBufferSize;
@@ -336,9 +346,9 @@ BOOL SEMPQCreator::WriteMPQToSEMPQ(
 			break;
 
 		// Check for cancellation
-		if (CheckCancellation(cancellationCheck, lpUserData))
+		if (cancellationCheck && cancellationCheck())
 		{
-			bCancel = TRUE;
+			bCancel = true;
 			break;
 		}
 
@@ -349,134 +359,129 @@ BOOL SEMPQCreator::WriteMPQToSEMPQ(
 		int progress = (int)(((float)dwTransferred
 			* WRITE_MPQ_PROGRESS_SIZE
 			/ (float)dwMPQSize) + WRITE_MPQ_INITIAL_PROGRESS);
-		ReportProgress(progress, "Writing MPQ Data...", progressCallback, lpUserData);
+		if (progressCallback)
+			progressCallback(progress, "Writing MPQ Data...\n");
 	}
 
 	// Did we finish, or was there an error?
 	if (!dwRemaining) {
 		SetEndOfFile(hSEMPQ);
-		bRetVal = TRUE;
+		bRetVal = true;
 	} else if (!bCancel) {
-		sprintf(lpszErrorMessage, "Unable to write to file: %s", lpszEXEName);
+		errorMessage = "Unable to write to file: " + params.outputPath;
 	} else {
-		strcpy(lpszErrorMessage, "Operation cancelled by user");
+		errorMessage = "Operation cancelled by user";
 	}
 
 	delete [] lpbyReadBuffer;
 
-	if (bRetVal)
-		ReportProgress(WRITE_FINISHED, "Writing MPQ Data...", progressCallback, lpUserData);
+	if (bRetVal && progressCallback)
+		progressCallback(WRITE_FINISHED, "Writing MPQ Data...\n");
+
+	CloseHandle(hMPQ);
+	CloseHandle(hSEMPQ);
 
 	return bRetVal;
 }
 
-STUBDATA* SEMPQCreator::CreateStubData(
-	LPCSTR lpszCustomName,
-	LPCSTR lpszRegistryKey,
-	LPCSTR lpszRegistryValue,
-	LPCSTR lpszProgramPath,
-	LPCSTR lpszTargetFileName,
-	LPCSTR lpszSpawnFileName,
-	LPCSTR lpszParameters,
-	int nShuntCount,
-	DWORD dwFlags,
-	LPSTR lpszErrorMessage)
+// Helper: Create STUBDATA structure from parameters
+static STUBDATA* CreateStubDataFromParams(const SEMPQCreationParams& params, std::string& errorMessage)
 {
 	// Validate parameters
-	if (!lpszCustomName || !lpszErrorMessage)
+	if (params.sempqName.empty())
 	{
-		if (lpszErrorMessage)
-			strcpy(lpszErrorMessage, "Invalid parameters: lpszCustomName and lpszErrorMessage are required");
-		return NULL;
+		errorMessage = "Invalid parameters: sempqName is required";
+		return nullptr;
 	}
 
 	// Determine if we're using registry (built-in game) or custom path
-	BOOL bUseRegistry = (lpszRegistryKey != NULL && lpszRegistryValue != NULL);
-	BOOL bUseCustomPath = (lpszProgramPath != NULL && *lpszProgramPath != '\0');
+	bool bUseRegistry = params.useRegistry;
+	bool bUseCustomPath = !params.targetPath.empty();
 
 	if (!bUseRegistry && !bUseCustomPath)
 	{
-		strcpy(lpszErrorMessage, "Either registry parameters or program path must be specified");
-		return NULL;
+		errorMessage = "Either registry parameters or target path must be specified";
+		return nullptr;
 	}
 
 	if (bUseRegistry && bUseCustomPath)
 	{
-		strcpy(lpszErrorMessage, "Cannot specify both registry parameters and program path");
-		return NULL;
+		errorMessage = "Cannot specify both registry parameters and target path";
+		return nullptr;
 	}
 
-	// Compute the size for the stub data. We need this for both verifying
-	// that it will all fit, and so we can get all the offsets correct.
+    // Compute the size for the stub data. We need this for both verifying
+    // that it will all fit, and so we can get all the offsets correct.
 	DWORD cbRegKeyName = 0, cbRegValueName = 0,
-		cbTargetPathName = 0, cbTargetFileName = 0,
-		cbSpawnFileName = 0, cbArgs = strlen(lpszParameters) + 1;
+			cbTargetPathName = 0, cbTargetFileName = 0,
+			cbSpawnFileName = 0, cbArgs = params.parameters.length() + 1;
 	char szTargetPath[MAX_PATH] = {0};
-	LPCSTR lpszTargetFileNameToUse = NULL;
+	std::string targetFileNameToUse;
 
 	// Are we using a supported app, or a custom one?
 	if (bUseRegistry)
 	{
 		// A built-in one
-		if (!lpszTargetFileName || !lpszSpawnFileName)
+		if (params.targetFileName.empty() || params.spawnFileName.empty())
 		{
-			strcpy(lpszErrorMessage, "Target filename and spawn filename are required for registry-based games");
-			return NULL;
+			errorMessage = "Target filename and spawn filename are required for registry-based games";
+			return nullptr;
 		}
 
-		cbRegKeyName = strlen(lpszRegistryKey) + 1;
-		cbRegValueName = strlen(lpszRegistryValue) + 1;
+		cbRegKeyName = params.registryKey.length() + 1;
+		cbRegValueName = params.registryValue.length() + 1;
 
-		cbTargetFileName = strlen(lpszTargetFileName) + 1;
-		cbSpawnFileName = strlen(lpszSpawnFileName) + 1;
+		cbTargetFileName = params.targetFileName.length() + 1;
+		cbSpawnFileName = params.spawnFileName.length() + 1;
 	}
 	else
 	{
 		// Custom one
 		// Create the target path
-		strcpy(szTargetPath, lpszProgramPath);
+		strcpy(szTargetPath, params.targetPath.c_str());
 		PathRemoveFileSpec(szTargetPath);
-		lpszTargetFileNameToUse = PathFindFileName(lpszProgramPath);
+		const char* lpszFileName = PathFindFileName(params.targetPath.c_str());
 
-		if (!lpszTargetFileNameToUse || !*lpszTargetFileNameToUse)
+		if (!lpszFileName || !*lpszFileName)
 		{
-			strcpy(lpszErrorMessage, "Invalid program path: cannot extract filename");
-			return NULL;
+			errorMessage = "Invalid target path: cannot extract filename";
+			return nullptr;
 		}
 
+		targetFileNameToUse = lpszFileName;
 		cbTargetPathName = strlen(szTargetPath) + 1;
-		cbTargetFileName = cbSpawnFileName = strlen(lpszTargetFileNameToUse) + 1;
+		cbTargetFileName = cbSpawnFileName = targetFileNameToUse.length() + 1;
 	}
 
 	// Compute the offsets of the strings
 	DWORD nRegKeyOffset = sizeof(PATCHTARGETEX),
-		nRegValueOffset = nRegKeyOffset + cbRegKeyName,
-		nTargetPathOffset = nRegValueOffset + cbRegValueName,
-		nTargetFileOffset = nTargetPathOffset + cbTargetPathName,
-		nSpawnFileOffset = nTargetFileOffset + cbTargetFileName,
-		nArgsOffset = nSpawnFileOffset + cbSpawnFileName,
-		nStubSize = sizeof(STUBDATA) + nArgsOffset + cbArgs - nRegKeyOffset;
+			nRegValueOffset = nRegKeyOffset + cbRegKeyName,
+			nTargetPathOffset = nRegValueOffset + cbRegValueName,
+			nTargetFileOffset = nTargetPathOffset + cbTargetPathName,
+			nSpawnFileOffset = nTargetFileOffset + cbTargetFileName,
+			nArgsOffset = nSpawnFileOffset + cbSpawnFileName,
+			nStubSize = sizeof(STUBDATA) + nArgsOffset + cbArgs - nRegKeyOffset;
 
 	// It shouldn't be possible for this to happen, but who knows
 	if (nStubSize > STUBDATASIZE)
 	{
-		sprintf(lpszErrorMessage, "Stub data size (%u) exceeds maximum (%u)", nStubSize, STUBDATASIZE);
-		return NULL;
+		errorMessage = "Stub data size (" + std::to_string(nStubSize) + ") exceeds maximum (" + std::to_string(STUBDATASIZE) + ")";
+		return nullptr;
 	}
 
 	// Allocate space for all the data
 	STUBDATA* pDataSEMPQ = (STUBDATA*)new BYTE[nStubSize];
 	if (!pDataSEMPQ)
 	{
-		sprintf(lpszErrorMessage, "Unable to allocate memory (%u bytes)", nStubSize);
-		return NULL;
+		errorMessage = "Unable to allocate memory (" + std::to_string(nStubSize) + " bytes)";
+		return nullptr;
 	}
 
 	// Set up the basic stub data fields
 	pDataSEMPQ->dwDummy = GetTickCount();
 	pDataSEMPQ->cbSize = nStubSize;
-	pDataSEMPQ->patchTarget.grfFlags = dwFlags;
-	strncpy(pDataSEMPQ->szCustomName, lpszCustomName, sizeof(pDataSEMPQ->szCustomName) - 1);
+	pDataSEMPQ->patchTarget.grfFlags = params.flags;
+	strncpy(pDataSEMPQ->szCustomName, params.sempqName.c_str(), sizeof(pDataSEMPQ->szCustomName) - 1);
 	pDataSEMPQ->szCustomName[sizeof(pDataSEMPQ->szCustomName) - 1] = '\0';
 
 	// Set up the string pointers for the patch target
@@ -497,47 +502,34 @@ STUBDATA* SEMPQCreator::CreateStubData(
 		pDataSEMPQ->patchTarget.bUseRegistry = TRUE;
 
 		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nRegKeyOffset,
-			lpszRegistryKey);
+			   params.registryKey.c_str());
 		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nRegValueOffset,
-			lpszRegistryValue);
-		pDataSEMPQ->patchTarget.bValueIsFileName = FALSE;
+			   params.registryValue.c_str());
+		pDataSEMPQ->patchTarget.bValueIsFileName = params.valueIsFullPath ? TRUE : FALSE;
 
 		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nSpawnFileOffset,
-			lpszSpawnFileName);
+			   params.spawnFileName.c_str());
 		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nTargetFileOffset,
-			lpszTargetFileName);
+			   params.targetFileName.c_str());
 
-		pDataSEMPQ->patchTarget.nShuntCount = nShuntCount;
+		pDataSEMPQ->patchTarget.nShuntCount = params.shuntCount;
 	}
 	else
 	{
 		pDataSEMPQ->patchTarget.bUseRegistry = FALSE;
 
 		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nTargetPathOffset,
-			szTargetPath);
+			   szTargetPath);
 
 		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nTargetFileOffset,
-			lpszTargetFileNameToUse);
+			   targetFileNameToUse.c_str());
 		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nSpawnFileOffset,
-			lpszTargetFileNameToUse);
+			   targetFileNameToUse.c_str());
 
 		pDataSEMPQ->patchTarget.nShuntCount = 0;
 	}
 
-	strcpy((LPSTR)&pDataSEMPQ->patchTarget + nArgsOffset, lpszParameters);
+	strcpy((LPSTR)&pDataSEMPQ->patchTarget + nArgsOffset, params.parameters.c_str());
 
 	return pDataSEMPQ;
-}
-
-void SEMPQCreator::ReportProgress(int progress, LPCSTR lpszMessage, SEMPQProgressCallback callback, LPVOID lpUserData)
-{
-	if (callback)
-		callback(progress, lpszMessage, lpUserData);
-}
-
-BOOL SEMPQCreator::CheckCancellation(SEMPQCancellationCheck callback, LPVOID lpUserData)
-{
-	if (callback)
-		return callback(lpUserData);
-	return FALSE;
 }

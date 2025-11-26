@@ -219,27 +219,6 @@ public:
 	virtual ~CSEMPQWizard();
 
 protected:
-	// These constants define the range of progress bar values that can occur 
-	// at each step of the SEMPQ creation. This is just a rough estimate 
-	// of how long each section is expected to take. All are in %.
-	enum
-	{
-		WRITE_STUB_INITIAL_PROGRESS = 0,
-		WRITE_PLUGINS_INITIAL_PROGRESS = 5,
-		WRITE_PLUGINS_PROGRESS_SIZE = 15,
-		WRITE_MPQ_INITIAL_PROGRESS = 20,
-		WRITE_MPQ_PROGRESS_SIZE = 80
-	};
-
-	// Generates the STUBDATA block that is to be written to the SEMPQ file, 
-	// containing various things from the first and second pages, which are 
-	// necessary to perform the patch. See Common.h for more information 
-	// about the STUBDATA structure.
-	STUBDATA *CreateStubData();
-	// Frees the allocated STUBDATA structure. Must be used to free the data 
-	// returned by CreateStubData.
-	void FreeStubData(STUBDATA *lpStubData);
-
 	// Gets the full list of modules that need to be written to the SEMPQ.
 	// This function calls CSEMPQWizardPage3::GetSelectedPluginModules, then
 	// adds on any modules required by MPQDraft itself.

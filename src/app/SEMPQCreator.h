@@ -13,29 +13,58 @@
 #ifndef SEMPQCREATOR_H
 #define SEMPQCREATOR_H
 
-#include <windows.h>
-#include "../core/Common.h"
+#include <string>
+#include <vector>
+#include <functional>
+#include <cstdint>
 
-// Forward declarations
-typedef HANDLE EFSHANDLEFORWRITE;
+// Forward declaration (to avoid including Windows headers)
+struct MPQDRAFTPLUGINMODULE;
 
 // Progress callback function type
-// Parameters: progress (0-100), status message
-typedef void (*SEMPQProgressCallback)(int progress, LPCSTR lpszStatusMessage, LPVOID lpUserData);
+// Parameters: progress (0-100), status text
+using ProgressCallback = std::function<void(int, const std::string&)>;
 
 // Cancellation check function type
-// Returns TRUE if the operation should be cancelled
-typedef BOOL (*SEMPQCancellationCheck)(LPVOID lpUserData);
+// Returns: true if operation should be cancelled
+using CancellationCheck = std::function<bool()>;
+
+// SEMPQ creation parameters
+struct SEMPQCreationParams
+{
+	// Output file
+	std::string outputPath;
+
+	// SEMPQ settings
+	std::string sempqName;
+	std::string mpqPath;
+	std::string iconPath;
+
+	// Target settings
+	bool useRegistry;
+	std::string registryKey;
+	std::string registryValue;
+	bool valueIsFullPath;  // If true, registry value contains full path to .exe (not just directory)
+	std::string targetPath;
+	std::string targetFileName;
+	std::string spawnFileName;
+	int shuntCount;
+
+	// Flags and parameters
+	uint32_t flags;
+	std::string parameters;
+
+	// Plugins (with full metadata including component/module IDs)
+	std::vector<MPQDRAFTPLUGINMODULE> pluginModules;
+};
 
 /////////////////////////////////////////////////////////////////////////////
-// SEMPQCreator - MFC-free SEMPQ creation class
+// SEMPQCreator - SEMPQ creation class
 /////////////////////////////////////////////////////////////////////////////
 
 class SEMPQCreator
 {
 public:
-	SEMPQCreator();
-	~SEMPQCreator();
 	// Progress range constants (in %)
 	static constexpr int WRITE_STUB_INITIAL_PROGRESS = 0;
 	static constexpr int WRITE_PLUGINS_INITIAL_PROGRESS = 5;
@@ -45,113 +74,40 @@ public:
 	static constexpr int WRITE_FINISHED = 100;
 
 	// Main entry point: Create a complete SEMPQ file
-	// Returns TRUE on success, FALSE on failure
-	BOOL CreateSEMPQ(
-		// Output file path for the SEMPQ
-		LPCSTR lpszOutputPath,
-		// The SEMPQ name (for display in error messages)
-		LPCSTR lpszSEMPQName,
-		// Path to the MPQ file to embed
-		LPCSTR lpszMPQPath,
-		// Path to the icon file (can be NULL for default)
-		LPCSTR lpszIconPath,
-		// The stub data containing patch configuration
-		const STUBDATA& stubData,
-		// Array of plugin module structures
-		const MPQDRAFTPLUGINMODULE* lpPluginModules,
-		// Number of plugin modules
-		DWORD nNumPluginModules,
-		// Progress callback (can be NULL)
-		SEMPQProgressCallback progressCallback,
-		// User data passed to callbacks
-		LPVOID lpUserData,
-		// Cancellation check callback (can be NULL)
-		SEMPQCancellationCheck cancellationCheck,
-		// Output: error message buffer (must be at least 512 chars)
-		LPSTR lpszErrorMessage
+	// Returns true on success, false on failure
+	// Calls progressCallback periodically with progress updates
+	// Calls cancellationCheck periodically to check if operation should be cancelled
+	bool createSEMPQ(
+		const SEMPQCreationParams& params,
+		ProgressCallback progressCallback,
+		CancellationCheck cancellationCheck,
+		std::string& errorMessage
 	);
 
-	// Get the offset where stub data should be written in the stub executable
-	// Returns 0 on failure
-	static DWORD GetStubDataWriteOffset(LPCSTR lpszStubFileName);
-
-	// Create STUBDATA structure from parameters
-	// Returns dynamically allocated STUBDATA* on success, NULL on failure
-	// Caller is responsible for deleting the returned pointer with: delete [] (BYTE*)pStubData
-	//
-	// For built-in games (registry-based):
-	//   - lpszRegistryKey and lpszRegistryValue must be non-NULL
-	//   - lpszTargetFileName and lpszSpawnFileName must be non-NULL
-	//   - lpszTargetPath should be NULL
-	//   - nShuntCount specifies DLL injection depth
-	//
-	// For custom executables (path-based):
-	//   - lpszProgramPath must be non-NULL (full path to executable)
-	//   - lpszRegistryKey and lpszRegistryValue should be NULL
-	//   - lpszTargetFileName and lpszSpawnFileName are derived from lpszProgramPath
-	//   - nShuntCount should be 0
-	static STUBDATA* CreateStubData(
-		LPCSTR lpszCustomName,           // Display name for the SEMPQ
-		LPCSTR lpszRegistryKey,          // Registry key (for built-in games) or NULL
-		LPCSTR lpszRegistryValue,        // Registry value (for built-in games) or NULL
-		LPCSTR lpszProgramPath,          // Full path to executable (for custom) or NULL
-		LPCSTR lpszTargetFileName,       // Target filename (for built-in games) or NULL
-		LPCSTR lpszSpawnFileName,        // Spawn filename (for built-in games) or NULL
-		LPCSTR lpszParameters,           // Command-line arguments (can be empty string)
-		int nShuntCount,                 // Shunt count for DLL injection
-		DWORD dwFlags,                   // Patch flags (e.g., MPQD_EXTENDED_REDIR)
-		LPSTR lpszErrorMessage           // Output: error message buffer (512 chars)
+private:
+	// Step 1: Write executable code (0% - 5%)
+	bool writeStubToSEMPQ(
+		const SEMPQCreationParams& params,
+		ProgressCallback progressCallback,
+		CancellationCheck cancellationCheck,
+		std::string& errorMessage
 	);
 
-protected:
-	// Step 1: Extract stub executable and write stub data
-	BOOL WriteStubToSEMPQ(
-		LPCSTR lpszEXEName,
-		const STUBDATA& dataSEMPQ,
-		SEMPQProgressCallback progressCallback,
-		LPVOID lpUserData,
-		SEMPQCancellationCheck cancellationCheck,
-		LPSTR lpszErrorMessage
+	// Step 2: Write plugins (5% - 20%)
+	bool writePluginsToSEMPQ(
+		const SEMPQCreationParams& params,
+		ProgressCallback progressCallback,
+		CancellationCheck cancellationCheck,
+		std::string& errorMessage
 	);
 
-	// Step 2: Write plugins to EFS archive
-	BOOL WritePluginsToSEMPQ(
-		LPCSTR lpszEXEName,
-		const MPQDRAFTPLUGINMODULE* lpPluginModules,
-		DWORD nNumPluginModules,
-		SEMPQProgressCallback progressCallback,
-		LPVOID lpUserData,
-		SEMPQCancellationCheck cancellationCheck,
-		LPSTR lpszErrorMessage
+	// Step 3: Write MPQ data (20% - 100%)
+	bool writeMPQToSEMPQ(
+		const SEMPQCreationParams& params,
+		ProgressCallback progressCallback,
+		CancellationCheck cancellationCheck,
+		std::string& errorMessage
 	);
-
-	// Step 3: Append MPQ data to SEMPQ
-	BOOL WriteMPQToSEMPQ(
-		LPCSTR lpszEXEName,
-		LPCSTR lpszMPQName,
-		SEMPQProgressCallback progressCallback,
-		LPVOID lpUserData,
-		SEMPQCancellationCheck cancellationCheck,
-		LPSTR lpszErrorMessage
-	);
-
-	// Helper: Write MPQ data (overload with open file handles)
-	BOOL WriteMPQToSEMPQ(
-		LPCSTR lpszMPQName,
-		LPCSTR lpszEXEName,
-		HANDLE hSEMPQ,
-		HANDLE hMPQ,
-		SEMPQProgressCallback progressCallback,
-		LPVOID lpUserData,
-		SEMPQCancellationCheck cancellationCheck,
-		LPSTR lpszErrorMessage
-	);
-
-	// Helper: Report progress
-	void ReportProgress(int progress, LPCSTR lpszMessage, SEMPQProgressCallback callback, LPVOID lpUserData);
-
-	// Helper: Check for cancellation
-	BOOL CheckCancellation(SEMPQCancellationCheck callback, LPVOID lpUserData);
 };
 
 #endif // SEMPQCREATOR_H
