@@ -81,7 +81,7 @@ struct PluginInfo
 class PluginManager {
 public:
 	PluginManager() = default;
-	~PluginManager();
+	~PluginManager() { clear(); }
 
 	/////////////////////////////////////////////////////////////////////////////
 	// Plugin Loading/Unloading

@@ -13,16 +13,9 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#endif
 
-PluginManager::~PluginManager() {
-	clear();
-}
-
-// Helper function to load a plugin DLL and retrieve its information
-BOOL PluginManager::LoadPluginInfo(IN LPCSTR lpszFileName, OUT PluginInfo &pluginInfo)
-{
-#ifdef _WIN32
+// Helper function to load a plugin and retrieve its information
+BOOL PluginManager::LoadPluginInfo(IN LPCSTR lpszFileName, OUT PluginInfo &pluginInfo) {
     // Load the plugin's module
 	pluginInfo.hDLLModule = LoadLibrary(lpszFileName);
 	if (!pluginInfo.hDLLModule)
@@ -32,8 +25,7 @@ BOOL PluginManager::LoadPluginInfo(IN LPCSTR lpszFileName, OUT PluginInfo &plugi
 	GetMPQDraftPluginPtr pGetMPQDraftPlugin = (GetMPQDraftPluginPtr)
 		GetProcAddress(pluginInfo.hDLLModule, "GetMPQDraftPlugin");
 
-	if (!pGetMPQDraftPlugin || !pGetMPQDraftPlugin(&pluginInfo.pPlugin))
-	{
+	if (!pGetMPQDraftPlugin || !pGetMPQDraftPlugin(&pluginInfo.pPlugin)) {
 		FreeLibrary(pluginInfo.hDLLModule);
 		pluginInfo.hDLLModule = NULL;
 		return FALSE;
@@ -51,31 +43,76 @@ BOOL PluginManager::LoadPluginInfo(IN LPCSTR lpszFileName, OUT PluginInfo &plugi
 	pluginInfo.strFileName = lpszFileName;
 
 	return TRUE;
-#else
-    // Plugin loading not supported on non-Windows platforms
-    // (Plugins are Windows DLLs)
-    (void)lpszFileName;
-    (void)pluginInfo;
-    return FALSE;
-#endif
+}
+
+bool PluginManager::configurePlugin(const std::string &path, void *hwnd) {
+    auto it = loadedPlugins.find(path);
+	if (it == loadedPlugins.end()) {
+		return false;
+	}
+
+	const PluginInfo *info = it->second;
+	if (!info || !info->pPlugin) {
+		return false;
+	}
+
+	// Cast void* back to HWND for Windows API
+	HWND windowHandle = (HWND)hwnd;
+
+	// Call the plugin's Configure method
+	return info->pPlugin->Configure(windowHandle) ? true : false;
 }
 
 // Helper function to get the number of auxiliary modules for a plugin
-// Returns 0 on non-Windows or if the plugin doesn't support GetModules
-static int getAuxiliaryModuleCount(const PluginInfo *info)
-{
-#ifdef _WIN32
+static int getAuxiliaryModuleCount(const PluginInfo *info) {
     if (info && info->pPlugin) {
 		DWORD numModules = 0;
 		if (info->pPlugin->GetModules(nullptr, &numModules)) {
 			return static_cast<int>(numModules);
 		}
 	}
-#else
-    (void)info;  // Suppress unused parameter warning
-#endif
     return 0;
 }
+
+void freePluginInfo(PluginInfo *info) {
+    if (info->hDLLModule) {
+		FreeLibrary(info->hDLLModule);
+    }
+    delete info;
+}
+
+#else // Non-Windows stubs for plugin loading functions
+
+// Helper function to load a plugin and retrieve its information
+BOOL PluginManager::LoadPluginInfo(IN LPCSTR lpszFileName, OUT PluginInfo &pluginInfo) {
+
+    // Plugin loading is not supported on non-Windows platforms,
+    // since plugins are Windows DLLs.
+    (void)lpszFileName;
+    (void)pluginInfo;
+    return FALSE;
+}
+
+bool PluginManager::configurePlugin(const std::string &path, void *hwnd) {
+    // Plugin configuration is not available on non-Windows platforms
+    (void)path;
+    (void)hwnd;
+    return false;
+}
+
+// Helper function to get the number of auxiliary modules for a plugin
+// Returns 0 on non-Windows
+static int getAuxiliaryModuleCount(const PluginInfo *info) {
+    (void)info;  // Suppress unused parameter warning
+    return 0;
+}
+
+// The DLL can only be unloaded on Windows.
+void freePluginInfo(PluginInfo *info) {
+    delete info;
+}
+#endif
+
 
 bool PluginManager::addPlugin(const std::string &path, std::string &errorMessage) {
 	// Don't add duplicates - silently filter them out
@@ -89,47 +126,16 @@ bool PluginManager::addPlugin(const std::string &path, std::string &errorMessage
 	bool loadSuccess = LoadPluginInfo(path.c_str(), *info);
 
 	if (!loadSuccess) {
-#ifdef _WIN32
-		// On Windows, this is a real error - the plugin DLL couldn't be loaded
 		delete info;
 		failedPlugins.insert(path);
-		errorMessage = "Failed to load plugin DLL. The file may not be a valid MPQDraft plugin, "
+		errorMessage = "Failed to load plugin '" + path + "'. The file may not be a valid MPQDraft plugin, "
 		               "or it may be missing required dependencies.";
 		return false;
-#else
-		// On non-Windows platforms, plugins can't be loaded (they're Windows DLLs)
-		// But we can still add them to the list for testing the UI
-
-        // TODO: Do we want to add dummy plugins?
-		// Populate the PluginInfo as a dummy entry for UI testing
-		info->strFileName = path;
-
-		// Extract filename from path for display name
-		size_t lastSlash = path.find_last_of("/\\");
-		std::string fileName = (lastSlash != std::string::npos) ? path.substr(lastSlash + 1) : path;
-		info->strPluginName = fileName;
-
-		info->dwPluginID = 0;
-		info->hDLLModule = nullptr;
-		info->pPlugin = nullptr;
-		// Fall through to add it to the list
-#endif
 	}
 
 	// Add to our map
 	loadedPlugins[path] = info;
 	return true;
-}
-
-void freePluginInfo(PluginInfo *info) {
-	if (info->hDLLModule) {
-#ifdef _WIN32
-        // On Windows, we can actually unload the DLL
-        // On other platforms, we can't unload the DLL
-		FreeLibrary(info->hDLLModule);
-#endif
-	}
-	delete info;
 }
 
 bool PluginManager::removePlugin(const std::string &path) {
@@ -234,31 +240,6 @@ PluginManager::ValidationResult PluginManager::validateSelection(
 	}
 
 	return result;
-}
-
-bool PluginManager::configurePlugin(const std::string &path, void *hwnd) {
-#ifdef _WIN32
-	auto it = loadedPlugins.find(path);
-	if (it == loadedPlugins.end()) {
-		return false;
-	}
-
-	const PluginInfo *info = it->second;
-	if (!info || !info->pPlugin) {
-		return false;
-	}
-
-	// Cast void* back to HWND for Windows API
-	HWND windowHandle = (HWND)hwnd;
-
-	// Call the plugin's Configure method
-	return info->pPlugin->Configure(windowHandle) ? true : false;
-#else
-	// Plugin configuration is not available on non-Windows platforms
-	(void)path;
-	(void)hwnd;
-	return false;
-#endif
 }
 
 int PluginManager::getPluginModuleCount(const std::string &path) const {
