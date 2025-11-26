@@ -172,10 +172,14 @@
     <ClCompile Include="core\Common.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="app\gamedata.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="app\gui\BitmapDialog.cpp" />
     <ClCompile Include="app\gui\CommonPages.cpp" />
     <ClCompile Include="app\gui\dib256.cpp" />
     <ClCompile Include="app\gui\dibpal.cpp" />
+    <ClCompile Include="app\gui\main.cpp" />
     <ClCompile Include="app\gui\MainMenu.cpp" />
     <ClCompile Include="app\gui\patchwizard.cpp" />
     <ClCompile Include="app\gui\ProgressWnd.cpp" />
@@ -196,6 +200,7 @@
     <ClInclude Include="core\MPQDraftPlugin.h" />
     <ClInclude Include="common\QDebug.h" />
     <ClInclude Include="common\QResource.h" />
+    <ClInclude Include="app\gamedata.h" />
     <ClInclude Include="app\resource_ids.h" />
     <ClInclude Include="app\SEMPQCreator.h" />
     <ClInclude Include="app\cli\stdafx_cli.h" />
@@ -206,6 +211,7 @@
     <ClInclude Include="app\gui\CommonPages.h" />
     <ClInclude Include="app\gui\dib256.h" />
     <ClInclude Include="app\gui\dibpal.h" />
+    <ClInclude Include="app\gui\main.h" />
     <ClInclude Include="app\gui\MainMenu.h" />
     <ClInclude Include="app\gui\patchwizard.h" />
     <ClInclude Include="app\gui\ProgressWnd.h" />
