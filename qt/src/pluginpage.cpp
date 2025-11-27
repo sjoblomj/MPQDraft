@@ -292,11 +292,11 @@ bool PluginPage::addPlugin(const QString &path, bool showMessages)
     bool success = pluginManager->addPlugin(stdPath, errorMessage);
 
     if (!success) {
-        // Plugin failed to load - add to list in red
+        // Plugin failed to load - add to list in red, but make it non-checkable
         QString displayName = QFileInfo(path).fileName() + " (failed to load)";
         QListWidgetItem *item = new QListWidgetItem(displayName, pluginListWidget);
-        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-        item->setCheckState(Qt::Unchecked);
+        // Remove the checkable flag so the checkbox cannot be enabled
+        item->setFlags(item->flags() & ~Qt::ItemIsUserCheckable);
         item->setData(Qt::UserRole, path);
         item->setForeground(Qt::red);
         item->setIcon(QIcon(":/icons/plugin.svg"));
@@ -317,13 +317,15 @@ bool PluginPage::addPlugin(const QString &path, bool showMessages)
     }
 
     QString displayName = QString::fromStdString(info->strPluginName);
+    if (displayName.isEmpty()) {
+        displayName = QFileInfo(path).fileName();
+    }
 
 #ifndef _WIN32
-    // On Linux, show informational message on first manual add
+    // On non-Windows, show informational message on first manual add
     if (showMessages) {
         QMessageBox::information(this, "Plugin Loading Not Available",
                                 QString("Plugin loading is only available on Windows.\n\n"
-                                       "This is a development build for GUI testing. "
                                        "The plugin will be added to the list, but cannot be "
                                        "configured or validated.\n\n"
                                        "File: %1")

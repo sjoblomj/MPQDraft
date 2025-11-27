@@ -2008,55 +2008,57 @@ void SEMPQProgressPage::rebuildProgressLog(int progress)
     QString pendingIcon = "[ ]";    // Not started
 
     // Step 1: Writing Executable Code (0-5%)
-    if (progress >= 5) {
+    if (progress >= 5) { // Done
         html += QString("<span style='font-weight: bold; color: green;'>%1 Writing Executable Code</span><br>").arg(doneIcon);
-    } else if (progress >= 0 && progress < 5) {
+    } else if (progress >= 0) { // In progress
         html += QString("<span style='font-style: italic; color: blue;'>%1 Writing Executable Code</span><br>").arg(activeIcon);
-    } else {
+    } else { // Not started
         html += QString("<span style='color: gray;'>%1 Writing Executable Code</span><br>").arg(pendingIcon);
     }
 
     // Step 2: Writing Plugins (5-20%)
-    if (progress >= 20) {
-        html += QString("<span style='font-weight: bold; color: green;'>%1 Writing Plugins</span><br>").arg(doneIcon);
-    } else if (progress >= 5 && progress < 20) {
-        html += QString("<span style='font-style: italic; color: blue;'>%1 Writing Plugins</span><br>").arg(activeIcon);
-    } else {
-        html += QString("<span style='color: gray;'>%1 Writing Plugins</span><br>").arg(pendingIcon);
+    int pluginCount = pluginNames.size();
+    QString pluginStepLabel = QString("Writing %1 Plugin%2")
+        .arg(pluginCount)
+        .arg(pluginCount == 1 ? "" : "s");
+
+    if (progress >= 20) { // Done
+        html += QString("<span style='font-weight: bold; color: green;'>%1 %2</span><br>").arg(doneIcon, pluginStepLabel);
+    } else if (progress >= 5) { // In progress
+        html += QString("<span style='font-style: italic; color: blue;'>%1 %2</span><br>").arg(activeIcon, pluginStepLabel);
+    } else { // Not started
+        html += QString("<span style='color: gray;'>%1 %2</span><br>").arg(pendingIcon, pluginStepLabel);
     }
 
     // Individual plugins
-    if (!pluginNames.isEmpty())
+    for (int i = 0; i < pluginNames.size(); i++)
     {
-        for (int i = 0; i < pluginNames.size(); i++)
-        {
-            QString pluginName = pluginNames[i];
+        QString pluginName = pluginNames[i];
 
-            // Calculate progress for this plugin
-            // Plugins span 5-20%, so 15% total divided by number of plugins
-            double pluginProgressRange = 15.0 / pluginNames.size();
-            double pluginStartProgress = 5.0 + (i * pluginProgressRange);
-            double pluginEndProgress = pluginStartProgress + pluginProgressRange;
+        // Calculate progress for this plugin
+        // Plugins span 5-20%, so 15% total divided by number of plugins
+        double pluginProgressRange = 15.0 / pluginNames.size();
+        double pluginStartProgress = 5.0 + (i * pluginProgressRange);
+        double pluginEndProgress = pluginStartProgress + pluginProgressRange;
 
-            if (progress >= pluginEndProgress) {
-                html += QString("  <span style='font-weight: bold; color: green;'>%1 Writing plugin %2</span><br>")
-                    .arg(doneIcon, pluginName.toHtmlEscaped());
-            } else if (progress >= pluginStartProgress && progress < pluginEndProgress) {
-                html += QString("  <span style='font-style: italic; color: blue;'>%1 Writing plugin %2</span><br>")
-                    .arg(activeIcon, pluginName.toHtmlEscaped());
-            } else {
-                html += QString("  <span style='color: gray;'>%1 Writing plugin %2</span><br>")
-                    .arg(pendingIcon, pluginName.toHtmlEscaped());
-            }
+        if (progress >= pluginEndProgress) {
+            html += QString("  <span style='font-weight: bold; color: green;'>%1 Writing plugin %2</span><br>")
+                .arg(doneIcon, pluginName.toHtmlEscaped());
+        } else if (progress >= pluginStartProgress && progress < pluginEndProgress) {
+            html += QString("  <span style='font-style: italic; color: blue;'>%1 Writing plugin %2</span><br>")
+                .arg(activeIcon, pluginName.toHtmlEscaped());
+        } else {
+            html += QString("  <span style='color: gray;'>%1 Writing plugin %2</span><br>")
+                .arg(pendingIcon, pluginName.toHtmlEscaped());
         }
     }
 
     // Step 3: Writing MPQ Data (20-100%)
-    if (progress >= 100) {
+    if (progress >= 100) { // Done
         html += QString("<span style='font-weight: bold; color: green;'>%1 Writing MPQ Data</span><br>").arg(doneIcon);
-    } else if (progress >= 20 && progress < 100) {
+    } else if (progress >= 20) { // In progress
         html += QString("<span style='font-style: italic; color: blue;'>%1 Writing MPQ Data</span><br>").arg(activeIcon);
-    } else {
+    } else { // Not started
         html += QString("<span style='color: gray;'>%1 Writing MPQ Data</span><br>").arg(pendingIcon);
     }
 
@@ -2273,6 +2275,9 @@ void SEMPQCreationWorker::run()
     qDebug() << "Icon Path:" << QString::fromStdString(params.iconPath);
     qDebug() << "Parameters:" << QString::fromStdString(params.parameters);
     qDebug() << "Plugins:" << static_cast<int>(params.pluginModules.size()) << "plugin(s)";
+    for (size_t i = 0; i < params.pluginModules.size(); i++) {
+        qDebug() << "  Plugin" << (i + 1) << ":" << params.pluginModules[i].szModuleFileName;
+    }
     qDebug() << "Use Registry:" << (params.useRegistry ? "Yes" : "No");
     if (params.useRegistry) {
         qDebug() << "Registry Key:" << QString::fromStdString(params.registryKey);
