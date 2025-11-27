@@ -2008,9 +2008,9 @@ void SEMPQProgressPage::rebuildProgressLog(int progress)
     QString pendingIcon = "[ ]";    // Not started
 
     // Step 1: Writing Executable Code (0-5%)
-    if (progress >= 5) { // Done
+    if (progress >= SEMPQCreator::WRITE_PLUGINS_INITIAL_PROGRESS) { // Done
         html += QString("<span style='font-weight: bold; color: green;'>%1 Writing Executable Code</span><br>").arg(doneIcon);
-    } else if (progress >= 0) { // In progress
+    } else if (progress >= SEMPQCreator::WRITE_STUB_INITIAL_PROGRESS) { // In progress
         html += QString("<span style='font-style: italic; color: blue;'>%1 Writing Executable Code</span><br>").arg(activeIcon);
     } else { // Not started
         html += QString("<span style='color: gray;'>%1 Writing Executable Code</span><br>").arg(pendingIcon);
@@ -2022,9 +2022,9 @@ void SEMPQProgressPage::rebuildProgressLog(int progress)
         .arg(pluginCount)
         .arg(pluginCount == 1 ? "" : "s");
 
-    if (progress >= 20) { // Done
+    if (progress >= SEMPQCreator::WRITE_MPQ_INITIAL_PROGRESS) { // Done
         html += QString("<span style='font-weight: bold; color: green;'>%1 %2</span><br>").arg(doneIcon, pluginStepLabel);
-    } else if (progress >= 5) { // In progress
+    } else if (progress >= SEMPQCreator::WRITE_PLUGINS_INITIAL_PROGRESS) { // In progress
         html += QString("<span style='font-style: italic; color: blue;'>%1 %2</span><br>").arg(activeIcon, pluginStepLabel);
     } else { // Not started
         html += QString("<span style='color: gray;'>%1 %2</span><br>").arg(pendingIcon, pluginStepLabel);
@@ -2036,9 +2036,9 @@ void SEMPQProgressPage::rebuildProgressLog(int progress)
         QString pluginName = pluginNames[i];
 
         // Calculate progress for this plugin
-        // Plugins span 5-20%, so 15% total divided by number of plugins
-        double pluginProgressRange = 15.0 / pluginNames.size();
-        double pluginStartProgress = 5.0 + (i * pluginProgressRange);
+        // Plugins span from WRITE_PLUGINS_INITIAL_PROGRESS to WRITE_MPQ_INITIAL_PROGRESS
+        double pluginProgressRange = (double)SEMPQCreator::WRITE_PLUGINS_PROGRESS_SIZE / pluginNames.size();
+        double pluginStartProgress = SEMPQCreator::WRITE_PLUGINS_INITIAL_PROGRESS + (i * pluginProgressRange);
         double pluginEndProgress = pluginStartProgress + pluginProgressRange;
 
         if (progress >= pluginEndProgress) {
@@ -2054,9 +2054,9 @@ void SEMPQProgressPage::rebuildProgressLog(int progress)
     }
 
     // Step 3: Writing MPQ Data (20-100%)
-    if (progress >= 100) { // Done
+    if (progress >= SEMPQCreator::WRITE_FINISHED) { // Done
         html += QString("<span style='font-weight: bold; color: green;'>%1 Writing MPQ Data</span><br>").arg(doneIcon);
-    } else if (progress >= 20) { // In progress
+    } else if (progress >= SEMPQCreator::WRITE_MPQ_INITIAL_PROGRESS) { // In progress
         html += QString("<span style='font-style: italic; color: blue;'>%1 Writing MPQ Data</span><br>").arg(activeIcon);
     } else { // Not started
         html += QString("<span style='color: gray;'>%1 Writing MPQ Data</span><br>").arg(pendingIcon);
@@ -2103,7 +2103,7 @@ void SEMPQProgressPage::onCreationComplete(bool success, const QString& message)
     if (success)
     {
         percentLabel->setText("100%");
-        progressBar->setValue(100);
+        progressBar->setValue(SEMPQCreator::WRITE_FINISHED);
 
         // Add "Finished" to the progress log
         QString html = progressLog->toHtml();

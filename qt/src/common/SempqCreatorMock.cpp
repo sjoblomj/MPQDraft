@@ -10,13 +10,6 @@
 #include <sys/stat.h>
 #include <algorithm>
 
-// Progress range constants (matching original MFC code)
-constexpr int WRITE_STUB_INITIAL_PROGRESS = 0;
-constexpr int WRITE_PLUGINS_INITIAL_PROGRESS = 5;
-constexpr int WRITE_PLUGINS_PROGRESS_SIZE = 15;
-constexpr int WRITE_MPQ_INITIAL_PROGRESS = 20;
-constexpr int WRITE_MPQ_PROGRESS_SIZE = 80;
-
 // Helper: Check if file exists
 static bool fileExists(const std::string& path)
 {
@@ -98,7 +91,7 @@ bool SEMPQCreator::writeStubToSEMPQ(
     std::string& errorMessage)
 {
     (void)params;  // Suppress unused parameter warning
-    progressCallback(WRITE_STUB_INITIAL_PROGRESS, "Writing Executable Code...\n");
+    progressCallback(SEMPQCreator::WRITE_STUB_INITIAL_PROGRESS, "Writing Executable Code...\n");
 
     // Simulate extracting the stub executable from resources
     simulateWork(1000, 3000);
@@ -127,7 +120,7 @@ bool SEMPQCreator::writeStubToSEMPQ(
         return false;
     }
 
-    progressCallback(WRITE_PLUGINS_INITIAL_PROGRESS, "Writing Executable Code...\n");
+    progressCallback(SEMPQCreator::WRITE_PLUGINS_INITIAL_PROGRESS, "Writing Executable Code...\n");
     return true;
 }
 
@@ -137,7 +130,7 @@ bool SEMPQCreator::writePluginsToSEMPQ(
     CancellationCheck cancellationCheck,
     std::string& errorMessage)
 {
-    progressCallback(WRITE_PLUGINS_INITIAL_PROGRESS, "Writing Plugins...\n");
+    progressCallback(SEMPQCreator::WRITE_PLUGINS_INITIAL_PROGRESS, "Writing Plugins...\n");
 
     int numPlugins = static_cast<int>(params.pluginModules.size());
 
@@ -145,7 +138,7 @@ bool SEMPQCreator::writePluginsToSEMPQ(
     if (numPlugins == 0)
     {
         simulateWork(500, 1500);
-        progressCallback(WRITE_MPQ_INITIAL_PROGRESS, "Writing Plugins...\n");
+        progressCallback(SEMPQCreator::WRITE_MPQ_INITIAL_PROGRESS, "Writing Plugins...\n");
         return true;
     }
 
@@ -156,8 +149,8 @@ bool SEMPQCreator::writePluginsToSEMPQ(
         simulateWork(1000, 3000);
 
         // Update progress
-        int progress = (int)(((float)i * (float)WRITE_PLUGINS_PROGRESS_SIZE / (float)numPlugins)
-                            + (float)WRITE_PLUGINS_INITIAL_PROGRESS);
+        int progress = (int)(((float)i * (float)SEMPQCreator::WRITE_PLUGINS_PROGRESS_SIZE / (float)numPlugins)
+                            + (float)SEMPQCreator::WRITE_PLUGINS_INITIAL_PROGRESS);
         progressCallback(progress, "Writing Plugins...\n");
 
         // Check for cancellation
@@ -168,7 +161,7 @@ bool SEMPQCreator::writePluginsToSEMPQ(
         }
     }
 
-    progressCallback(WRITE_MPQ_INITIAL_PROGRESS, "Writing Plugins...\n");
+    progressCallback(SEMPQCreator::WRITE_MPQ_INITIAL_PROGRESS, "Writing Plugins...\n");
     return true;
 }
 
@@ -178,7 +171,7 @@ bool SEMPQCreator::writeMPQToSEMPQ(
     CancellationCheck cancellationCheck,
     std::string& errorMessage)
 {
-    progressCallback(WRITE_MPQ_INITIAL_PROGRESS, "Writing MPQ Data...\n");
+    progressCallback(SEMPQCreator::WRITE_MPQ_INITIAL_PROGRESS, "Writing MPQ Data...\n");
 
     // Get MPQ file size to simulate realistic progress
     size_t mpqSize = getFileSize(params.mpqPath);
@@ -199,8 +192,8 @@ bool SEMPQCreator::writeMPQToSEMPQ(
         transferred += currentChunk;
 
         // Update progress
-        int progress = (int)(((float)transferred * WRITE_MPQ_PROGRESS_SIZE / (float)mpqSize)
-                            + WRITE_MPQ_INITIAL_PROGRESS);
+        int progress = (int)(((float)transferred * SEMPQCreator::WRITE_MPQ_PROGRESS_SIZE / (float)mpqSize)
+                            + SEMPQCreator::WRITE_MPQ_INITIAL_PROGRESS);
         progressCallback(progress, "Writing MPQ Data...\n");
 
         // Check for cancellation

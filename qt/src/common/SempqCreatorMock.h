@@ -58,6 +58,14 @@ struct SEMPQCreationParams
 class SEMPQCreator
 {
 public:
+    // Progress range constants (in %)
+    static constexpr int WRITE_STUB_INITIAL_PROGRESS = 0;
+    static constexpr int WRITE_PLUGINS_INITIAL_PROGRESS = 5;
+    static constexpr int WRITE_PLUGINS_PROGRESS_SIZE = 15;
+    static constexpr int WRITE_MPQ_INITIAL_PROGRESS = 20;
+    static constexpr int WRITE_MPQ_PROGRESS_SIZE = 80;
+    static constexpr int WRITE_FINISHED = 100;
+
     // Create a SEMPQ file with the given parameters
     // Returns true on success, false on failure
     // Calls progressCallback periodically with progress updates
