@@ -7,7 +7,7 @@
 */
 
 // PluginManager.h : Plugin management business logic
-// Handles plugin loading, validation, and lifecycle management without frontend dependencies
+// Handles plugin loading, validation, and lifecycle management
 
 #ifndef PLUGINMANAGER_H
 #define PLUGINMANAGER_H
@@ -17,19 +17,13 @@
 #else
 // Stub types for non-Windows builds
 typedef void* HMODULE;
-typedef int BOOL;
-typedef unsigned long DWORD;
-typedef const char* LPCSTR;
-#define TRUE 1
-#define FALSE 0
-#define IN
-#define OUT
 #endif
 
 #include <string>
 #include <vector>
 #include <map>
 #include <set>
+#include <cstdint>
 #include "../common/common.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -44,7 +38,7 @@ struct PluginInfo
 	std::string strFileName;
 
 	// The plugin's ID from IMPQDraftPlugin
-	DWORD dwPluginID;
+	uint32_t dwPluginID;
 
 	// The plugin's name from IMPQDraftPlugin
 	std::string strPluginName;
@@ -57,8 +51,8 @@ struct PluginInfo
 
 	PluginInfo()
 		: dwPluginID(0)
-		, hDLLModule(NULL)
-		, pPlugin(NULL)
+		, hDLLModule(nullptr)
+		, pPlugin(nullptr)
 	{
 	}
 };
@@ -248,7 +242,7 @@ private:
 	std::set<std::string> failedPlugins;
 
 	// Helper function to load a plugin DLL and retrieve its information
-	static BOOL LoadPluginInfo(IN LPCSTR lpszFileName, OUT PluginInfo &pluginInfo);
+	static bool LoadPluginInfo(const char* fileName, PluginInfo &pluginInfo);
 
 	// Non-copyable
 	PluginManager(const PluginManager&) = delete;

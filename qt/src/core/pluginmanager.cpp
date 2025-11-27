@@ -15,11 +15,11 @@
 #include <windows.h>
 
 // Helper function to load a plugin and retrieve its information
-BOOL PluginManager::LoadPluginInfo(IN LPCSTR lpszFileName, OUT PluginInfo &pluginInfo) {
+bool PluginManager::LoadPluginInfo(const char* fileName, PluginInfo &pluginInfo) {
     // Load the plugin's module
-	pluginInfo.hDLLModule = LoadLibrary(lpszFileName);
+	pluginInfo.hDLLModule = LoadLibrary(fileName);
 	if (!pluginInfo.hDLLModule)
-		return FALSE;
+		return false;
 
 	// Get the plugin's interface
 	GetMPQDraftPluginPtr pGetMPQDraftPlugin = (GetMPQDraftPluginPtr)
@@ -27,8 +27,8 @@ BOOL PluginManager::LoadPluginInfo(IN LPCSTR lpszFileName, OUT PluginInfo &plugi
 
 	if (!pGetMPQDraftPlugin || !pGetMPQDraftPlugin(&pluginInfo.pPlugin)) {
 		FreeLibrary(pluginInfo.hDLLModule);
-		pluginInfo.hDLLModule = NULL;
-		return FALSE;
+		pluginInfo.hDLLModule = nullptr;
+		return false;
 	}
 
 	// Get the plugin's ID
@@ -40,9 +40,9 @@ BOOL PluginManager::LoadPluginInfo(IN LPCSTR lpszFileName, OUT PluginInfo &plugi
 	pluginInfo.strPluginName = szPluginName;
 
 	// Store the filename
-	pluginInfo.strFileName = lpszFileName;
+	pluginInfo.strFileName = fileName;
 
-	return TRUE;
+	return true;
 }
 
 bool PluginManager::configurePlugin(const std::string &path, void *hwnd) {
@@ -66,7 +66,7 @@ bool PluginManager::configurePlugin(const std::string &path, void *hwnd) {
 // Helper function to get the number of auxiliary modules for a plugin
 static int getAuxiliaryModuleCount(const PluginInfo *info) {
     if (info && info->pPlugin) {
-		DWORD numModules = 0;
+		uint32_t numModules = 0;
 		if (info->pPlugin->GetModules(nullptr, &numModules)) {
 			return static_cast<int>(numModules);
 		}
@@ -84,13 +84,13 @@ void freePluginInfo(PluginInfo *info) {
 #else // Non-Windows stubs for plugin loading functions
 
 // Helper function to load a plugin and retrieve its information
-BOOL PluginManager::LoadPluginInfo(IN LPCSTR lpszFileName, OUT PluginInfo &pluginInfo) {
+bool PluginManager::LoadPluginInfo(const char* fileName, PluginInfo &pluginInfo) {
 
     // Plugin loading is not supported on non-Windows platforms,
     // since plugins are Windows DLLs.
-    (void)lpszFileName;
+    (void)fileName;
     (void)pluginInfo;
-    return FALSE;
+    return false;
 }
 
 bool PluginManager::configurePlugin(const std::string &path, void *hwnd) {
