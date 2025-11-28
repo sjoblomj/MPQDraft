@@ -1125,11 +1125,27 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     //=========================================================================
     // Common controls (below tabs)
     //=========================================================================
+    QHBoxLayout *paramsLayout = new QHBoxLayout();
     QLabel *paramsLabel = new QLabel("Command-Line Parameters (optional):", this);
-    mainLayout->addWidget(paramsLabel);
+    paramsLayout->addWidget(paramsLabel);
+
+    QLabel *paramsHelp = new QLabel(this);
+    paramsHelp->setText(" ? ");
+    paramsHelp->setStyleSheet(
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    paramsHelp->setToolTip(
+        "<b>Command-Line Parameters</b><br><br>"
+        "Optional arguments that will be passed to the target executable when it launches.<br><br>"
+        "These parameters are passed directly to the game executable and have no effect on MPQDraft itself.");
+    paramsHelp->setCursor(Qt::WhatsThisCursor);
+    paramsLayout->addWidget(paramsHelp);
+    paramsLayout->addStretch();
+    mainLayout->addLayout(paramsLayout);
 
     parametersEdit = new QLineEdit(this);
-    parametersEdit->setPlaceholderText("e.g., -window -opengl");
     mainLayout->addWidget(parametersEdit);
 
     mainLayout->addSpacing(10);
