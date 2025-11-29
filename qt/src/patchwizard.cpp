@@ -6,6 +6,7 @@
 #include "pluginpage.h"
 #include "common/patcher.h"
 #include "core/gamedata.h"
+#include "core/gamedetection.h"
 #include "gamedata_qt.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -911,199 +912,75 @@ void TargetSelectionPage::populateInstalledGames()
 {
     gameList->clear();
 
-    // Get list of installed games
-    QVector<const SupportedGame*> installedGames = getInstalledGamesQt();
-
-    // Load custom applications from QSettings
+    // Load custom applications from QSettings into ApplicationData vector
+    std::vector<ApplicationData> overrides;
     QSettings settings;
     settings.beginGroup("CustomApplications");
     QStringList customAppNames = settings.childGroups();
+    for (const QString& appName : customAppNames) {
+        settings.beginGroup(appName);
+        ApplicationData app;
+        app.displayText = appName.toStdString();
+        app.executablePath = settings.value("executablePath").toString().toStdString();
+        app.iconPath = settings.value("iconPath").toString().toStdString();
+        app.parameters = settings.value("parameters").toString().toStdString();
+        app.extendedRedir = settings.value("extendedRedir", true).toBool();
+        app.shuntCount = settings.value("shuntCount", 0).toInt();
+        app.noSpawning = settings.value("noSpawning", false).toBool();
+        settings.endGroup();
+        overrides.push_back(app);
+    }
     settings.endGroup();
 
-    // Track which custom apps have been processed (to handle overrides)
-    QSet<QString> processedCustomApps;
+    // Build merged application list
+    std::vector<ApplicationEntry> applications = buildInstalledApplicationList(overrides);
 
-    // Populate game list with detected games and their components
-    for (const SupportedGame* game : installedGames) {
-        for (const GameComponent& component : game->components) {
-            // Generate display name
-            QString displayText;
-            if (game->components.size() == 1) {
-                displayText = getGameName(*game);
-            } else {
-                displayText = QString("%1 - %2").arg(getGameName(*game), getComponentName(component));
-            }
+    // Create UI items for each application
+    for (const ApplicationEntry& entry : applications) {
+        const ApplicationData& app = entry.data;
 
-            // Check if there's an override in QSettings
-            bool hasOverride = customAppNames.contains(displayText);
-            if (hasOverride) {
-                processedCustomApps.insert(displayText);
-            }
-
-            QString componentPath;
-            QString iconPath;
-            QString parameters;
-            bool extendedRedir;
-            int shuntCount;
-            bool noSpawning;
-            bool isModified = false;
-            bool pathInvalid = false;
-
-            if (hasOverride) {
-                // Load from QSettings
-                settings.beginGroup("CustomApplications");
-                settings.beginGroup(displayText);
-                componentPath = settings.value("executablePath").toString();
-                iconPath = settings.value("iconPath").toString();
-                parameters = settings.value("parameters").toString();
-                extendedRedir = settings.value("extendedRedir", component.extendedRedir).toBool();
-                shuntCount = settings.value("shuntCount", component.shuntCount).toInt();
-                noSpawning = settings.value("noSpawning", (component.flags & MPQD_NO_SPAWNING) != 0).toBool();
-                settings.endGroup();
-                settings.endGroup();
-
-                isModified = true;
-
-                // Verify path exists
-                QFileInfo fileInfo(componentPath);
-                if (!fileInfo.exists() || !fileInfo.isFile()) {
-                    pathInvalid = true;
-                }
-            } else {
-                // Use default values from gamedata
-                componentPath = locateComponentQt(getRegistryKey(*game), getRegistryValue(*game), getFileName(component));
-                if (componentPath.isEmpty()) {
-                    continue;  // Skip components that don't exist
-                }
-
-                // Verify that the path actually exists
-                QFileInfo fileInfo(componentPath);
-                if (!fileInfo.exists() || !fileInfo.isFile()) {
-                    pathInvalid = true;
-                }
-
-                iconPath = getIconPath(component);
-                parameters = QString();  // No parameters for default games
-                extendedRedir = component.extendedRedir;
-                shuntCount = component.shuntCount;
-                noSpawning = (component.flags & MPQD_NO_SPAWNING) != 0;
-            }
-
-            QListWidgetItem *item = new QListWidgetItem(gameList);
-            item->setText(displayText);
-
-            // Set icon
-            QIcon icon(iconPath.isEmpty() ? getIconPath(component) : iconPath);
-            item->setIcon(icon);
-
-            // Store data in item
-            item->setData(Qt::UserRole, extendedRedir);
-            item->setData(Qt::UserRole + 1, componentPath);
-            item->setData(Qt::UserRole + 2, shuntCount);
-            item->setData(Qt::UserRole + 3, noSpawning);
-            item->setData(Qt::UserRole + 4, isModified);  // Track if this is from QSettings
-            item->setData(Qt::UserRole + 5, parameters);  // Command-line parameters
-
-            // Color coding and tooltips
-            if (pathInvalid) {
-                item->setForeground(QBrush(QColor(255, 0, 0)));  // Red
-                QFont font = item->font();
-                font.setItalic(true);
-                item->setFont(font);
-                if (isModified) {
-                    item->setToolTip("Executable not found - Right click to reset");
-                } else {
-                    item->setToolTip("Executable not found");
-                }
-            } else if (isModified) {
-                item->setForeground(QBrush(QColor(0, 0, 255)));  // Blue
-                QFont font = item->font();
-                font.setItalic(true);
-                item->setFont(font);
-                item->setToolTip("Default values modified - Right click to reset");
-            }
-        }
-    }
-
-    // Add novel custom applications (not in gamedata.cpp)
-    // First, get all supported games to check if an app is in gamedata.cpp
-    std::vector<SupportedGame> allGames = getSupportedGames();
-
-    for (const QString& appName : customAppNames) {
-        if (processedCustomApps.contains(appName)) {
-            continue;  // Already processed as an override
-        }
-
-        settings.beginGroup("CustomApplications");
-        settings.beginGroup(appName);
-        QString componentPath = settings.value("executablePath").toString();
-        QString iconPath = settings.value("iconPath").toString();
-        QString parameters = settings.value("parameters").toString();
-        bool extendedRedir = settings.value("extendedRedir", true).toBool();
-        int shuntCount = settings.value("shuntCount", 0).toInt();
-        bool noSpawning = settings.value("noSpawning", false).toBool();
-        settings.endGroup();
-        settings.endGroup();
-
-        // Check if this app is in gamedata.cpp (but not detected on system)
-        bool isInGameData = false;
-        QString defaultIconPath;
-        for (const SupportedGame& game : allGames) {
-            for (const GameComponent& component : game.components) {
-                QString displayText;
-                if (game.components.size() == 1) {
-                    displayText = QString::fromStdString(game.gameName);
-                } else {
-                    displayText = QString::fromStdString(game.gameName) + " - " + QString::fromStdString(component.componentName);
-                }
-
-                if (displayText == appName) {
-                    isInGameData = true;
-                    defaultIconPath = QString::fromStdString(component.iconPath);
-                    break;
-                }
-            }
-            if (isInGameData) break;
-        }
+        // Check if path is valid
+        QFileInfo fileInfo(QString::fromStdString(app.executablePath));
+        bool pathInvalid = !fileInfo.exists() || !fileInfo.isFile();
 
         QListWidgetItem *item = new QListWidgetItem(gameList);
-        item->setText(appName);
+        item->setText(QString::fromStdString(app.displayText));
 
         // Set icon
-        if (!iconPath.isEmpty()) {
-            item->setIcon(QIcon(iconPath));
-        } else if (!defaultIconPath.isEmpty()) {
-            item->setIcon(QIcon(defaultIconPath));
+        if (!app.iconPath.empty()) {
+            item->setIcon(QIcon(QString::fromStdString(app.iconPath)));
         } else {
             item->setIcon(QIcon(":/icons/not-found.png"));
         }
 
-        // Store data
-        item->setData(Qt::UserRole, extendedRedir);
-        item->setData(Qt::UserRole + 1, componentPath);
-        item->setData(Qt::UserRole + 2, shuntCount);
-        item->setData(Qt::UserRole + 3, noSpawning);
-        item->setData(Qt::UserRole + 4, true);  // Is from QSettings
-        item->setData(Qt::UserRole + 5, parameters);  // Command-line parameters
+        // Store data in item
+        item->setData(Qt::UserRole, app.extendedRedir);
+        item->setData(Qt::UserRole + 1, QString::fromStdString(app.executablePath));
+        item->setData(Qt::UserRole + 2, app.shuntCount);
+        item->setData(Qt::UserRole + 3, app.noSpawning);
+        item->setData(Qt::UserRole + 4, entry.isOverridden);
+        item->setData(Qt::UserRole + 5, QString::fromStdString(app.parameters));
+        item->setData(Qt::UserRole + 6, entry.isSupportedGame);
 
-        // Verify path exists
-        QFileInfo fileInfo(componentPath);
-        if (!fileInfo.exists() || !fileInfo.isFile()) {
+        // Color coding and tooltips
+        if (pathInvalid) {
             QFont font = item->font();
             font.setItalic(true);
             item->setFont(font);
             item->setForeground(QBrush(QColor(255, 0, 0)));  // Red
-            if (isInGameData) {
+            if (entry.isOverridden && entry.isSupportedGame) {
                 item->setToolTip("Executable not found - Right click to reset");
-            } else {
+            } else if (entry.isOverridden) {
                 item->setToolTip("Executable not found - Right click to remove");
+            } else {
+                item->setToolTip("Executable not found");
             }
-        } else {
+        } else if (entry.isOverridden) {
             QFont font = item->font();
             font.setItalic(true);
             item->setFont(font);
             item->setForeground(QBrush(QColor(0, 0, 255)));  // Blue
-            if (isInGameData) {
+            if (entry.isSupportedGame) {
                 item->setToolTip("Default values modified - Right click to reset");
             } else {
                 item->setToolTip("Custom application - Right click to remove");
@@ -1147,33 +1024,13 @@ void TargetSelectionPage::onGameListContextMenu(const QPoint &pos)
     }
 
     QString appName = item->text();
-
-    // Check if this is a default game (exists in gamedata.cpp)
-    std::vector<SupportedGame> allGames = getSupportedGames();
-    bool isDefaultGame = false;
-
-    for (const SupportedGame& game : allGames) {
-        for (const GameComponent& component : game.components) {
-            QString displayText;
-            if (game.components.size() == 1) {
-                displayText = QString::fromStdString(game.gameName);
-            } else {
-                displayText = QString::fromStdString(game.gameName) + " - " + QString::fromStdString(component.componentName);
-            }
-
-            if (displayText == appName) {
-                isDefaultGame = true;
-                break;
-            }
-        }
-        if (isDefaultGame) break;
-    }
+    bool isSupportedGame = item->data(Qt::UserRole + 6).toBool();
 
     // Create context menu
     QMenu contextMenu(this);
     QAction *action;
 
-    if (isDefaultGame) {
+    if (isSupportedGame) {
         action = contextMenu.addAction("Reset to default values");
     } else {
         action = contextMenu.addAction("Remove from list");

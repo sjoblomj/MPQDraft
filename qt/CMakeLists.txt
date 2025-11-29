@@ -19,10 +19,10 @@ set(SOURCES
     src/patchwizard.cpp
     src/sempqwizard.cpp
     src/pluginpage.cpp
-    src/common/gamedetection.cpp
     src/common/SempqCreatorMock.cpp
     src/core/pluginmanager.cpp
     src/core/gamedata.cpp
+    src/core/gamedetection.cpp
     src/core/sempqparamsbuilder.cpp
 )
 
@@ -35,10 +35,10 @@ set(HEADERS
     src/common/mpqdraftplugin.h
     src/common/common.h
     src/common/patcher.h
-    src/common/gamedetection.h
     src/common/SempqCreatorMock.h
     src/core/pluginmanager.h
     src/core/gamedata.h
+    src/core/gamedetection.h
     src/core/sempqparamsbuilder.h
 )
 

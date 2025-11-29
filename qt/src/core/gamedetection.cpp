@@ -1,5 +1,8 @@
 #include "gamedetection.h"
+#include "../common/common.h"
 #include <fstream>
+#include <map>
+#include <set>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -34,7 +37,7 @@ static bool fileExists(const std::string& path) {
 // Determines whether a game is installed by checking for its registry entries
 // On Windows: checks both HKEY_LOCAL_MACHINE and HKEY_CURRENT_USER
 // On other platforms: always returns false
-bool locateGame(const std::string& registryKey, const std::string& registryValue) {
+static bool isGameInstalled(const std::string& registryKey, const std::string& registryValue) {
 #ifdef _WIN32
     // Convert std::string to wide string for Windows API
     std::wstring wideKey = stringToWString(registryKey);
@@ -149,10 +152,123 @@ std::vector<const SupportedGame*> getInstalledGames() {
     std::vector<const SupportedGame*> installedGames;
 
     for (const SupportedGame& game : supportedGames) {
-        if (locateGame(game.registryKey, game.registryValue)) {
+        if (isGameInstalled(game.registryKey, game.registryValue)) {
             installedGames.push_back(&game);
         }
     }
 
     return installedGames;
+}
+
+// Helper to generate display name for a game component
+static std::string generateDisplayName(const SupportedGame& game, const GameComponent& component) {
+    if (game.components.size() == 1) {
+        return game.gameName;
+    }
+    return game.gameName + " - " + component.componentName;
+}
+
+// Helper to check if a display name exists in gamedata (all supported games, not just installed)
+static bool isDisplayNameInGameData(const std::string& displayName, std::string* outIconPath = nullptr) {
+    std::vector<SupportedGame> allGames = getSupportedGames();
+    for (const SupportedGame& game : allGames) {
+        for (const GameComponent& component : game.components) {
+            std::string name = generateDisplayName(game, component);
+            if (name == displayName) {
+                if (outIconPath) {
+                    *outIconPath = component.iconPath;
+                }
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+
+// Build a merged list of applications from installed games and user overrides
+// - Starts with installed games from getInstalledGames()
+// - Applies overrides from the provided list (matching by displayText)
+// - Adds new entries for overrides that don't match any installed game
+//
+// The caller is responsible for providing as many sets of overrides as desired,
+// and can thus use whatever source they want for overrides (Windows registry, settings files, etc.)
+std::vector<ApplicationEntry> buildInstalledApplicationList(const std::vector<ApplicationData>& overrides) {
+    std::vector<ApplicationEntry> result;
+
+    // Get installed games
+    std::vector<const SupportedGame*> installedGames = getInstalledGames();
+
+    // Build a map of overrides by displayText for quick lookup
+    std::map<std::string, const ApplicationData*> overrideMap;
+    for (const ApplicationData& override : overrides) {
+        overrideMap[override.displayText] = &override;
+    }
+
+    // Track which overrides have been applied
+    std::set<std::string> appliedOverrides;
+
+    // Process installed games
+    for (const SupportedGame* game : installedGames) {
+        for (const GameComponent& component : game->components) {
+            std::string displayName = generateDisplayName(*game, component);
+
+            ApplicationEntry entry;
+            entry.isSupportedGame = true;
+
+            // Check if there's an override for this game
+            auto it = overrideMap.find(displayName);
+            if (it != overrideMap.end()) {
+                // Apply override
+                const ApplicationData* override = it->second;
+                entry.data = *override;
+                entry.isOverridden = true;
+                appliedOverrides.insert(displayName);
+            } else {
+                // Use default values from gamedata
+                std::string componentPath = locateComponent(
+                    game->registryKey, game->registryValue, component.fileName);
+
+                if (componentPath.empty()) {
+                    // Skip components that can't be located
+                    continue;
+                }
+
+                entry.data.displayText = displayName;
+                entry.data.executablePath = componentPath;
+                entry.data.iconPath = component.iconPath;
+                entry.data.parameters = "";
+                entry.data.extendedRedir = component.extendedRedir;
+                entry.data.shuntCount = component.shuntCount;
+                entry.data.noSpawning = (component.flags & MPQD_NO_SPAWNING) != 0;
+                entry.isOverridden = false;
+            }
+
+            result.push_back(entry);
+        }
+    }
+
+    // Add overrides that weren't applied to installed games (custom apps or uninstalled games)
+    for (const ApplicationData& override : overrides) {
+        if (appliedOverrides.find(override.displayText) != appliedOverrides.end()) {
+            continue;  // Already processed
+        }
+
+        ApplicationEntry entry;
+        entry.data = override;
+        entry.isOverridden = true;
+
+        // Check if this is a known game in gamedata (even if not installed)
+        std::string defaultIconPath;
+        entry.isSupportedGame = isDisplayNameInGameData(override.displayText, &defaultIconPath);
+
+        // If no icon specified but it's in gamedata, use the default icon
+        if (entry.data.iconPath.empty() && !defaultIconPath.empty()) {
+            entry.data.iconPath = defaultIconPath;
+        }
+
+        result.push_back(entry);
+    }
+
+    return result;
 }
