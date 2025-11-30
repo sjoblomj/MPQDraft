@@ -90,22 +90,11 @@ std::vector<MPQDRAFTPLUGINMODULE> PluginPage::getSelectedPluginModules() const
             QString path = item->data(Qt::UserRole).toString();
             std::string pathStr = path.toStdString();
 
-            // Get plugin info from the manager
-            const PluginInfo* info = pluginManager->getPluginInfo(pathStr);
+            // Get all modules for this plugin (plugin DLL + any auxiliary data files)
+            std::vector<MPQDRAFTPLUGINMODULE> pluginModules = pluginManager->getPluginModules(pathStr);
 
-            if (info) {
-                // Create module structure with real plugin metadata
-                MPQDRAFTPLUGINMODULE module;
-                module.dwComponentID = info->dwPluginID;  // Real plugin ID!
-                module.dwModuleID = 0;  // Main plugin module has ID 0
-                module.bExecute = 1;    // Mark as executable
-
-                // Copy the file path
-                strncpy(module.szModuleFileName, pathStr.c_str(), MPQDRAFT_MAX_PATH - 1);
-                module.szModuleFileName[MPQDRAFT_MAX_PATH - 1] = '\0';
-
-                modules.push_back(module);
-            }
+            // Append to our result
+            modules.insert(modules.end(), pluginModules.begin(), pluginModules.end());
         }
     }
 

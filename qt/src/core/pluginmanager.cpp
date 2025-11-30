@@ -10,6 +10,7 @@
 
 #include "pluginmanager.h"
 #include "../common/patcher.h"  // For MAX_MPQDRAFT_PLUGINS, MAX_AUXILIARY_MODULES
+#include <cstring>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -74,6 +75,31 @@ static int getAuxiliaryModuleCount(const PluginInfo *info) {
     return 0;
 }
 
+// Helper function to get auxiliary modules for a plugin
+// Returns the modules in the provided vector (which should be pre-sized)
+static bool getAuxiliaryModules(const PluginInfo *info, std::vector<MPQDRAFTPLUGINMODULE> &modules, int startIndex) {
+    if (!info || !info->pPlugin) {
+        return false;
+    }
+
+    uint32_t numModules = 0;
+    if (!info->pPlugin->GetModules(nullptr, &numModules) || numModules == 0) {
+        return true;  // No modules is not an error
+    }
+
+    // Get the modules directly into the vector starting at startIndex
+    if (!info->pPlugin->GetModules(&modules[startIndex], &numModules)) {
+        return false;
+    }
+
+    // Make all modules have the correct component ID
+    for (uint32_t i = 0; i < numModules; i++) {
+        modules[startIndex + i].dwComponentID = info->dwPluginID;
+    }
+
+    return true;
+}
+
 void freePluginInfo(PluginInfo *info) {
     if (info->hDLLModule) {
 		FreeLibrary(info->hDLLModule);
@@ -105,6 +131,15 @@ bool PluginManager::configurePlugin(const std::string &path, void *hwnd) {
 static int getAuxiliaryModuleCount(const PluginInfo *info) {
     (void)info;  // Suppress unused parameter warning
     return 0;
+}
+
+// Helper function to get auxiliary modules for a plugin
+// Returns true on non-Windows (no modules to get)
+static bool getAuxiliaryModules(const PluginInfo *info, std::vector<MPQDRAFTPLUGINMODULE> &modules, int startIndex) {
+    (void)info;
+    (void)modules;
+    (void)startIndex;
+    return true;  // No modules on non-Windows
 }
 
 // The DLL can only be unloaded on Windows.
@@ -250,4 +285,41 @@ int PluginManager::getPluginModuleCount(const std::string &path) const {
 
 	const PluginInfo *info = it->second;
 	return getAuxiliaryModuleCount(info);
+}
+
+std::vector<MPQDRAFTPLUGINMODULE> PluginManager::getPluginModules(const std::string &path) const {
+	std::vector<MPQDRAFTPLUGINMODULE> modules;
+
+	auto it = loadedPlugins.find(path);
+	if (it == loadedPlugins.end()) {
+		return modules;  // Empty vector if plugin not found
+	}
+
+	const PluginInfo *info = it->second;
+	if (!info) {
+		return modules;
+	}
+
+	// Get the number of auxiliary modules
+	int auxModuleCount = getAuxiliaryModuleCount(info);
+
+	// Allocate space for plugin DLL + auxiliary modules
+	modules.resize(1 + auxModuleCount);
+
+	// First entry: the plugin DLL itself (dwModuleID=0, bExecute=TRUE)
+	modules[0].dwComponentID = info->dwPluginID;
+	modules[0].dwModuleID = 0;
+	modules[0].bExecute = 1;
+	strncpy(modules[0].szModuleFileName, info->strFileName.c_str(), MPQDRAFT_MAX_PATH - 1);
+	modules[0].szModuleFileName[MPQDRAFT_MAX_PATH - 1] = '\0';
+
+	// Get auxiliary modules (if any)
+	if (auxModuleCount > 0) {
+		if (!getAuxiliaryModules(info, modules, 1)) {
+			// Failed to get auxiliary modules - return just the plugin DLL
+			modules.resize(1);
+		}
+	}
+
+	return modules;
 }

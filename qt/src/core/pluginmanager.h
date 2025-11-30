@@ -234,6 +234,23 @@ public:
 			- Calls plugin's GetModules() method */
 	int getPluginModuleCount(const std::string &path) const;
 
+	/*	getPluginModules
+		Gets all modules for a plugin (the plugin DLL itself + any auxiliary modules).
+
+		Parameters:
+			path [in] - Full path to the plugin
+
+		Returns:
+			Vector of MPQDRAFTPLUGINMODULE structures. The first entry is always
+			the plugin DLL itself (with dwModuleID=0, bExecute=TRUE). Any subsequent
+			entries are auxiliary data files returned by the plugin's GetModules().
+
+		Notes:
+			- Returns empty vector if plugin not found or not loaded
+			- On Windows, calls plugin's GetModules() to get auxiliary modules
+			- On other platforms, only returns the plugin DLL entry */
+	std::vector<MPQDRAFTPLUGINMODULE> getPluginModules(const std::string &path) const;
+
 private:
 	// Map of plugin paths to their loaded info
 	std::map<std::string, PluginInfo*> loadedPlugins;
