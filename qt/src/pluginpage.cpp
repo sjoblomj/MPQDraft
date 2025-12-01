@@ -1,5 +1,11 @@
 /*
-    PluginPage - Implementation
+    PluginPage - Plugin selection and configuration page
+
+    This page is shared by both the Patch Wizard and SEMPQ Wizard.
+    It allows users to:
+    - Browse for plugins
+    - Select which plugins to use
+    - Configure individual plugins
 */
 
 #include "pluginpage.h"
@@ -20,15 +26,18 @@ PluginPage::PluginPage(QWidget *parent)
 {
     setTitle("Select Plugins");
     setSubTitle("Choose plugins to load. Plugins can add custom patching functionality.");
-    setPixmap(QWizard::LogoPixmap, QPixmap(":/icons/plugin.svg").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    setPixmap(
+            QWizard::LogoPixmap,
+            QPixmap(":/icons/plugin.svg").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+    );
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
-    // Status label at top
-    statusLabel = new QLabel(this);
-    statusLabel->setWordWrap(true);
-    statusLabel->hide();
-    mainLayout->addWidget(statusLabel);
+    // Warning text at top
+    warningText = new QLabel(this);
+    warningText->setWordWrap(true);
+    warningText->hide();
+    mainLayout->addWidget(warningText);
 
     // Horizontal layout for list and buttons
     QHBoxLayout *contentLayout = new QHBoxLayout();
@@ -37,8 +46,7 @@ PluginPage::PluginPage(QWidget *parent)
     pluginListWidget = new QListWidget(this);
     pluginListWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
     connect(pluginListWidget, &QListWidget::itemChanged, this, &PluginPage::onItemChanged);
-    connect(pluginListWidget, &QListWidget::itemSelectionChanged,
-            this, &PluginPage::onItemSelectionChanged);
+    connect(pluginListWidget, &QListWidget::itemSelectionChanged, this, &PluginPage::onItemSelectionChanged);
     contentLayout->addWidget(pluginListWidget);
 
     // Buttons
@@ -68,53 +76,38 @@ PluginPage::~PluginPage()
     delete pluginManager;
 }
 
-QStringList PluginPage::getSelectedPlugins() const
+std::vector<std::string> PluginPage::getSelectedPluginPaths() const
 {
-    QStringList selected;
+    std::vector<std::string> selectedPaths;
     for (int i = 0; i < pluginListWidget->count(); ++i) {
         QListWidgetItem *item = pluginListWidget->item(i);
         if (item->checkState() == Qt::Checked) {
-            selected.append(item->data(Qt::UserRole).toString());
+            selectedPaths.push_back(item->data(Qt::UserRole).toString().toStdString());
         }
     }
-    return selected;
+    return selectedPaths;
 }
 
 std::vector<MPQDRAFTPLUGINMODULE> PluginPage::getSelectedPluginModules() const
 {
     std::vector<MPQDRAFTPLUGINMODULE> modules;
 
-    for (int i = 0; i < pluginListWidget->count(); ++i) {
-        QListWidgetItem *item = pluginListWidget->item(i);
-        if (item->checkState() == Qt::Checked) {
-            QString path = item->data(Qt::UserRole).toString();
-            std::string pathStr = path.toStdString();
+    for (const std::string &pathStr : getSelectedPluginPaths()) {
+        // Get all modules for this plugin (plugin DLL + any auxiliary data files)
+        std::vector<MPQDRAFTPLUGINMODULE> pluginModules = pluginManager->getPluginModules(pathStr);
 
-            // Get all modules for this plugin (plugin DLL + any auxiliary data files)
-            std::vector<MPQDRAFTPLUGINMODULE> pluginModules = pluginManager->getPluginModules(pathStr);
-
-            // Append to our result
-            modules.insert(modules.end(), pluginModules.begin(), pluginModules.end());
-        }
+        // Append to our result
+        modules.insert(modules.end(), pluginModules.begin(), pluginModules.end());
     }
 
     return modules;
 }
 
+// QWizardPage override. Returns true if the page is complete and the user can proceed.
+// Validates that the selected plugins don't exceed MPQDraft limits.
 bool PluginPage::isComplete() const
 {
-    // Get list of selected plugin paths
-    std::vector<std::string> selectedPaths;
-    for (int i = 0; i < pluginListWidget->count(); ++i) {
-        QListWidgetItem *item = pluginListWidget->item(i);
-        if (item->checkState() == Qt::Checked) {
-            QString pluginPath = item->data(Qt::UserRole).toString();
-            selectedPaths.push_back(pluginPath.toStdString());
-        }
-    }
-
-    // Delegate validation to PluginManager
-    PluginManager::ValidationResult result = pluginManager->validateSelection(selectedPaths);
+    PluginManager::ValidationResult result = pluginManager->validateSelection(getSelectedPluginPaths());
     return result.valid;
 }
 
@@ -127,7 +120,8 @@ void PluginPage::initializePage()
     QString windowTitle = wizard()->windowTitle();
 
     if (windowTitle.contains("SEMPQ")) {
-        // SEMPQ Wizard - this is NOT the last page, so change Next button to "Create SEMPQ"
+        // SEMPQ Wizard - this is NOT the last page (the progress page follows),
+        // so change Next button to "Create SEMPQ"
         wizard()->setButtonText(QWizard::NextButton, "Create &SEMPQ");
     } else if (windowTitle.contains("Patch")) {
         // Patch Wizard - this IS the last page, so change Finish button to "Launch"
@@ -233,27 +227,16 @@ void PluginPage::loadSettings()
 
 void PluginPage::validatePluginSelection()
 {
-    // Get list of selected plugin paths
-    std::vector<std::string> selectedPaths;
-    for (int i = 0; i < pluginListWidget->count(); ++i) {
-        QListWidgetItem *item = pluginListWidget->item(i);
-        if (item->checkState() == Qt::Checked) {
-            QString pluginPath = item->data(Qt::UserRole).toString();
-            selectedPaths.push_back(pluginPath.toStdString());
-        }
-    }
-
-    // Delegate validation to PluginManager
-    PluginManager::ValidationResult result = pluginManager->validateSelection(selectedPaths);
+    PluginManager::ValidationResult result = pluginManager->validateSelection(getSelectedPluginPaths());
 
     // Update UI based on validation result
     if (!result.valid) {
         QString errorMsg = QString("<font color='#d32f2f'><b>Warning:</b> %1</font>")
                               .arg(QString::fromStdString(result.errorMessage));
-        statusLabel->setText(errorMsg);
-        statusLabel->show();
+        warningText->setText(errorMsg);
+        warningText->show();
     } else {
-        statusLabel->hide();
+        warningText->hide();
     }
 }
 
@@ -311,7 +294,7 @@ bool PluginPage::addPlugin(const QString &path, bool showMessages)
     }
 
 #ifndef _WIN32
-    // On non-Windows, show informational message on first manual add
+    // On non-Windows, show an informational message on the first manual add
     if (showMessages) {
         QMessageBox::information(this, "Plugin Loading Not Available",
                                 QString("Plugin loading is only available on Windows.\n\n"
@@ -402,8 +385,7 @@ void PluginPage::onConfigureClicked()
     }
 #else
     QMessageBox::information(this, "Not Available",
-                            "Plugin configuration is only available on Windows.\n\n"
-                            "This is a development build for GUI testing.");
+                            "Plugin configuration is only available on Windows.");
 #endif
 }
 

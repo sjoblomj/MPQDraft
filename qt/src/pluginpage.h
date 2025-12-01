@@ -1,9 +1,9 @@
 /*
     PluginPage - Plugin selection and configuration page
-    
+
     This page is shared by both the Patch Wizard and SEMPQ Wizard.
     It allows users to:
-    - Browse for plugin DLLs
+    - Browse for plugins
     - Select which plugins to use
     - Configure individual plugins
 */
@@ -26,7 +26,7 @@ public:
     explicit PluginPage(QWidget *parent = nullptr);
     ~PluginPage();
 
-    QStringList getSelectedPlugins() const;
+    std::vector<std::string> getSelectedPluginPaths() const;
     std::vector<MPQDRAFTPLUGINMODULE> getSelectedPluginModules() const;
     bool isComplete() const override;
     void initializePage() override;
@@ -51,9 +51,9 @@ private:
     QPushButton *browseButton;
     QPushButton *removeButton;
     QPushButton *configureButton;
-    QLabel *statusLabel;
+    QLabel *warningText;
 
-    // Plugin business logic manager (Qt-free)
+    // Plugin business logic manager
     PluginManager *pluginManager;
 };
 

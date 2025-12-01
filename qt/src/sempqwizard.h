@@ -1,8 +1,9 @@
 /*
     SEMPQWizard - Wizard for creating Self-Executing MPQ files
-    
-    This wizard has 3 pages:
-    1. SEMPQ settings (name, icon, target)
+
+    This wizard has 4 pages:
+    0. Introduction
+    1. SEMPQ settings (name, output, MPQ, icon)
     2. Select target executable
     3. Select plugins
 */
@@ -24,9 +25,10 @@
 #include <QThread>
 #include <cstdint>
 
+#include "core/sempqparamsbuilder.h"
+
 // Forward declarations
 class PluginPage;
-struct GameComponent;
 class SEMPQCreator;
 class SEMPQCreationWorker;
 
@@ -75,7 +77,7 @@ private:
     void validateIconPath();
     void validateOutputPath();
     bool isMPQPathValid() const;
-    bool isOutputPathValid() const;
+    bool isOutputPathValid(QString *errorMessage = nullptr) const;
     void updateIconPreview();
     void saveSettings();
     void loadSettings();
@@ -102,32 +104,11 @@ class SEMPQTargetPage : public QWizardPage
 public:
     explicit SEMPQTargetPage(QWidget *parent = nullptr);
 
-    // Returns true if using registry-based target (Mode 1 or Mode 2)
-    bool isRegistryBased() const;
+    // Returns all target settings as a single struct
+    SEMPQTargetSettings getTargetSettings() const;
 
-    // Returns the current tab index (0=Supported Games, 1=Custom Registry, 2=Custom Target)
-    int getCurrentTabIndex() const;
-
-    // Mode 1: Registry-based - Supported Games (returns nullptr if not Mode 1)
-    const GameComponent* getSelectedComponent() const;
-
-    // Mode 2: Registry-based - Custom Registry (returns empty if not Mode 2)
-    QString getCustomRegistryKey() const;
-    QString getCustomRegistryValue() const;
-    QString getCustomRegistryExe() const;
-    QString getCustomRegistryTargetFile() const;
-    int getCustomRegistryShuntCount() const;
-    bool getCustomRegistryIsFullPath() const;
-    uint32_t getCustomRegistryFlags() const;
-
-    // Mode 3: Custom path (returns empty if not Mode 3)
-    QString getCustomTargetPath() const;
-    int getCustomTargetShuntCount() const;
-    bool getCustomTargetNoSpawning() const;
-
-    // Common to all modes
+    // Returns the command line parameters
     QString getParameters() const;
-    bool getExtendedRedir() const;
 
     // Override to validate page completion
     bool isComplete() const override;
@@ -148,6 +129,7 @@ private slots:
     void onPasteTargetFileClicked();
 
 private:
+    bool isRegistryBased() const;
     void validateCustomPath();
     void updateExtendedRedirCheckbox();
     void updateCustomRegistryPlaceholders();
@@ -263,6 +245,8 @@ protected:
     void run() override;
 
 private:
+    void executeCreation(const SEMPQCreationParams &params);
+
     QWizard *wizard;
     SEMPQCreator *creator;
     bool cancelRequested;
@@ -290,4 +274,3 @@ private:
 };
 
 #endif // SEMPQWIZARD_H
-

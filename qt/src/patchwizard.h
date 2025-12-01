@@ -1,7 +1,8 @@
 /*
     PatchWizard - Wizard for patching a game executable with MPQs and plugins
-    
-    This wizard has 3 pages:
+
+    This wizard has 4 pages:
+    0. Introduction
     1. Select target executable (game to patch)
     2. Select MPQ files to load
     3. Select and configure plugins
@@ -122,7 +123,7 @@ private:
     QPushButton *removeButton;
     QPushButton *moveUpButton;
     QPushButton *moveDownButton;
-    QLabel *statusLabel;
+    QLabel *warningLabel;
 };
 
 //=============================================================================
@@ -134,7 +135,7 @@ class PatchWizard : public QWizard
 
 public:
     explicit PatchWizard(QWidget *parent = nullptr);
-    
+
     void accept() override;
 
 private:
@@ -147,4 +148,3 @@ private:
 };
 
 #endif // PATCHWIZARD_H
-

@@ -1,5 +1,11 @@
 /*
-    SEMPQWizard - Implementation
+    SEMPQWizard - Wizard for creating Self-Executing MPQ files
+
+    This wizard has 4 pages:
+    0. Introduction
+    1. SEMPQ settings (name, output, MPQ, icon)
+    2. Select target executable
+    3. Select plugins
 */
 
 #include "sempqwizard.h"
@@ -28,6 +34,16 @@
 static const char* INVALID_FIELD_STYLE = "QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }";
 
 //=============================================================================
+// Helper functions
+//=============================================================================
+static const QVector<SupportedGame>& getStaticGamesVector()
+{
+    static QVector<SupportedGame> games = getSupportedGamesQt();
+    return games;
+}
+
+
+//=============================================================================
 // Page 0: Introduction
 //=============================================================================
 SEMPQIntroPage::SEMPQIntroPage(QWidget *parent)
@@ -35,16 +51,19 @@ SEMPQIntroPage::SEMPQIntroPage(QWidget *parent)
 {
     setTitle("Welcome to SEMPQ Creation Wizard");
     setSubTitle("Create Self-Executing MPQ (SEMPQ) files.");
-    setPixmap(QWizard::LogoPixmap, QPixmap(":/icons/mpqdraft.png").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    setPixmap(
+            QWizard::LogoPixmap,
+            QPixmap(":/icons/mpqdraft.png").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+    );
 
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
 
     QLabel *introLabel = new QLabel(
-        "<p>This wizard will help you create a Self-Executing MPQ (SEMPQ) file.</p>"
+        "<p>Follow these steps to create a Self-Executing MPQ (SEMPQ) file.</p>"
 
         "<p><b>What are MPQs?</b><br>"
-        "MPQs are archives containing game data such as  graphics, sounds and other resources. "
+        "MPQs are archives containing game data such as graphics, sounds and other resources. "
         "They were used extensively by Blizzard Entertainment, but also Sierra OnLine's "
         "Lords of Magic.</p>"
 
@@ -55,10 +74,10 @@ SEMPQIntroPage::SEMPQIntroPage(QWidget *parent)
 
         "<p><b>Benefits of SEMPQ files:</b></p>"
         "<ul>"
-        "<li>Easy distribution - share a single .exe file with others</li>"
-        "<li>No installation required - recipients just run the file</li>"
-        "<li>Automatic patching - the game is patched and launched in one step</li>"
-        "<li>Self-contained - includes all necessary MPQ data and plugins</li>"
+        "<li>Easy distribution - share a single .exe file with others.</li>"
+        "<li>No installation required - recipients just run the file.</li>"
+        "<li>Automatic patching - the game is patched and launched in one step.</li>"
+        "<li>Self-contained - includes all necessary MPQ data and plugins.</li>"
         "</ul>"
 
         "<p>Click <b>Next</b> to configure your SEMPQ file.</p>"
@@ -85,15 +104,19 @@ SEMPQSettingsPage::SEMPQSettingsPage(QWidget *parent)
 {
     setTitle("SEMPQ Settings");
     setSubTitle("Configure the self-executing MPQ file to create.");
-    setPixmap(QWizard::LogoPixmap, QPixmap(":/icons/mpq.svg").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    setPixmap(
+            QWizard::LogoPixmap,
+            QPixmap(":/icons/mpq.svg").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+    );
 
     QVBoxLayout *layout = new QVBoxLayout(this);
 
-    // SEMPQ name
+    // SEMPQ name (max 31 chars - stored in fixed 32-byte buffer in STUBDATA)
     QLabel *nameLabel = new QLabel("SEMPQ Name:", this);
     layout->addWidget(nameLabel);
     sempqNameEdit = new QLineEdit(this);
-    sempqNameEdit->setPlaceholderText("e.g., MyMod");
+    sempqNameEdit->setPlaceholderText("e.g., My Mod");
+    sempqNameEdit->setMaxLength(31);
     layout->addWidget(sempqNameEdit);
 
     layout->addSpacing(20);
@@ -188,24 +211,24 @@ SEMPQSettingsPage::SEMPQSettingsPage(QWidget *parent)
     layout->addLayout(iconSectionLayout);
 
     // Make all browse buttons the same width
-    int maxWidth = qMax(browseMPQButton->sizeHint().width(),
+    int maxWidth = qMax(browseMPQButton   ->sizeHint().width(),
                    qMax(browseOutputButton->sizeHint().width(),
-                        browseIconButton->sizeHint().width()));
-    browseMPQButton->setFixedWidth(maxWidth);
+                        browseIconButton  ->sizeHint().width()));
+    browseMPQButton   ->setFixedWidth(maxWidth);
     browseOutputButton->setFixedWidth(maxWidth);
-    browseIconButton->setFixedWidth(maxWidth);
+    browseIconButton  ->setFixedWidth(maxWidth);
 
     layout->addStretch();
 
     // Connect text changes to completeChanged signal for validation
-    connect(sempqNameEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::completeChanged);
-    connect(mpqPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::completeChanged);
+    connect(sempqNameEdit,  &QLineEdit::textChanged, this, &SEMPQSettingsPage::completeChanged);
+    connect(mpqPathEdit,    &QLineEdit::textChanged, this, &SEMPQSettingsPage::completeChanged);
     connect(outputPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::completeChanged);
 
     // Connect field changes to save settings
-    connect(sempqNameEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::saveSettings);
-    connect(mpqPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::saveSettings);
-    connect(iconPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::saveSettings);
+    connect(sempqNameEdit,  &QLineEdit::textChanged, this, &SEMPQSettingsPage::saveSettings);
+    connect(mpqPathEdit,    &QLineEdit::textChanged, this, &SEMPQSettingsPage::saveSettings);
+    connect(iconPathEdit,   &QLineEdit::textChanged, this, &SEMPQSettingsPage::saveSettings);
     connect(outputPathEdit, &QLineEdit::textChanged, this, &SEMPQSettingsPage::saveSettings);
 
     SEMPQSettingsPage::onIconPathChanged();
@@ -214,8 +237,8 @@ SEMPQSettingsPage::SEMPQSettingsPage(QWidget *parent)
 bool SEMPQSettingsPage::isComplete() const
 {
     // Page is complete if all required fields are non-empty AND valid
-    return !sempqNameEdit->text().trimmed().isEmpty() &&
-           !mpqPathEdit->text().trimmed().isEmpty() &&
+    return !sempqNameEdit ->text().trimmed().isEmpty() &&
+           !mpqPathEdit   ->text().trimmed().isEmpty() &&
            !outputPathEdit->text().trimmed().isEmpty() &&
            isMPQPathValid() &&
            isOutputPathValid();
@@ -223,12 +246,11 @@ bool SEMPQSettingsPage::isComplete() const
 
 bool SEMPQSettingsPage::validatePage()
 {
-    // Check if the output file already exists and prompt for overwrite
+    // Check if the output file already exists and prompt for overwriting
     QString outputPath = outputPathEdit->text().trimmed();
     QFileInfo outputFileInfo(outputPath);
 
-    if (outputFileInfo.exists())
-    {
+    if (outputFileInfo.exists()) {
         QMessageBox msgBox(this);
         msgBox.setIcon(QMessageBox::Warning);
         msgBox.setWindowTitle("File Already Exists");
@@ -239,8 +261,7 @@ bool SEMPQSettingsPage::validatePage()
 
         int result = msgBox.exec();
 
-        if (result == QMessageBox::No)
-        {
+        if (result == QMessageBox::No) {
             // User chose not to overwrite - stay on this page
             return false;
         }
@@ -266,9 +287,9 @@ void SEMPQSettingsPage::saveSettings()
     QSettings settings;
     settings.beginGroup("SEMPQWizard/Settings");
 
-    settings.setValue("sempqName", sempqNameEdit->text());
-    settings.setValue("mpqPath", mpqPathEdit->text());
-    settings.setValue("iconPath", iconPathEdit->text());
+    settings.setValue("sempqName",   sempqNameEdit->text());
+    settings.setValue("mpqPath",       mpqPathEdit->text());
+    settings.setValue("iconPath",     iconPathEdit->text());
     settings.setValue("outputPath", outputPathEdit->text());
 
     settings.endGroup();
@@ -280,20 +301,20 @@ void SEMPQSettingsPage::loadSettings()
     settings.beginGroup("SEMPQWizard/Settings");
 
     // Block signals while loading to avoid triggering saves
-    sempqNameEdit->blockSignals(true);
-    mpqPathEdit->blockSignals(true);
-    iconPathEdit->blockSignals(true);
+    sempqNameEdit ->blockSignals(true);
+    mpqPathEdit   ->blockSignals(true);
+    iconPathEdit  ->blockSignals(true);
     outputPathEdit->blockSignals(true);
 
-    sempqNameEdit->setText(settings.value("sempqName", "").toString());
-    mpqPathEdit->setText(settings.value("mpqPath", "").toString());
-    iconPathEdit->setText(settings.value("iconPath", "").toString());
+    sempqNameEdit ->setText(settings.value("sempqName",  "").toString());
+    mpqPathEdit   ->setText(settings.value("mpqPath",    "").toString());
+    iconPathEdit  ->setText(settings.value("iconPath",   "").toString());
     outputPathEdit->setText(settings.value("outputPath", "").toString());
 
     // Unblock signals
-    sempqNameEdit->blockSignals(false);
-    mpqPathEdit->blockSignals(false);
-    iconPathEdit->blockSignals(false);
+    sempqNameEdit ->blockSignals(false);
+    mpqPathEdit   ->blockSignals(false);
+    iconPathEdit  ->blockSignals(false);
     outputPathEdit->blockSignals(false);
 
     settings.endGroup();
@@ -354,48 +375,59 @@ void SEMPQSettingsPage::onMPQPathChanged()
 
 void SEMPQSettingsPage::onBrowseMPQClicked()
 {
+    QSettings settings;
+    QString startDir = settings.value("SEMPQWizard/Directories/mpq", QString()).toString();
+
     QString fileName = QFileDialog::getOpenFileName(
         this,
         "Select MPQ File",
-        QString(),
+        startDir,
         "MPQ Archives (*.mpq);;All Files (*.*)"
     );
 
     if (!fileName.isEmpty()) {
         mpqPathEdit->setText(fileName);
+        settings.setValue("SEMPQWizard/Directories/mpq", QFileInfo(fileName).absolutePath());
+        outputPathEdit->setFocus();
+    }
+}
+
+void SEMPQSettingsPage::onBrowseOutputClicked()
+{
+    QSettings settings;
+    QString startDir = settings.value("SEMPQWizard/Directories/output", QString()).toString();
+
+    QString fileName = QFileDialog::getSaveFileName(
+        this,
+        "Save SEMPQ File As",
+        startDir,
+        "Executable Files (*.exe);;All Files (*.*)"
+    );
+
+    if (!fileName.isEmpty()) {
+        outputPathEdit->setText(fileName);
+        settings.setValue("SEMPQWizard/Directories/output", QFileInfo(fileName).absolutePath());
         iconPathEdit->setFocus();
     }
 }
 
 void SEMPQSettingsPage::onBrowseIconClicked()
 {
+    QSettings settings;
+    QString startDir = settings.value("SEMPQWizard/Directories/icon", QString()).toString();
+
     QString fileName = QFileDialog::getOpenFileName(
-        this,
-        "Select Icon File",
-        QString(),
-        "Icon Files (*.ico);;All Files (*.*)"
+            this,
+            "Select Icon File",
+            startDir,
+            "Icon Files (*.ico);;All Files (*.*)"
     );
 
     if (!fileName.isEmpty()) {
         iconPathEdit->setText(fileName);
+        settings.setValue("SEMPQWizard/Directories/icon", QFileInfo(fileName).absolutePath());
         iconPathEdit->selectAll();
         iconPathEdit->setFocus();
-    }
-}
-
-void SEMPQSettingsPage::onBrowseOutputClicked()
-{
-    QString fileName = QFileDialog::getSaveFileName(
-        this,
-        "Save SEMPQ File As",
-        QString(),
-        "Executable Files (*.exe);;All Files (*.*)"
-    );
-
-    if (!fileName.isEmpty()) {
-        outputPathEdit->setText(fileName);
-        outputPathEdit->selectAll();
-        outputPathEdit->setFocus();
     }
 }
 
@@ -440,58 +472,6 @@ void SEMPQSettingsPage::validateIconPath()
     }
 }
 
-void SEMPQSettingsPage::validateOutputPath()
-{
-    QString outputPath = outputPathEdit->text().trimmed();
-
-    if (outputPath.isEmpty()) {
-        outputPathEdit->setStyleSheet("");
-        outputPathEdit->setToolTip("");
-        return;
-    }
-
-    // Check for illegal characters in the path
-    // Windows: < > : " | ? * and control characters (0-31)
-    // Unix: only null character is truly illegal, but we'll check for common issues
-    QRegularExpression illegalChars;
-    // Windows illegal characters
-    illegalChars.setPattern("[<>\"|?*\\x00-\\x1F]");
-
-    QRegularExpressionMatch match = illegalChars.match(outputPath);
-    if (match.hasMatch()) {
-        outputPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
-        outputPathEdit->setToolTip(QString("Path contains illegal character: '%1'").arg(match.captured(0)));
-        return;
-    }
-
-    // Check if the directory exists (not the file itself, just the parent directory)
-    QFileInfo fileInfo(outputPath);
-    QDir parentDir = fileInfo.absoluteDir();
-
-    if (!parentDir.exists()) {
-        outputPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
-        outputPathEdit->setToolTip("Directory does not exist");
-        return;
-    }
-
-    // Check if we have write permission to the directory
-    QFileInfo dirInfo(parentDir.absolutePath());
-    if (!dirInfo.isWritable()) {
-        outputPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
-        outputPathEdit->setToolTip("No write permission to directory");
-        return;
-    }
-
-    // If file exists, show a warning style (yellow) but don't mark as invalid
-    if (fileInfo.exists()) {
-        outputPathEdit->setStyleSheet("QLineEdit { border: 2px solid #ffa500; background-color: #fff4e0; }");
-        outputPathEdit->setToolTip("Warning: File already exists and will be overwritten");
-    } else {
-        outputPathEdit->setStyleSheet("");
-        outputPathEdit->setToolTip("");
-    }
-}
-
 bool SEMPQSettingsPage::isMPQPathValid() const
 {
     QString mpqPath = mpqPathEdit->text().trimmed();
@@ -508,34 +488,67 @@ bool SEMPQSettingsPage::isMPQPathValid() const
     return true;
 }
 
-bool SEMPQSettingsPage::isOutputPathValid() const
+void SEMPQSettingsPage::validateOutputPath()
 {
     QString outputPath = outputPathEdit->text().trimmed();
 
     if (outputPath.isEmpty()) {
+        outputPathEdit->setStyleSheet("");
+        outputPathEdit->setToolTip("");
+        return;
+    }
+
+    QString errorMessage;
+    if (!isOutputPathValid(&errorMessage)) {
+        outputPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
+        outputPathEdit->setToolTip(errorMessage);
+        return;
+    }
+
+    // If the file exists, show a warning style (yellow) but don't mark as invalid
+    QFileInfo fileInfo(outputPath);
+    if (fileInfo.exists()) {
+        outputPathEdit->setStyleSheet("QLineEdit { border: 2px solid #ffa500; background-color: #fff4e0; }");
+        outputPathEdit->setToolTip("Warning: File already exists and will be overwritten");
+    } else {
+        outputPathEdit->setStyleSheet("");
+        outputPathEdit->setToolTip("");
+    }
+}
+
+bool SEMPQSettingsPage::isOutputPathValid(QString *errorMessage) const
+{
+    QString outputPath = outputPathEdit->text().trimmed();
+
+    if (outputPath.isEmpty()) {
+        if (errorMessage) *errorMessage = "Output path is empty";
         return false;
     }
 
-    // Check for illegal characters
+    // Check for illegal characters in the path
+    // Windows: < > " | ? * and control characters (0-31)
     QRegularExpression illegalChars;
     illegalChars.setPattern("[<>\"|?*\\x00-\\x1F]");
 
     QRegularExpressionMatch match = illegalChars.match(outputPath);
     if (match.hasMatch()) {
+        if (errorMessage) *errorMessage = QString("Path contains illegal character: '%1'").arg(match.captured(0));
         return false;
     }
 
-    // Check if the directory exists
+    // Check if the directory exists (not the file itself, just the parent directory)
     QFileInfo fileInfo(outputPath);
     QDir parentDir = fileInfo.absoluteDir();
 
     if (!parentDir.exists()) {
+        if (errorMessage) *errorMessage = "Directory does not exist";
         return false;
     }
 
     // Check if we have write permission to the directory
     QFileInfo dirInfo(parentDir.absolutePath());
     if (!dirInfo.isWritable()) {
+        if (errorMessage) *errorMessage = "No write permission to directory";
         return false;
     }
 
@@ -547,30 +560,14 @@ void SEMPQSettingsPage::updateIconPreview()
 {
     QString iconPath = iconPathEdit->text().trimmed();
 
-    bool loadedIcon = false;
-    if (!iconPath.isEmpty()) {
-        // Try to load the custom icon
-        QPixmap customPixmap(iconPath);
-        if (!customPixmap.isNull()) {
-            iconPreviewLabel->setPixmap(customPixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-            loadedIcon = true;
-        }
+    // Try to load custom icon, fall back to default StarDraft icon
+    QPixmap pixmap(iconPath);
+    if (pixmap.isNull()) {
+        pixmap.load(":/icons/StarDraft.png");
     }
-    if (!loadedIcon) {
-        // No custom icon or failed to load it - show default StarDraft icon
-        QPixmap defaultPixmap(":/icons/StarDraft.png");
-        iconPreviewLabel->setPixmap(defaultPixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-    }
+    iconPreviewLabel->setPixmap(pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 }
 
-//=============================================================================
-// Helper function to get the static games vector (shared across all functions)
-//=============================================================================
-static const QVector<SupportedGame>& getStaticGamesVector()
-{
-    static QVector<SupportedGame> games = getSupportedGamesQt();
-    return games;
-}
 
 //=============================================================================
 // Page 2: Select Target Program
@@ -580,12 +577,15 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 {
     setTitle("Select Target Program");
     setSubTitle("Choose the program that the SEMPQ will launch.");
-    setPixmap(QWizard::LogoPixmap, QPixmap(":/icons/blizzard/bnet.png").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    setPixmap(
+            QWizard::LogoPixmap,
+            QPixmap(":/icons/blizzard/bnet.png").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+    );
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     mainLayout->setSpacing(15);
 
-    // Create tab widget (don't connect signal yet - will do after all widgets are created)
+    // Create a tab widget (don't connect signal yet - will do after all widgets are created)
     tabWidget = new QTabWidget(this);
     tabWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
@@ -598,7 +598,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     QLabel *gamesInfoLabel = new QLabel(
         "Select a supported game from the list below. The SEMPQ will automatically "
         "locate the game on the user's computer using the Windows registry, making "
-        "it portable across different installations.",
+        "it portable across different machines.",
         supportedGamesTab);
     gamesInfoLabel->setWordWrap(true);
     gamesLayout->addWidget(gamesInfoLabel);
@@ -610,17 +610,16 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     gameList->setIconSize(QSize(32, 32));
     connect(gameList, &QListWidget::currentItemChanged, this, &SEMPQTargetPage::onGameSelectionChanged);
 
-    // Populate game list with all components from all games
+    // Populate the game list with all components from all games.
     // Use shared static storage so pointers remain valid
     const QVector<SupportedGame>& games = getStaticGamesVector();
     for (const SupportedGame& game : games) {
         for (const GameComponent& component : game.components) {
             QListWidgetItem *item = new QListWidgetItem(gameList);
 
-            // Display format: "Game Name - Component Name"
             QString displayText;
             if (game.components.size() == 1) {
-                // Single component - just show game name
+                // Single component - just show the game name
                 displayText = getGameName(game);
             } else {
                 // Multiple components - show "Game - Component"
@@ -650,7 +649,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     customRegScrollArea->setWidgetResizable(true);
     customRegScrollArea->setFrameShape(QFrame::NoFrame);
 
-    // Set background to match tab background (white)
+    // Set background to match the tab background (white)
     QPalette scrollPalette = customRegScrollArea->palette();
     scrollPalette.setColor(QPalette::Window, Qt::white);
     customRegScrollArea->setPalette(scrollPalette);
@@ -755,9 +754,9 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     customRegLayout->addSpacing(5);
 
-    // Executable Filename
+    // Executable file name
     QHBoxLayout *exeFileLabelLayout = new QHBoxLayout();
-    QLabel *exeFileLabel = new QLabel("Executable Filename:", customRegContentWidget);
+    QLabel *exeFileLabel = new QLabel("Executable file name:", customRegContentWidget);
     exeFileLabelLayout->addWidget(exeFileLabel);
 
     QLabel *exeFileHelp = new QLabel(customRegContentWidget);
@@ -768,12 +767,13 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
         "max-width: 16px; min-height: 16px; max-height: 16px; "
         "qproperty-alignment: AlignCenter; }");
     exeFileHelp->setToolTip(
-        "<b>Executable Filename</b><br><br>"
+        "<b>Executable file name</b><br><br>"
         "The name of the game's executable file that will be launched.<br><br>"
         "<b>Example:</b> StarCraft.exe<br><br>"
         "This file will be combined with the path from the registry to create the full "
         "path to the game executable. Make sure to include the .exe extension.<br><br>"
-        "<b>Note:</b> This field is unused when 'Registry value contains full path to executable' is checked.");
+        "<b>Note:</b> This field is unused when 'Registry value contains full path to "
+        "executable' is checked.");
     exeFileHelp->setCursor(Qt::WhatsThisCursor);
     exeFileLabelLayout->addWidget(exeFileHelp);
     exeFileLabelLayout->addStretch();
@@ -792,12 +792,11 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     exeFileInputLayout->addWidget(pasteExeFileButton);
 
     customRegLayout->addLayout(exeFileInputLayout);
-
     customRegLayout->addSpacing(5);
 
-    // Target File Name
+    // Target file name
     QHBoxLayout *targetFileLabelLayout = new QHBoxLayout();
-    QLabel *targetFileLabel = new QLabel("Target File Name:", customRegContentWidget);
+    QLabel *targetFileLabel = new QLabel("Target file name:", customRegContentWidget);
     targetFileLabelLayout->addWidget(targetFileLabel);
 
     QLabel *targetFileHelp = new QLabel(customRegContentWidget);
@@ -808,9 +807,9 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
         "max-width: 16px; min-height: 16px; max-height: 16px; "
         "qproperty-alignment: AlignCenter; }");
     targetFileHelp->setToolTip(
-        "<b>Target File Name</b><br><br>"
+        "<b>Target file name</b><br><br>"
         "The file that MPQDraft will inject into and patch.<br><br>"
-        "<b>Most common case:</b> This is the same as the Executable Filename. "
+        "<b>Most common case:</b> This is the same as the Executable file name. "
         "For example, if the executable is 'StarCraft.exe', the target is also 'StarCraft.exe'.<br><br>"
         "<b>Special case:</b> Some games use a launcher that starts a different executable. "
         "For example, Diablo II has 'Diablo II.exe' (launcher) and 'Game.exe' (actual game). "
@@ -837,7 +836,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     customRegLayout->addSpacing(10);
 
-    // Checkbox for "Value is full path"
+    // Checkbox for "Registry value contains full path to executable"
     QHBoxLayout *isFullPathLayout = new QHBoxLayout();
     customRegIsFullPathCheckbox = new QCheckBox(
         "Registry value contains full path to executable",
@@ -856,11 +855,11 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
         "<b>Registry Value Contains Full Path</b><br><br>"
         "Controls how the registry value is interpreted when the SEMPQ runs on the end user's machine.<br><br>"
         "<b>Unchecked (default):</b> The registry value contains only the installation directory. "
-        "The Executable Filename and Target File Name will be appended to this directory path.<br><br>"
-        "<b>Example:</b> If the registry contains 'C:\\Program Files\\StarCraft' and the Executable Filename "
+        "The Executable File Name and Target File Name will be appended to this directory path.<br><br>"
+        "<b>Example:</b> If the registry contains 'C:\\Program Files\\StarCraft' and the Executable File Name "
         "is 'StarCraft.exe', the final path will be 'C:\\Program Files\\StarCraft\\StarCraft.exe'.<br><br>"
         "<b>Checked:</b> The registry value already contains the complete path to the executable file. "
-        "The Executable Filename and Target File Name fields are ignored.<br><br>"
+        "The Executable File Name and Target File Name fields are ignored.<br><br>"
         "<b>Example:</b> If the registry contains 'C:\\Program Files\\StarCraft\\StarCraft.exe', "
         "this path will be used directly.<br><br>"
         "Most games store only the directory path, so leave this unchecked unless you've verified "
@@ -968,13 +967,13 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     QVBoxLayout *customTargetTabLayout = new QVBoxLayout(customTargetTab);
     customTargetTabLayout->setContentsMargins(0, 0, 0, 0);
 
-    // Create scroll area for custom target content
+    // Create a scroll area for custom target content
     QScrollArea *customTargetScrollArea = new QScrollArea(customTargetTab);
     customTargetScrollArea->setWidgetResizable(true);
     customTargetScrollArea->setFrameShape(QFrame::NoFrame);
     customTargetScrollArea->setStyleSheet("QScrollArea { background-color: white; }");
 
-    // Create content widget for the scroll area
+    // Create a content widget for the scroll area
     QWidget *customTargetContentWidget = new QWidget();
     customTargetContentWidget->setStyleSheet("QWidget { background-color: white; }");
     QVBoxLayout *customLayout = new QVBoxLayout(customTargetContentWidget);
@@ -1116,7 +1115,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     //=========================================================================
     tabWidget->addTab(supportedGamesTab, "Supported &Games");
     tabWidget->addTab(customRegistryTab, "Custom &Registry");
-    tabWidget->addTab(customTargetTab, "Custom &Target");
+    tabWidget->addTab(customTargetTab,   "Custom &Target");
 
     mainLayout->addWidget(tabWidget);
 
@@ -1153,7 +1152,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     // Extended redir checkbox (common to both modes)
     QHBoxLayout *extendedRedirLayout = new QHBoxLayout();
 
-    extendedRedirCheckbox = new QCheckBox("Redirect SFileOpenFileEx calls", this);
+    extendedRedirCheckbox = new QCheckBox("Use extended file redirection", this);
     extendedRedirCheckbox->setChecked(true);  // Default to true
     extendedRedirLayout->addWidget(extendedRedirCheckbox);
 
@@ -1175,14 +1174,14 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
         "qproperty-alignment: AlignCenter; "
         "}");
     infoIcon->setToolTip(
-        "<b>Extended File Redirection</b><br><br>"
+        "<b>Extended File Redirection (MPQD_EXTENDED_REDIR)</b><br><br>"
         "Blizzard games use Storm.dll to access MPQ archives. Some Storm functions "
         "(like SFileOpenFileEx) can bypass the normal MPQ priority chain by accepting "
         "a specific archive handle.<br><br>"
         "When enabled, MPQDraft hooks these functions to force them to search through "
         "the entire MPQ priority chain (including your custom MPQs), even when the game "
         "tries to read from a specific archive.<br><br>"
-        "<b>When to enable:</b> Most Blizzard games (StarCraft, Warcraft III, Diablo II) "
+        "<b>When to enable:</b> Most Blizzard games including StarCraft and Warcraft III "
         "require this for mods to work correctly.<br><br>"
         "<b>When to disable:</b> Only disable if you're certain the target program doesn't "
         "use these Storm functions, or if you experience compatibility issues.");
@@ -1191,7 +1190,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     extendedRedirRefLabel = new QLabel(this);
     extendedRedirRefLabel->setStyleSheet("QLabel { color: #808080; }");  // Gray text
-    extendedRedirRefLabel->setVisible(false);  // Hidden by default (shown only in Custom Registry tab)
+    extendedRedirRefLabel->setVisible(false);  // Hidden by default (shown only in the Custom Registry tab)
     extendedRedirLayout->addWidget(extendedRedirRefLabel);
 
     extendedRedirLayout->addStretch();
@@ -1217,7 +1216,7 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     connect(customTargetShuntCountSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &SEMPQTargetPage::saveSettings);
     connect(customTargetNoSpawningCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::saveSettings);
 
-    // Initialize Custom Registry placeholders with default game (Diablo)
+    // Initialize Custom Registry placeholders with the first game from gamedata
     updateCustomRegistryPlaceholders();
 }
 
@@ -1227,94 +1226,50 @@ bool SEMPQTargetPage::isRegistryBased() const
     return (index == 0 || index == 1);  // Tab 0: Supported Games, Tab 1: Custom Registry
 }
 
-int SEMPQTargetPage::getCurrentTabIndex() const
+SEMPQTargetSettings SEMPQTargetPage::getTargetSettings() const
 {
-    return tabWidget->currentIndex();
-}
+    SEMPQTargetSettings settings;
+    settings.extendedRedir = extendedRedirCheckbox->isChecked();
 
-const GameComponent* SEMPQTargetPage::getSelectedComponent() const
-{
-    if (!isRegistryBased()) {
-        return nullptr;
+    int tabIndex = tabWidget->currentIndex();
+    if (tabIndex == 0) {
+        // Mode 1: Supported Games (Registry-based)
+        settings.mode = SEMPQTargetMode::SUPPORTED_GAME;
+        settings.selectedComponent = selectedComponent;
+
+    } else if (tabIndex == 1) {
+        // Mode 2: Custom Registry
+        settings.mode = SEMPQTargetMode::CUSTOM_REGISTRY;
+        settings.customRegistryKey        = customRegKeyEdit       ->text().trimmed().toStdString();
+        settings.customRegistryValue      = customRegValueEdit     ->text().trimmed().toStdString();
+        settings.customRegistryExe        = customRegExeEdit       ->text().trimmed().toStdString();
+        settings.customRegistryTargetFile = customRegTargetFileEdit->text().trimmed().toStdString();
+        settings.customRegistryShuntCount = customRegShuntCountSpinBox ->value();
+        settings.customRegistryIsFullPath = customRegIsFullPathCheckbox->isChecked();
+
+        // Build flags for custom registry mode
+        settings.customRegistryFlags = 0;
+        if (extendedRedirCheckbox->isChecked()) {
+            settings.customRegistryFlags |= MPQD_EXTENDED_REDIR;
+        }
+        if (customRegNoSpawningCheckbox->isChecked()) {
+            settings.customRegistryFlags |= MPQD_NO_SPAWNING;
+        }
+
+    } else {
+        // Mode 3: Custom Target (Hardcoded Path)
+        settings.mode = SEMPQTargetMode::CUSTOM_PATH;
+        settings.customTargetPath = customPathEdit->text().toStdString();
+        settings.customTargetShuntCount = customTargetShuntCountSpinBox->value();
+        settings.customTargetNoSpawning = customTargetNoSpawningCheckbox->isChecked();
     }
-    return selectedComponent;
-}
 
-QString SEMPQTargetPage::getCustomTargetPath() const
-{
-    if (isRegistryBased()) {
-        return QString();
-    }
-    return customPathEdit->text();
-}
-
-int SEMPQTargetPage::getCustomTargetShuntCount() const
-{
-    return customTargetShuntCountSpinBox->value();
-}
-
-bool SEMPQTargetPage::getCustomTargetNoSpawning() const
-{
-    return customTargetNoSpawningCheckbox->isChecked();
+    return settings;
 }
 
 QString SEMPQTargetPage::getParameters() const
 {
     return parametersEdit->text();
-}
-
-QString SEMPQTargetPage::getCustomRegistryKey() const
-{
-    return customRegKeyEdit->text().trimmed();
-}
-
-QString SEMPQTargetPage::getCustomRegistryValue() const
-{
-    return customRegValueEdit->text().trimmed();
-}
-
-QString SEMPQTargetPage::getCustomRegistryExe() const
-{
-    return customRegExeEdit->text().trimmed();
-}
-
-QString SEMPQTargetPage::getCustomRegistryTargetFile() const
-{
-    return customRegTargetFileEdit->text().trimmed();
-}
-
-int SEMPQTargetPage::getCustomRegistryShuntCount() const
-{
-    return customRegShuntCountSpinBox->value();
-}
-
-bool SEMPQTargetPage::getCustomRegistryIsFullPath() const
-{
-    return customRegIsFullPathCheckbox->isChecked();
-}
-
-uint32_t SEMPQTargetPage::getCustomRegistryFlags() const
-{
-    uint32_t flags = 0;
-
-    // Extended redirection is handled by the common checkbox
-    if (extendedRedirCheckbox->isChecked()) {
-        flags |= MPQD_EXTENDED_REDIR;
-    }
-
-    // Custom registry specific flag
-    if (customRegNoSpawningCheckbox->isChecked()) {
-        flags |= MPQD_NO_SPAWNING;
-    }
-
-    return flags;
-}
-
-bool SEMPQTargetPage::getExtendedRedir() const
-{
-    // Always return the checkbox value - it's initialized to the component's default
-    // but the user can change it
-    return extendedRedirCheckbox->isChecked();
 }
 
 void SEMPQTargetPage::onGameSelectionChanged(QListWidgetItem *current, QListWidgetItem *previous)
@@ -1330,10 +1285,10 @@ void SEMPQTargetPage::onGameSelectionChanged(QListWidgetItem *current, QListWidg
     void* ptr = current->data(Qt::UserRole).value<void*>();
     selectedComponent = static_cast<const GameComponent*>(ptr);
 
-    // Update extended redir checkbox to show the default for this component
+    // Update the extended redir checkbox to show the default for this component
     updateExtendedRedirCheckbox();
 
-    // Update Custom Registry placeholders to show values from selected game
+    // Update Custom Registry placeholders to show values from the selected game
     updateCustomRegistryPlaceholders();
 
     // Emit completeChanged to update wizard buttons
@@ -1342,15 +1297,19 @@ void SEMPQTargetPage::onGameSelectionChanged(QListWidgetItem *current, QListWidg
 
 void SEMPQTargetPage::onBrowseClicked()
 {
+    QSettings settings;
+    QString startDir = settings.value("SEMPQWizard/Directories/customTarget", QString()).toString();
+
     QString fileName = QFileDialog::getOpenFileName(
         this,
         "Select Target Program",
-        QString(),
+        startDir,
         "Executable Files (*.exe);;All Files (*)"
     );
 
     if (!fileName.isEmpty()) {
         customPathEdit->setText(fileName);
+        settings.setValue("SEMPQWizard/Directories/customTarget", QFileInfo(fileName).absolutePath());
         customTargetShuntCountSpinBox->setFocus();
     }
 }
@@ -1368,14 +1327,11 @@ void SEMPQTargetPage::onCustomRegistryChanged()
 
 void SEMPQTargetPage::onTabChanged(int index)
 {
-    // If switching to Custom Registry tab (index 1)
-    if (index == 1) {
+    if (index == 1) { // If switching to the Custom Registry tab (index 1)
         clearWhitespaceOnlyFields();
         updateCustomRegistryPlaceholders();
-        extendedRedirRefLabel->setVisible(true);  // Show reference label in Custom Registry tab
-    } else {
-        extendedRedirRefLabel->setVisible(false);  // Hide reference label in other tabs
     }
+    extendedRedirRefLabel->setVisible(index == 1);  // Only show reference label in Custom Registry tab
 
     updateExtendedRedirCheckbox();
     emit completeChanged();
@@ -1419,13 +1375,12 @@ void SEMPQTargetPage::updateExtendedRedirCheckbox()
     if (isRegistryBased() && selectedComponent) {
         // Set to the default for the selected component
         extendedRedirCheckbox->setChecked(selectedComponent->extendedRedir);
-        // Reset warning flag when changing games
-        warnOnExtendedRedirChange = true;
     } else {
         // Custom target - default to true (most games need it)
         extendedRedirCheckbox->setChecked(true);
-        warnOnExtendedRedirChange = true;
     }
+    // Reset warning flag when changing games
+    warnOnExtendedRedirChange = true;
 
     // Reconnect the signal
     connect(extendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
@@ -1440,21 +1395,19 @@ void SEMPQTargetPage::onExtendedRedirChanged(int state)
         return;
     }
 
-    // For registry-based, only warn if there's a selected component
-    // For custom target, always warn on first change
+    // For registry-based, only warn if there's a selected component.
+    // For custom target, always warn on the first change
     if (isRegistryBased() && !selectedComponent) {
         return;
     }
 
-    // Show warning dialog
     QMessageBox msgBox(this);
     msgBox.setIcon(QMessageBox::Question);
     msgBox.setWindowTitle("Extended File Redirection");
-    msgBox.setText("It is highly recommended that you do not change 'Redirect SFileOpenFileEx calls' "
+    msgBox.setText("It is highly recommended that you do not change 'Use extended file redirection' "
                    "unless you are completely sure what you are doing. Do you wish to continue?");
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     msgBox.setDefaultButton(QMessageBox::No);
-
     int result = msgBox.exec();
 
     if (result == QMessageBox::Yes) {
@@ -1472,13 +1425,13 @@ void SEMPQTargetPage::onIsFullPathChanged(int state)
 {
     Q_UNUSED(state);
 
-    // Enable/disable the filename fields based on checkbox state
+    // Enable/disable the filename fields based on the checkbox state
     bool isFullPath = customRegIsFullPathCheckbox->isChecked();
 
-    customRegExeEdit->setEnabled(!isFullPath);
+    customRegExeEdit       ->setEnabled(!isFullPath);
     customRegTargetFileEdit->setEnabled(!isFullPath);
-    pasteExeFileButton->setEnabled(!isFullPath);
-    pasteTargetFileButton->setEnabled(!isFullPath);
+    pasteExeFileButton     ->setEnabled(!isFullPath);
+    pasteTargetFileButton  ->setEnabled(!isFullPath);
 
     // Trigger validation update
     emit completeChanged();
@@ -1493,7 +1446,7 @@ bool SEMPQTargetPage::isComplete() const
         return selectedComponent != nullptr;
     } else if (index == 1) {
         // Tab 1: Custom Registry - Must have all required fields filled
-        bool hasKeyAndValue = !customRegKeyEdit->text().trimmed().isEmpty() &&
+        bool hasKeyAndValue = !customRegKeyEdit  ->text().trimmed().isEmpty() &&
                               !customRegValueEdit->text().trimmed().isEmpty();
 
         // If "full path" is checked, filename fields are not required
@@ -1502,7 +1455,7 @@ bool SEMPQTargetPage::isComplete() const
         } else {
             // If "full path" is unchecked, filename fields are required
             return hasKeyAndValue &&
-                   !customRegExeEdit->text().trimmed().isEmpty() &&
+                   !customRegExeEdit       ->text().trimmed().isEmpty() &&
                    !customRegTargetFileEdit->text().trimmed().isEmpty();
         }
     } else {
@@ -1524,12 +1477,12 @@ void SEMPQTargetPage::cleanupPage()
 
 const GameComponent* SEMPQTargetPage::getReferenceComponent() const
 {
-    // If a game is selected in Supported Games tab, use that
+    // If a game is selected in the Supported Games tab, use that
     if (selectedComponent) {
         return selectedComponent;
     }
 
-    // Otherwise, use the first component (Diablo) as default
+    // Otherwise, use the first game from gamedata as default
     const QVector<SupportedGame>& games = getStaticGamesVector();
     if (!games.isEmpty() && !games[0].components.empty()) {
         return &games[0].components[0];
@@ -1540,18 +1493,10 @@ const GameComponent* SEMPQTargetPage::getReferenceComponent() const
 
 void SEMPQTargetPage::clearWhitespaceOnlyFields()
 {
-    // Clear fields that contain only whitespace
-    if (customRegKeyEdit->text().trimmed().isEmpty()) {
-        customRegKeyEdit->clear();
-    }
-    if (customRegValueEdit->text().trimmed().isEmpty()) {
-        customRegValueEdit->clear();
-    }
-    if (customRegExeEdit->text().trimmed().isEmpty()) {
-        customRegExeEdit->clear();
-    }
-    if (customRegTargetFileEdit->text().trimmed().isEmpty()) {
-        customRegTargetFileEdit->clear();
+    for (QLineEdit *field : {customRegKeyEdit, customRegValueEdit, customRegExeEdit, customRegTargetFileEdit}) {
+        if (field->text().trimmed().isEmpty()) {
+            field->clear();
+        }
     }
 }
 
@@ -1567,22 +1512,22 @@ void SEMPQTargetPage::saveSettings()
     settings.setValue("parameters", parametersEdit->text());
     settings.setValue("extendedRedir", extendedRedirCheckbox->isChecked());
 
-    // Save selected game (if any)
+    // Save the selected game (if any)
     if (selectedComponent) {
         settings.setValue("selectedGame", gameList->currentItem()->text());
     }
 
     // Save Custom Registry settings
-    settings.setValue("customRegKey", customRegKeyEdit->text());
-    settings.setValue("customRegValue", customRegValueEdit->text());
-    settings.setValue("customRegExe", customRegExeEdit->text());
-    settings.setValue("customRegTargetFile", customRegTargetFileEdit->text());
-    settings.setValue("customRegShuntCount", customRegShuntCountSpinBox->value());
+    settings.setValue("customRegKey",        customRegKeyEdit           ->text());
+    settings.setValue("customRegValue",      customRegValueEdit         ->text());
+    settings.setValue("customRegExe",        customRegExeEdit           ->text());
+    settings.setValue("customRegTargetFile", customRegTargetFileEdit    ->text());
+    settings.setValue("customRegShuntCount", customRegShuntCountSpinBox ->value());
     settings.setValue("customRegIsFullPath", customRegIsFullPathCheckbox->isChecked());
     settings.setValue("customRegNoSpawning", customRegNoSpawningCheckbox->isChecked());
 
     // Save Custom Target settings
-    settings.setValue("customTargetPath", customPathEdit->text());
+    settings.setValue("customTargetPath",       customPathEdit->text());
     settings.setValue("customTargetShuntCount", customTargetShuntCountSpinBox->value());
     settings.setValue("customTargetNoSpawning", customTargetNoSpawningCheckbox->isChecked());
 
@@ -1595,20 +1540,15 @@ void SEMPQTargetPage::loadSettings()
     settings.beginGroup("SEMPQWizard/Target");
 
     // Block signals while loading to avoid triggering saves
-    tabWidget->blockSignals(true);
-    parametersEdit->blockSignals(true);
-    extendedRedirCheckbox->blockSignals(true);
-    gameList->blockSignals(true);
-    customRegKeyEdit->blockSignals(true);
-    customRegValueEdit->blockSignals(true);
-    customRegExeEdit->blockSignals(true);
-    customRegTargetFileEdit->blockSignals(true);
-    customRegShuntCountSpinBox->blockSignals(true);
-    customRegIsFullPathCheckbox->blockSignals(true);
-    customRegNoSpawningCheckbox->blockSignals(true);
-    customPathEdit->blockSignals(true);
-    customTargetShuntCountSpinBox->blockSignals(true);
-    customTargetNoSpawningCheckbox->blockSignals(true);
+    const std::initializer_list<QObject*> widgets = {
+        tabWidget, parametersEdit, extendedRedirCheckbox, gameList,
+        customRegKeyEdit, customRegValueEdit, customRegExeEdit, customRegTargetFileEdit,
+        customRegShuntCountSpinBox, customRegIsFullPathCheckbox, customRegNoSpawningCheckbox,
+        customPathEdit, customTargetShuntCountSpinBox, customTargetNoSpawningCheckbox
+    };
+    for (QObject *widget : widgets) {
+        widget->blockSignals(true);
+    }
 
     // Restore tab
     int savedTab = settings.value("currentTab", 0).toInt();
@@ -1632,11 +1572,11 @@ void SEMPQTargetPage::loadSettings()
     }
 
     // Restore Custom Registry settings
-    customRegKeyEdit->setText(settings.value("customRegKey", "").toString());
-    customRegValueEdit->setText(settings.value("customRegValue", "").toString());
-    customRegExeEdit->setText(settings.value("customRegExe", "").toString());
-    customRegTargetFileEdit->setText(settings.value("customRegTargetFile", "").toString());
-    customRegShuntCountSpinBox->setValue(settings.value("customRegShuntCount", 0).toInt());
+    customRegKeyEdit           ->setText   (settings.value("customRegKey",        "")   .toString());
+    customRegValueEdit         ->setText   (settings.value("customRegValue",      "")   .toString());
+    customRegExeEdit           ->setText   (settings.value("customRegExe",        "")   .toString());
+    customRegTargetFileEdit    ->setText   (settings.value("customRegTargetFile", "")   .toString());
+    customRegShuntCountSpinBox ->setValue  (settings.value("customRegShuntCount", 0)    .toInt());
     customRegIsFullPathCheckbox->setChecked(settings.value("customRegIsFullPath", false).toBool());
     customRegNoSpawningCheckbox->setChecked(settings.value("customRegNoSpawning", false).toBool());
 
@@ -1646,39 +1586,26 @@ void SEMPQTargetPage::loadSettings()
     customTargetNoSpawningCheckbox->setChecked(settings.value("customTargetNoSpawning", false).toBool());
 
     // Unblock signals
-    tabWidget->blockSignals(false);
-    parametersEdit->blockSignals(false);
-    extendedRedirCheckbox->blockSignals(false);
-    gameList->blockSignals(false);
-    customRegKeyEdit->blockSignals(false);
-    customRegValueEdit->blockSignals(false);
-    customRegExeEdit->blockSignals(false);
-    customRegTargetFileEdit->blockSignals(false);
-    customRegShuntCountSpinBox->blockSignals(false);
-    customRegIsFullPathCheckbox->blockSignals(false);
-    customRegNoSpawningCheckbox->blockSignals(false);
-    customPathEdit->blockSignals(false);
-    customTargetShuntCountSpinBox->blockSignals(false);
-    customTargetNoSpawningCheckbox->blockSignals(false);
+    for (QObject *widget : widgets) {
+        widget->blockSignals(false);
+    }
 
     settings.endGroup();
 
-    // Manually trigger updates that would have been triggered by signals
+    // Manually trigger updates that would have been triggered by signals.
     // This is necessary because we blocked signals during loading
     if (gameList->currentItem()) {
         onGameSelectionChanged(gameList->currentItem(), nullptr);
     }
 
-    if (savedTab == 1) {
-        // Custom Registry tab
+    if (savedTab == 1) {        // Custom Registry tab
         onCustomRegistryChanged();
-    } else if (savedTab == 2) {
-        // Custom Target tab
+    } else if (savedTab == 2) { // Custom Target tab
         onCustomPathChanged();
     }
     onTabChanged(savedTab);
 
-    // Restore extended redir checkbox AFTER all updates (which overwrite it with defaults)
+    // Restore the extended redir checkbox AFTER all updates (which overwrite it with defaults).
     // Block signals to avoid triggering the warning dialog
     extendedRedirCheckbox->blockSignals(true);
     extendedRedirCheckbox->setChecked(savedExtendedRedir);
@@ -1713,7 +1640,7 @@ void SEMPQTargetPage::updateCustomRegistryPlaceholders()
         return;
     }
 
-    // Get display name for the component
+    // Get the display name for the component
     QString displayName;
     if (refGame->components.size() == 1) {
         displayName = getGameName(*refGame);
@@ -1722,17 +1649,17 @@ void SEMPQTargetPage::updateCustomRegistryPlaceholders()
     }
 
     // Update placeholders with reference game values
-    customRegKeyEdit->setPlaceholderText(QString("%1: %2").arg(displayName, getRegistryKey(*refGame)));
+    customRegKeyEdit  ->setPlaceholderText(QString("%1: %2").arg(displayName, getRegistryKey(*refGame)));
     customRegValueEdit->setPlaceholderText(QString("%1: %2").arg(displayName, getRegistryValue(*refGame)));
-    customRegExeEdit->setPlaceholderText(QString("%1: %2").arg(displayName, getFileName(*refComp)));
+    customRegExeEdit  ->setPlaceholderText(QString("%1: %2").arg(displayName, getFileName(*refComp)));
 
     // Target file name - always show the actual value
     customRegTargetFileEdit->setPlaceholderText(QString("%1: %2").arg(displayName, getTargetFileName(*refComp)));
 
     // Update paste button tooltips
-    pasteRegKeyButton->setToolTip(QString("Copy value from %1").arg(displayName));
-    pasteRegValueButton->setToolTip(QString("Copy value from %1").arg(displayName));
-    pasteExeFileButton->setToolTip(QString("Copy value from %1").arg(displayName));
+    pasteRegKeyButton    ->setToolTip(QString("Copy value from %1").arg(displayName));
+    pasteRegValueButton  ->setToolTip(QString("Copy value from %1").arg(displayName));
+    pasteExeFileButton   ->setToolTip(QString("Copy value from %1").arg(displayName));
     pasteTargetFileButton->setToolTip(QString("Copy value from %1").arg(displayName));
 
     // Update reference labels for checkboxes and spinbox
@@ -1755,7 +1682,7 @@ void SEMPQTargetPage::onPasteRegKeyClicked()
     const GameComponent* refComp = getReferenceComponent();
     if (!refComp) return;
 
-    // Find the game to get registry key
+    // Find the game to get the registry key
     const QVector<SupportedGame>& games = getStaticGamesVector();
     for (const SupportedGame& game : games) {
         for (const GameComponent& comp : game.components) {
@@ -1857,8 +1784,7 @@ SEMPQProgressPage::SEMPQProgressPage(QWidget *parent)
 SEMPQProgressPage::~SEMPQProgressPage()
 {
     // Make sure worker thread is stopped and cleaned up
-    if (worker)
-    {
+    if (worker) {
         worker->requestCancellation();
         worker->wait();
         delete worker;
@@ -1868,10 +1794,9 @@ SEMPQProgressPage::~SEMPQProgressPage()
 
 void SEMPQProgressPage::cleanupPage()
 {
-    // Called when user goes back or cancels the wizard
+    // Called when the user goes back or cancels the wizard.
     // Stop the worker thread if it's running
-    if (worker)
-    {
+    if (worker) {
         worker->requestCancellation();
         worker->wait();
         delete worker;
@@ -1885,52 +1810,48 @@ void SEMPQProgressPage::initializePage()
 {
     // Reset state
     creationComplete = false;
-    creationSuccess = false;
-    cancelRequested = false;
+    creationSuccess  = false;
+    cancelRequested  = false;
     resultMessage.clear();
 
-    progressBar->setValue(0);
+    progressBar ->setValue(0);
     percentLabel->setText("0%");
-    statusLabel->setText("Initializing...");
-    progressLog->clear();
+    statusLabel ->setText("Initializing...");
+    progressLog ->clear();
     pluginNames.clear();
     currentPluginIndex = -1;
 
     // Get the list of plugins from the plugin page
-    for (int i = 0; i < wizard()->pageIds().count(); i++)
-    {
+    for (int i = 0; i < wizard()->pageIds().count(); i++) {
         int pageId = wizard()->pageIds().at(i);
         QWizardPage *page = wizard()->page(pageId);
         PluginPage *pluginPage = qobject_cast<PluginPage*>(page);
-        if (pluginPage)
-        {
-            QStringList selectedPlugins = pluginPage->getSelectedPlugins();
-            for (const QString& plugin : selectedPlugins)
-            {
+
+        if (pluginPage) {
+            for (const std::string& plugin : pluginPage->getSelectedPluginPaths()) {
                 // Extract just the filename from the full path
-                QFileInfo fileInfo(plugin);
+                QFileInfo fileInfo(QString::fromStdString(plugin));
                 pluginNames.append(fileInfo.fileName());
             }
             break;
         }
     }
 
-    // Initialize the progress log with all steps in "not started" state
+    // Initialize the progress log with all steps in the "not started" state
     rebuildProgressLog(0);
 
-    // Hide Back button by setting button layout to only show Cancel and Finish
+    // Hide the Back button by setting button layout to only show Cancel and Finish
     QList<QWizard::WizardButton> layout;
     layout << QWizard::Stretch << QWizard::CancelButton;
     wizard()->setButtonLayout(layout);
 
-    // Set the icon based on user input and get output path
+    // Set the icon based on user input and get the output path
     SEMPQWizard *sempqWizard = qobject_cast<SEMPQWizard*>(wizard());
-    if (sempqWizard)
-    {
+    if (sempqWizard) {
         // Find the settings page to get the icon path and SEMPQ name
         SEMPQSettingsPage *settingsPage = nullptr;
-        for (int i = 0; i < wizard()->pageIds().count(); i++)
-        {
+
+        for (int i = 0; i < wizard()->pageIds().count(); i++) {
             int pageId = wizard()->pageIds().at(i);
             QWizardPage *page = wizard()->page(pageId);
             settingsPage = qobject_cast<SEMPQSettingsPage*>(page);
@@ -1938,26 +1859,22 @@ void SEMPQProgressPage::initializePage()
                 break;
         }
 
-        if (settingsPage)
-        {
+        if (settingsPage) {
             QString iconPath = settingsPage->getIconPath();
             QPixmap iconPixmap;
 
-            // Try to load user's icon, fall back to StarDraft icon
-            if (!iconPath.isEmpty() && QFileInfo::exists(iconPath))
-            {
+            // Try to load the user's icon
+            if (!iconPath.isEmpty() && QFileInfo::exists(iconPath)) {
                 iconPixmap = QPixmap(iconPath);
             }
 
-            // If user icon failed or wasn't provided, use StarDraft icon
-            if (iconPixmap.isNull())
-            {
+            // If the user icon failed or wasn't provided, use the StarDraft icon
+            if (iconPixmap.isNull()) {
                 iconPixmap = QPixmap(":/icons/StarDraft.png");
             }
 
-            // Scale to 64x64 and set as logo
-            if (!iconPixmap.isNull())
-            {
+            // Scale to 64x64 and set as the Wizard page logo
+            if (!iconPixmap.isNull()) {
                 setPixmap(QWizard::LogoPixmap, iconPixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
             }
 
@@ -1979,8 +1896,7 @@ bool SEMPQProgressPage::isComplete() const
 void SEMPQProgressPage::startCreation()
 {
     // Clean up any existing worker
-    if (worker)
-    {
+    if (worker) {
         worker->requestCancellation();
         worker->wait();
         delete worker;
@@ -1992,18 +1908,14 @@ void SEMPQProgressPage::startCreation()
     worker->setWizard(wizard());
 
     // Connect signals
-    connect(worker, &SEMPQCreationWorker::progressUpdate,
-            this, &SEMPQProgressPage::onProgressUpdate);
-    connect(worker, &SEMPQCreationWorker::creationComplete,
-            this, &SEMPQProgressPage::onCreationComplete);
+    connect(worker, &SEMPQCreationWorker::progressUpdate,   this, &SEMPQProgressPage::onProgressUpdate);
+    connect(worker, &SEMPQCreationWorker::creationComplete, this, &SEMPQProgressPage::onCreationComplete);
 
-    // Connect wizard's Cancel button to worker
+    // Connect the wizard's Cancel button to the worker
     QPushButton *cancelButton = qobject_cast<QPushButton*>(wizard()->button(QWizard::CancelButton));
-    if (cancelButton)
-    {
+    if (cancelButton) {
         connect(cancelButton, &QPushButton::clicked, this, [this]() {
-            if (worker)
-            {
+            if (worker) {
                 worker->requestCancellation();
                 cancelRequested = true;
                 statusLabel->setText("Cancelling operation...");
@@ -2017,13 +1929,11 @@ void SEMPQProgressPage::startCreation()
 void SEMPQProgressPage::rebuildProgressLog(int progress)
 {
     QString html;
-
-    // Use pure ASCII symbols for maximum portability (Windows XP, Wine, etc.)
-    QString doneIcon = "[X]";      // Completed
-    QString activeIcon = "[>]";     // In progress
+    QString doneIcon    = "[X]";    // Completed
+    QString activeIcon  = "[>]";    // In progress
     QString pendingIcon = "[ ]";    // Not started
 
-    // Step 1: Writing Executable Code (0-5%)
+    // Step 1: Writing Executable Code
     if (progress >= SEMPQCreator::WRITE_PLUGINS_INITIAL_PROGRESS) { // Done
         html += QString("<span style='font-weight: bold; color: green;'>%1 Writing Executable Code</span><br>").arg(doneIcon);
     } else if (progress >= SEMPQCreator::WRITE_STUB_INITIAL_PROGRESS) { // In progress
@@ -2032,7 +1942,7 @@ void SEMPQProgressPage::rebuildProgressLog(int progress)
         html += QString("<span style='color: gray;'>%1 Writing Executable Code</span><br>").arg(pendingIcon);
     }
 
-    // Step 2: Writing Plugins (5-20%)
+    // Step 2: Writing Plugins
     int pluginCount = pluginNames.size();
     QString pluginStepLabel = QString("Writing %1 Plugin%2")
         .arg(pluginCount)
@@ -2047,15 +1957,14 @@ void SEMPQProgressPage::rebuildProgressLog(int progress)
     }
 
     // Individual plugins
-    for (int i = 0; i < pluginNames.size(); i++)
-    {
+    for (int i = 0; i < pluginNames.size(); i++) {
         QString pluginName = pluginNames[i];
 
         // Calculate progress for this plugin
         // Plugins span from WRITE_PLUGINS_INITIAL_PROGRESS to WRITE_MPQ_INITIAL_PROGRESS
         double pluginProgressRange = (double)SEMPQCreator::WRITE_PLUGINS_PROGRESS_SIZE / pluginNames.size();
         double pluginStartProgress = SEMPQCreator::WRITE_PLUGINS_INITIAL_PROGRESS + (i * pluginProgressRange);
-        double pluginEndProgress = pluginStartProgress + pluginProgressRange;
+        double pluginEndProgress   = pluginStartProgress + pluginProgressRange;
 
         if (progress >= pluginEndProgress) {
             html += QString("  <span style='font-weight: bold; color: green;'>%1 Writing plugin %2</span><br>")
@@ -2069,7 +1978,7 @@ void SEMPQProgressPage::rebuildProgressLog(int progress)
         }
     }
 
-    // Step 3: Writing MPQ Data (20-100%)
+    // Step 3: Writing MPQ Data
     if (progress >= SEMPQCreator::WRITE_FINISHED) { // Done
         html += QString("<span style='font-weight: bold; color: green;'>%1 Writing MPQ Data</span><br>").arg(doneIcon);
     } else if (progress >= SEMPQCreator::WRITE_MPQ_INITIAL_PROGRESS) { // In progress
@@ -2089,44 +1998,41 @@ void SEMPQProgressPage::updateProgressLog(const QString& text, int progress)
 
 void SEMPQProgressPage::onProgressUpdate(int progress, const QString& statusText)
 {
-    progressBar->setValue(progress);
+    progressBar ->setValue(progress);
     percentLabel->setText(QString("%1%").arg(progress));
 
     // Update window title with percentage
     wizard()->setWindowTitle(QString("MPQDraft SEMPQ Wizard [%1%]").arg(progress));
 
-    // Update progress log
     updateProgressLog(statusText, progress);
 }
 
 void SEMPQProgressPage::onCreationComplete(bool success, const QString& message)
 {
     creationComplete = true;
-    creationSuccess = success;
-    resultMessage = message;
+    creationSuccess  = success;
+    resultMessage    = message;
 
-    // Restore window title
+    // Restore window title (i.e. remove percentage)
     wizard()->setWindowTitle("MPQDraft SEMPQ Wizard");
 
     // Wait for worker thread to finish and clean up
-    if (worker)
-    {
+    if (worker) {
         worker->wait();
         delete worker;
         worker = nullptr;
     }
 
-    if (success)
-    {
+    if (success) {
         percentLabel->setText("100%");
-        progressBar->setValue(SEMPQCreator::WRITE_FINISHED);
+        progressBar ->setValue(SEMPQCreator::WRITE_FINISHED);
 
         // Add "Finished" to the progress log
         QString html = progressLog->toHtml();
         html += "<span style='font-weight: bold; color: green;'>[X] Finished - SEMPQ created successfully</span>";
         progressLog->setHtml(html);
 
-        // Show Finish button instead of Cancel
+        // Show the Finish button instead of Cancel
         QList<QWizard::WizardButton> layout;
         layout << QWizard::Stretch << QWizard::FinishButton;
         wizard()->setButtonLayout(layout);
@@ -2136,18 +2042,17 @@ void SEMPQProgressPage::onCreationComplete(bool success, const QString& message)
 
         // Set focus on the Finish button
         wizard()->button(QWizard::FinishButton)->setFocus();
-    }
-    else
-    {
+
+    } else {
         // Add "Failed" to the progress log
         QString html = progressLog->toHtml();
         html += "<span style='font-weight: bold; color: red;'>[X] Failed to create SEMPQ!</span>";
         progressLog->setHtml(html);
 
-        // Show error message
+        // Show the error message
         QMessageBox::critical(this, "Error", message);
 
-        // Show Finish button to close
+        // Show the Finish button to close
         QList<QWizard::WizardButton> layout;
         layout << QWizard::Stretch << QWizard::FinishButton;
         wizard()->setButtonLayout(layout);
@@ -2159,7 +2064,7 @@ void SEMPQProgressPage::onCreationComplete(bool success, const QString& message)
         wizard()->button(QWizard::FinishButton)->setFocus();
     }
 
-    // Signal that the page is complete so Finish button works
+    // Signal that the page is complete so the Finish button works
     emit completeChanged();
 }
 
@@ -2192,16 +2097,14 @@ void SEMPQCreationWorker::requestCancellation()
 
 void SEMPQCreationWorker::run()
 {
-    if (!wizard)
-    {
+    if (!wizard) {
         emit creationComplete(false, "Internal error: wizard not set");
         return;
     }
 
     // Get wizard pages
     SEMPQWizard *sempqWizard = qobject_cast<SEMPQWizard*>(wizard);
-    if (!sempqWizard)
-    {
+    if (!sempqWizard) {
         emit creationComplete(false, "Internal error: invalid wizard type");
         return;
     }
@@ -2212,8 +2115,7 @@ void SEMPQCreationWorker::run()
     PluginPage *pluginPage = nullptr;
 
     // Find the pages by iterating through wizard pages
-    for (int i = 0; i < wizard->pageIds().count(); i++)
-    {
+    for (int i = 0; i < wizard->pageIds().count(); i++) {
         int pageId = wizard->pageIds().at(i);
         QWizardPage *page = wizard->page(pageId);
 
@@ -2225,52 +2127,21 @@ void SEMPQCreationWorker::run()
             pluginPage = qobject_cast<PluginPage*>(page);
     }
 
-    if (!settingsPage || !targetPage || !pluginPage)
-    {
+    if (!settingsPage || !targetPage || !pluginPage) {
         emit creationComplete(false, "Internal error: could not find wizard pages");
         return;
     }
 
     // Extract basic settings from wizard pages
     SEMPQBasicSettings basicSettings;
-    basicSettings.sempqName = settingsPage->getSEMPQName().toStdString();
-    basicSettings.mpqPath = settingsPage->getMPQPath().toStdString();
-    basicSettings.iconPath = settingsPage->getIconPath().toStdString();
+    basicSettings.sempqName  = settingsPage->getSEMPQName() .toStdString();
+    basicSettings.mpqPath    = settingsPage->getMPQPath()   .toStdString();
+    basicSettings.iconPath   = settingsPage->getIconPath()  .toStdString();
     basicSettings.outputPath = settingsPage->getOutputPath().toStdString();
-    basicSettings.parameters = targetPage->getParameters().toStdString();
+    basicSettings.parameters = targetPage  ->getParameters().toStdString();
 
     // Extract target settings from wizard pages
-    SEMPQTargetSettings targetSettings;
-    targetSettings.extendedRedir = targetPage->getExtendedRedir();
-
-    int targetTabIndex = targetPage->getCurrentTabIndex();
-    if (targetTabIndex == 0) {
-        // Mode 1: Supported Games (Registry-based)
-        targetSettings.mode = SEMPQTargetMode::SUPPORTED_GAME;
-        targetSettings.selectedComponent = targetPage->getSelectedComponent();
-    }
-    else if (targetTabIndex == 1) {
-        // Mode 2: Custom Registry
-        targetSettings.mode = SEMPQTargetMode::CUSTOM_REGISTRY;
-        targetSettings.customRegistryKey = targetPage->getCustomRegistryKey().toStdString();
-        targetSettings.customRegistryValue = targetPage->getCustomRegistryValue().toStdString();
-        targetSettings.customRegistryExe = targetPage->getCustomRegistryExe().toStdString();
-        targetSettings.customRegistryTargetFile = targetPage->getCustomRegistryTargetFile().toStdString();
-        targetSettings.customRegistryShuntCount = targetPage->getCustomRegistryShuntCount();
-        targetSettings.customRegistryIsFullPath = targetPage->getCustomRegistryIsFullPath();
-        targetSettings.customRegistryFlags = targetPage->getCustomRegistryFlags();
-    }
-    else if (targetTabIndex == 2) {
-        // Mode 3: Custom Target (Hardcoded Path)
-        targetSettings.mode = SEMPQTargetMode::CUSTOM_PATH;
-        targetSettings.customTargetPath = targetPage->getCustomTargetPath().toStdString();
-        targetSettings.customTargetShuntCount = targetPage->getCustomTargetShuntCount();
-        targetSettings.customTargetNoSpawning = targetPage->getCustomTargetNoSpawning();
-    }
-    else {
-        emit creationComplete(false, QString("Internal error: unknown target tab index %1").arg(targetTabIndex));
-        return;
-    }
+    SEMPQTargetSettings targetSettings = targetPage->getTargetSettings();
 
     // Get plugin modules with full metadata (component IDs, module IDs, etc.)
     std::vector<MPQDRAFTPLUGINMODULE> pluginModules = pluginPage->getSelectedPluginModules();
@@ -2283,43 +2154,60 @@ void SEMPQCreationWorker::run()
         return;
     }
 
-    // Print all parameters to console for debugging
-    qDebug() << "=== SEMPQ Creation Parameters ===";
-    qDebug() << "SEMPQ Name:" << QString::fromStdString(params.sempqName);
-    qDebug() << "Output Path:" << QString::fromStdString(params.outputPath);
-    qDebug() << "MPQ Path:" << QString::fromStdString(params.mpqPath);
-    qDebug() << "Icon Path:" << QString::fromStdString(params.iconPath);
-    qDebug() << "Parameters:" << QString::fromStdString(params.parameters);
-    qDebug() << "Plugins:" << static_cast<int>(params.pluginModules.size()) << "plugin(s)";
-    for (size_t i = 0; i < params.pluginModules.size(); i++) {
-        qDebug() << "  Plugin" << (i + 1) << ":" << params.pluginModules[i].szModuleFileName;
-    }
-    qDebug() << "Use Registry:" << (params.useRegistry ? "Yes" : "No");
-    if (params.useRegistry) {
-        qDebug() << "Registry Key:" << QString::fromStdString(params.registryKey);
-        qDebug() << "Registry Value:" << QString::fromStdString(params.registryValue);
-        qDebug() << "Value Is Full Path:" << (params.valueIsFullPath ? "Yes" : "No");
-        qDebug() << "Spawn File Name:" << QString::fromStdString(params.spawnFileName);
-        qDebug() << "Target File Name:" << QString::fromStdString(params.targetFileName);
-    } else {
-        qDebug() << "Target Path:" << QString::fromStdString(params.targetPath);
-    }
-    qDebug() << "Shunt Count:" << params.shuntCount;
-    qDebug() << "Extended Redir:" << (params.flags & MPQD_EXTENDED_REDIR ? "Yes" : "No");
-    qDebug() << "No Spawning:" << (params.flags & MPQD_NO_SPAWNING ? "Yes" : "No");
-    qDebug() << "================================="; // TODO: Cleanup
+    executeCreation(params);
+}
 
-    // Create progress callback (converts std::string to QString)
+void SEMPQCreationWorker::executeCreation(const SEMPQCreationParams &params)
+{
+    // Create the progress callback (converts std::string to QString)
     auto progressCallback = [this](int progress, const std::string& statusText) {
         emit progressUpdate(progress, QString::fromStdString(statusText));
     };
 
-    // Create cancellation check
+    // Create the cancellation check
     auto cancellationCheck = [this]() -> bool {
         return cancelRequested;
     };
 
-    bool success = creator->createSEMPQ(params, progressCallback, cancellationCheck, errorMessage);
+    std::string errorMessage;
+    bool success = false;
+#ifdef _WIN32
+    success = creator->createSEMPQ(params, progressCallback, cancellationCheck, errorMessage);
+#else
+    errorMessage = "SEMPQ creation is not supported on this platform.";
+
+    // Actual SEMPQ creation is not supported on non-Windows platforms.
+    // One could here use the mock implementation for testing purposes,
+    // in git commit 80169374858613ee275026206d1d22d071f051a9
+    // The mock implementation has the same interface as the real:
+    //success = creator->createSEMPQ(params, progressCallback, cancellationCheck, errorMessage);
+
+    // Print all parameters to console
+    qDebug() << "=== SEMPQ Creation Parameters ===";
+    qDebug() << "SEMPQ Name:"   << QString::fromStdString(params.sempqName);
+    qDebug() << "Output Path:"  << QString::fromStdString(params.outputPath);
+    qDebug() << "MPQ Path:"     << QString::fromStdString(params.mpqPath);
+    qDebug() << "Icon Path:"    << QString::fromStdString(params.iconPath);
+    qDebug() << "Parameters:"   << QString::fromStdString(params.parameters);
+    qDebug() << "Plugins:"      << static_cast<int>(params.pluginModules.size()) << "plugin(s)";
+    for (size_t i = 0; i < params.pluginModules.size(); i++) {
+        qDebug() << "  Plugin"  << (i + 1) << ":" << params.pluginModules[i].szModuleFileName;
+    }
+    qDebug() << "Use Registry:" << (params.useRegistry ? "Yes" : "No");
+    if (params.useRegistry) {
+        qDebug() << "Registry Key:"       << QString::fromStdString(params.registryKey);
+        qDebug() << "Registry Value:"     << QString::fromStdString(params.registryValue);
+        qDebug() << "Value Is Full Path:" << (params.valueIsFullPath ? "Yes" : "No");
+        qDebug() << "Spawn File Name:"    << QString::fromStdString(params.spawnFileName);
+        qDebug() << "Target File Name:"   << QString::fromStdString(params.targetFileName);
+    } else {
+        qDebug() << "Target Path:" << QString::fromStdString(params.targetPath);
+    }
+    qDebug() << "Shunt Count:"     << params.shuntCount;
+    qDebug() << "Extended Redir:"  << (params.flags & MPQD_EXTENDED_REDIR ? "Yes" : "No");
+    qDebug() << "No Spawning:"     << (params.flags & MPQD_NO_SPAWNING    ? "Yes" : "No");
+    qDebug() << "=================================";
+#endif
 
     if (success) {
         emit creationComplete(true, QString("SEMPQ file '%1' created successfully!").arg(QString::fromStdString(params.outputPath)));
@@ -2339,7 +2227,7 @@ SEMPQWizard::SEMPQWizard(QWidget *parent)
     setWizardStyle(QWizard::ModernStyle);
     setOption(QWizard::HaveHelpButton, false);
 
-    // Enable minimize and maximize buttons - use Window flag instead of Dialog
+    // Enable the minimize and maximize buttons - use the Window flag instead of Dialog
     setWindowFlags(Qt::Window | Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint);
 
     // Set the wizard sidebar image with margin and frame
@@ -2349,7 +2237,7 @@ SEMPQWizard::SEMPQWizard(QWidget *parent)
     int frameWidth = 1;
 
     // Calculate total canvas size
-    QPixmap pixmapWithMargin(originalPixmap.width() + innerMargin * 2 + frameWidth * 2 + outerMargin * 2,
+    QPixmap pixmapWithMargin(originalPixmap.width()  + innerMargin * 2 + frameWidth * 2 + outerMargin * 2,
                              originalPixmap.height() + innerMargin * 2 + frameWidth * 2 + outerMargin * 2);
     pixmapWithMargin.fill(Qt::transparent);
     QPainter painter(&pixmapWithMargin);
@@ -2358,7 +2246,7 @@ SEMPQWizard::SEMPQWizard(QWidget *parent)
     // Calculate positions
     int frameX = outerMargin;
     int frameY = outerMargin;
-    int frameRectWidth = originalPixmap.width() + innerMargin * 2 + frameWidth * 2;
+    int frameRectWidth  = originalPixmap.width()  + innerMargin * 2 + frameWidth * 2;
     int frameRectHeight = originalPixmap.height() + innerMargin * 2 + frameWidth * 2;
     int imageX = outerMargin + frameWidth + innerMargin;
     int imageY = outerMargin + frameWidth + innerMargin;
@@ -2380,10 +2268,10 @@ SEMPQWizard::SEMPQWizard(QWidget *parent)
     setPixmap(QWizard::WatermarkPixmap, pixmapWithMargin);
 
     // Create pages
-    introPage = new SEMPQIntroPage(this);
+    introPage    = new SEMPQIntroPage(this);
     settingsPage = new SEMPQSettingsPage(this);
-    targetPage = new SEMPQTargetPage(this);
-    pluginPage = new PluginPage(this);
+    targetPage   = new SEMPQTargetPage(this);
+    pluginPage   = new PluginPage(this);
     progressPage = new SEMPQProgressPage(this);
 
     // Add pages
@@ -2393,20 +2281,20 @@ SEMPQWizard::SEMPQWizard(QWidget *parent)
     addPage(pluginPage);
     addPage(progressPage);
 
-    // Set minimum size
+    // Set the minimum size
     setMinimumSize(900, 600);
 }
 
 void SEMPQWizard::accept()
 {
-    // The progress page will handle the actual creation
-    // Just call the base class accept() which will close the wizard
+    // The progress page will handle the actual creation.
+    // Just call the base class accept() which will close the wizard.
     QWizard::accept();
 }
 
 void SEMPQWizard::reject()
 {
-    // Make sure the progress page cleans up its worker thread
-    // The cleanupPage() method will be called automatically
+    // Make sure the progress page cleans up its worker thread.
+    // The cleanupPage() method will be called automatically.
     QWizard::reject();
 }

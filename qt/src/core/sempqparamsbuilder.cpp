@@ -120,9 +120,18 @@ bool SEMPQParamsBuilder::buildCustomRegistryParams(
         return false;
     }
 
-    if (targetSettings.customRegistryExe.empty()) {
-        errorMessage = "Custom registry exe file is empty";
-        return false;
+    // When valueIsFullPath is false, we need the exe and target filenames.
+    // When valueIsFullPath is true, the filenames are derived from the registry value at runtime.
+    if (!targetSettings.customRegistryIsFullPath) {
+        if (targetSettings.customRegistryExe.empty()) {
+            errorMessage = "Executable filename is empty";
+            return false;
+        }
+
+        if (targetSettings.customRegistryTargetFile.empty()) {
+            errorMessage = "Target filename is empty";
+            return false;
+        }
     }
 
     // Set registry-based mode
