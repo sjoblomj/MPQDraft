@@ -131,7 +131,7 @@
     <ClCompile Include="common\QResource.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="core\LegacyGameRegistry.cpp">
+    <ClCompile Include="core\GameDetection.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="app\PluginLoader.cpp">

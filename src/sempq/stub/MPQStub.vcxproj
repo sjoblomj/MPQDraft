@@ -129,7 +129,7 @@
     <ClCompile Include="..\..\common\QDebug.cpp" />
     <ClCompile Include="..\..\common\QInjectDLL.cpp" />
     <ClCompile Include="..\..\common\QResource.cpp" />
-    <ClCompile Include="..\..\core\LegacyGameRegistry.cpp" />
+    <ClCompile Include="..\..\core\GameDetection.cpp" />
     <ClCompile Include="MPQStub.cpp" />
   </ItemGroup>
   <ItemGroup>

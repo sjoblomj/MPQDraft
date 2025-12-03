@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\core\LegacyGameRegistry.cpp">
+    <ClCompile Include="..\core\GameDetection.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ExceptionHandlers.cpp">

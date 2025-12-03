@@ -21,7 +21,7 @@
 #include "../../core/PatcherFlags.h"
 #include "../../core/PatcherApi.h"
 #include "../../sempq/SEMPQData.h"
-#include "../../core/GameRegistry.h"
+#include "../../core/GameDetection.h"
 #include "../cli/CommandParser.h"
 
 // A couple of functions to derive hash keys from CStrings. No idea why these 

@@ -6,15 +6,13 @@
 	The Initial Developer of the Original Code is Justin Olbrantz. The Original Code Copyright (C) 2008 Justin Olbrantz. All Rights Reserved.
 */
 
-// Functions for locating installed games via the Windows registry
-#if !defined(GAMEREGISTRY_H)
-#define GAMEREGISTRY_H
+// Functions for locating installed games
+#if !defined(GAMEDETECTION_H)
+#define GAMEDETECTION_H
 
-#include <windows.h>
+#include <string>
 
-// Determines whether a game is installed by checking for its registry entries
-BOOL LocateGame(IN LPCSTR lpszGameKey, OUT LPCSTR lpszGameValue);
 // Locates an installed game component file path through the game's registry entry
-BOOL LocateComponent(IN LPCSTR lpszGameKey, IN LPCSTR lpszGameValue, IN LPCSTR lpszFileName, OUT LPSTR lpszFilePath);
+std::string locateComponent(const std::string& registryKey, const std::string& registryValue, const std::string& fileName);
 
 #endif

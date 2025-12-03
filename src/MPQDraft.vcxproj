@@ -169,7 +169,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx_cli.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="core\LegacyGameRegistry.cpp">
+    <ClCompile Include="core\GameDetection.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="app\gamedata.cpp">
