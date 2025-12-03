@@ -11,7 +11,7 @@
 
 #include "stdafx_gui.h"
 #include "../MPQDraft.h"
-#include "../SEMPQCreator.h"
+#include "../../sempq/SEMPQCreator.h"
 #include "resource.h"
 #include "ProgressWnd.h"
 #include "SEMPQWizard.h"

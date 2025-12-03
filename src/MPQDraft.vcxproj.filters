@@ -42,7 +42,7 @@
     <ClCompile Include="..\Common\QResource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="app\SEMPQCreator.cpp">
+    <ClCompile Include="sempq\SEMPQCreator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="app\gamedata.cpp">
@@ -143,7 +143,7 @@
     <ClInclude Include="gui\SEMPQWizard.h">
       <Filter>Header Files\gui</Filter>
     </ClInclude>
-    <ClInclude Include="app\SEMPQCreator.h">
+    <ClInclude Include="sempq\SEMPQCreator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="app\gamedata.h">

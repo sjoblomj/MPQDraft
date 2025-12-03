@@ -9,9 +9,9 @@
 // SEMPQCreator.cpp - SEMPQ creation implementation
 
 #include "SEMPQCreator.h"
+#include "SEMPQData.h"
 #include "../common/QResource.h"
 #include "../app/resource_ids.h"
-#include "../core/SEMPQData.h"
 #include "../core/MPQDraftPlugin.h"
 #include <windows.h>
 #include <stdio.h>

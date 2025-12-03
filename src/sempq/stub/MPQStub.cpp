@@ -12,8 +12,8 @@
 #include <shlwapi.h>
 #include <QResource.h>
 #include "resource.h"
-#include "../core/SEMPQData.h"
-#include "../core/PatcherApi.h"
+#include "../SEMPQData.h"
+#include "../../core/PatcherApi.h"
 
 // Get the stub data in fully usable in-memory form
 BOOL FindStubData(OUT STUBDATA *lpStubData, OUT LPDWORD lpdwDataSize)

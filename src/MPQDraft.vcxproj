@@ -188,7 +188,7 @@
     <ClCompile Include="app\PluginLoader.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="app\SEMPQCreator.cpp">
+    <ClCompile Include="sempq\SEMPQCreator.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="app\gui\stdafx_gui.cpp">
@@ -202,7 +202,7 @@
     <ClInclude Include="common\QResource.h" />
     <ClInclude Include="app\gamedata.h" />
     <ClInclude Include="app\resource_ids.h" />
-    <ClInclude Include="app\SEMPQCreator.h" />
+    <ClInclude Include="sempq\SEMPQCreator.h" />
     <ClInclude Include="app\cli\stdafx_cli.h" />
     <ClInclude Include="app\cli\MPQDraftCLI.h" />
     <ClInclude Include="app\cli\CommandParser.h" />
@@ -260,7 +260,7 @@
       <Project>{77d73e31-6d14-45c9-87dd-32a519213ff6}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="stub\MPQStub.vcxproj">
+    <ProjectReference Include="sempq\stub\MPQStub.vcxproj">
       <Project>{c7e295b1-0aa2-4b15-927f-89e725474860}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>

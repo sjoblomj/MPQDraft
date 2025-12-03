@@ -15,19 +15,19 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\core\LegacyGameRegistry.cpp">
+    <ClCompile Include="..\..\core\LegacyGameRegistry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MPQStub.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\QDebug.cpp">
+    <ClCompile Include="..\..\..\Common\QDebug.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\QInjectDLL.cpp">
+    <ClCompile Include="..\..\..\Common\QInjectDLL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Common\QResource.cpp">
+    <ClCompile Include="..\..\..\Common\QResource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -37,16 +37,16 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Common.h">
+    <ClInclude Include="..\..\core\Common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\QDebug.h">
+    <ClInclude Include="..\..\..\Common\QDebug.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\QInjectDLL.h">
+    <ClInclude Include="..\..\..\Common\QInjectDLL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\QResource.h">
+    <ClInclude Include="..\..\..\Common\QResource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

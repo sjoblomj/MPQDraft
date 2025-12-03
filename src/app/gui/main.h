@@ -20,7 +20,7 @@
 
 #include "../../core/PatcherFlags.h"
 #include "../../core/PatcherApi.h"
-#include "../../core/SEMPQData.h"
+#include "../../sempq/SEMPQData.h"
 #include "../../core/GameRegistry.h"
 #include "../cli/CommandParser.h"
 
