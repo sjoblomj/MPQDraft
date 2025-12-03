@@ -151,7 +151,7 @@
     <ClCompile Include="..\common\QDebug.cpp" />
     <ClCompile Include="..\common\QHookAPI.cpp" />
     <ClCompile Include="..\common\QInjectDLL.cpp" />
-    <ClCompile Include="..\core\Common.cpp" />
+    <ClCompile Include="..\core\LegacyGameRegistry.cpp" />
     <ClCompile Include="ExceptionHandlers.cpp" />
     <ClCompile Include="MPQDraftDLL.cpp">
       <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">All</AssemblerOutput>

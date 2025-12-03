@@ -11,7 +11,8 @@
 #include "SEMPQCreator.h"
 #include "../common/QResource.h"
 #include "../app/resource_ids.h"
-#include "../core/Common.h"
+#include "../core/SEMPQData.h"
+#include "../core/MPQDraftPlugin.h"
 #include <windows.h>
 #include <stdio.h>
 #include <shlwapi.h>

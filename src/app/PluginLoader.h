@@ -16,7 +16,7 @@
 
 #include <windows.h>
 #include <string>
-#include "../core/Common.h"
+#include "../core/PatcherApi.h"
 
 /////////////////////////////////////////////////////////////////////////////
 /*	PluginInfo

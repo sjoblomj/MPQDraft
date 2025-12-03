@@ -12,7 +12,7 @@
 
 #include <windows.h>
 #include <QHookAPI.h>
-#include "../core/Common.h"
+#include "../core/PatcherApi.h"
 #include "Patcher.h"
 
 extern "C" BOOL WINAPI MPQDraftInitialize(IN MPQDRAFTPATCHERDATA *pData, IN DWORD nDataSize);

@@ -42,7 +42,7 @@
     <ClCompile Include="common\QResource.cpp">
       <Filter>Source Files\common</Filter>
     </ClCompile>
-    <ClCompile Include="core\Common.cpp">
+    <ClCompile Include="core\LegacyGameRegistry.cpp">
       <Filter>Source Files\core</Filter>
     </ClCompile>
     <ClCompile Include="app\PluginLoader.cpp">

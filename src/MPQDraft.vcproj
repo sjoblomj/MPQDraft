@@ -214,7 +214,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\Common.cpp"
+				RelativePath=".\core\LegacyGameRegistry.cpp"
 				>
 			</File>
 			<File

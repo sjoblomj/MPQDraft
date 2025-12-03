@@ -133,7 +133,7 @@
     <ClCompile Include="..\common\QDebug.cpp" />
     <ClCompile Include="..\common\QInjectDLL.cpp" />
     <ClCompile Include="..\common\QResource.cpp" />
-    <ClCompile Include="..\core\Common.cpp" />
+    <ClCompile Include="..\core\LegacyGameRegistry.cpp" />
     <ClCompile Include="MPQStub.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

@@ -17,7 +17,7 @@
 #include <windows.h>
 #include <vector>
 #include <string>
-#include "../../core/Common.h"
+#include "../../core/PatcherApi.h"
 
 /////////////////////////////////////////////////////////////////////////////
 /*	CMPQDraftCLI

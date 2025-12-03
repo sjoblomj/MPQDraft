@@ -212,7 +212,7 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath="..\Common.cpp"
+				RelativePath="..\core\LegacyGameRegistry.cpp"
 				>
 			</File>
 			<File

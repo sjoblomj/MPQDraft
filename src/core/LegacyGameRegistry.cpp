@@ -9,7 +9,7 @@
 #include <shlwapi.h>
 #include <assert.h>
 
-#include "../core/Common.h"
+#include "GameRegistry.h"
 
 BOOL LocateGame(LPCSTR lpszGameKey, LPCSTR lpszGameValue)
 {
