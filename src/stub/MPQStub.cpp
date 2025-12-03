@@ -6,7 +6,11 @@
 	The Initial Developer of the Original Code is Justin Olbrantz. The Original Code Copyright (C) 2008 Justin Olbrantz. All Rights Reserved.
 */
 
-#include "stdafx.h"
+#include <windows.h>
+#include <assert.h>
+#include <stdio.h>
+#include <shlwapi.h>
+#include <QResource.h>
 #include "resource.h"
 #include "../core/SEMPQData.h"
 #include "../core/PatcherApi.h"

@@ -6,7 +6,10 @@
 	The Initial Developer of the Original Code is Justin Olbrantz. The Original Code Copyright (C) 2008 Justin Olbrantz. All Rights Reserved.
 */
 
-#include "stdafx.h"
+#include <windows.h>
+#include <assert.h>
+#include <crtdbg.h>
+#include <QDebug.h>
 #include "MPQDraftDLL.h"
 
 // Typedefs for the Storm function pointers we're going to use in this DLL

@@ -1,4 +1,6 @@
-#include "stdafx.h"
+#include <windows.h>
+#include <stdio.h>
+#include <stdarg.h>
 
 // Code is based on Skywing's code, with slight tweaks. The license of this file is not precisely known at the moment.
 

@@ -11,6 +11,7 @@
 
 #include <windows.h>
 #include <MPQDraftPlugin.h>
+#include <QInjectDLL.h>
 
 // The MPQDraft patcher forms an additional layer of patching outside of the patcher in QInjectDLL. It adds on all the features necessary to do the patching MPQDraft requires, as opposed to merely providing basic patching services.
 
