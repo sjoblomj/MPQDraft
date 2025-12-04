@@ -8,7 +8,5 @@
 
 #pragma once
 
-// This file is automatically updated during build with the current date.
-// The default version below is used when building without the automated build system.
-#define MPQDRAFT_VERSION "dev"
-
+// This file is generated from version.h.in by CMake. Do not edit directly.
+#define MPQDRAFT_VERSION "@MPQDRAFT_VERSION@"

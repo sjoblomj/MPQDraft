@@ -4,6 +4,14 @@ project(MPQDraft VERSION 1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Generate version.h with current date
+string(TIMESTAMP MPQDRAFT_VERSION "%Y-%m-%d")
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/app/cli/version.h.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/app/cli/version.h
+    @ONLY
+)
+
 # Common include directories used by multiple targets
 set(COMMON_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}
