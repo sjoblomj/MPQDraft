@@ -1,4 +1,4 @@
-name: Build MPQDraft Windows binaries
+name: Build MPQDraft Windows binary
 
 on:
   push:
@@ -15,48 +15,6 @@ jobs:
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v1
-
-      - name: Install Visual Studio MFC components
-        shell: pwsh
-        run: |
-          $installer = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe'
-          $vswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
-
-          Write-Host "Checking for Visual Studio installer: $installer"
-          if (-not (Test-Path $installer)) {
-            Write-Host "vs_installer not found at $installer. Skipping install step."
-            exit 0
-          }
-
-          if (-not (Test-Path $vswhere)) {
-            Write-Host "vswhere not found at $vswhere. Skipping install step."
-            exit 0
-          }
-
-          $inst = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath -format value 2>$null
-          if (-not $inst) {
-            Write-Host 'No Visual Studio installation found via vswhere. Skipping install step.'
-            exit 0
-          }
-
-          $instPath = $inst.Trim()
-          Write-Host "Found Visual Studio at: $instPath"
-
-          # Component group for Desktop C++ (includes MFC)
-          $component0 = 'Microsoft.VisualStudio.ComponentGroup.NativeDesktop.MFC'
-          $component1 = 'Microsoft.VisualStudio.Component.VC.14.29.16.11.MFC'
-          $args = "modify --installPath `"$instPath`" --add $component0 --add $component1 --passive --norestart"
-
-          Write-Host "Invoking vs_installer: $args"
-          $p = Start-Process -FilePath $installer -ArgumentList $args -Wait -PassThru -NoNewWindow
-          Write-Host "vs_installer exit code: $($p.ExitCode)"
-
-          if ($p.ExitCode -ne 0) {
-            Write-Host 'Visual Studio modify returned non-zero. The hosted runner may not support modifying installed VS. Build may still fail due to missing MFC.'
-            # Do not fail the job here; let the build step surface the error with clearer message
-          } else {
-            Write-Host 'Visual Studio components modified successfully.'
-          }
 
       - name: Build MPQDraft solution
         run: |
@@ -95,9 +53,6 @@ jobs:
 
           # Copy GUI executable with date in filename
           Copy-Item -Path "src/Release/MPQDraft.exe" -Destination "artifacts/MPQDraft-$date.exe"
-
-          # Copy CLI executable with date in filename
-          Copy-Item -Path "src/Release/MPQDraftCLI.exe" -Destination "artifacts/MPQDraftCLI-$date.exe"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

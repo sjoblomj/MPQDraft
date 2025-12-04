@@ -150,17 +150,14 @@
     <ClCompile Include="common\QResource.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="app\cli\stdafx_cli.cpp">
-      <PrecompiledHeader>Create</PrecompiledHeader>
-      <PrecompiledHeaderFile>stdafx_cli.h</PrecompiledHeaderFile>
+    <ClCompile Include="app\cli\main_cli.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="app\cli\MPQDraftCLI.cpp">
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>stdafx_cli.h</PrecompiledHeaderFile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="app\cli\CommandParser.cpp">
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>stdafx_cli.h</PrecompiledHeaderFile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="core\GameDetection.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -183,9 +180,10 @@
     <ClInclude Include="core\GameData.h" />
     <ClInclude Include="app\resource_ids.h" />
     <ClInclude Include="sempq\SEMPQCreator.h" />
-    <ClInclude Include="app\cli\stdafx_cli.h" />
+    <ClInclude Include="app\cli\main_cli.h" />
     <ClInclude Include="app\cli\MPQDraftCLI.h" />
     <ClInclude Include="app\cli\CommandParser.h" />
+    <ClInclude Include="app\cli\version.h" />
     <ClInclude Include="core\PluginManager.h" />
     <ClInclude Include="app\MPQDraft.h" />
   </ItemGroup>

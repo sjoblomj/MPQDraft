@@ -46,7 +46,7 @@
     <ClCompile Include="core\PluginManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="app\cli\stdafx_cli.cpp">
+    <ClCompile Include="app\cli\main_cli.cpp">
       <Filter>Source Files\cli</Filter>
     </ClCompile>
     <ClCompile Include="app\cli\MPQDraftCLI.cpp">
@@ -75,13 +75,16 @@
     <ClInclude Include="app\resource_ids.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="app\cli\stdafx_cli.h">
+    <ClInclude Include="app\cli\main_cli.h">
       <Filter>Header Files\cli</Filter>
     </ClInclude>
     <ClInclude Include="app\cli\MPQDraftCLI.h">
       <Filter>Header Files\cli</Filter>
     </ClInclude>
     <ClInclude Include="app\cli\CommandParser.h">
+      <Filter>Header Files\cli</Filter>
+    </ClInclude>
+    <ClInclude Include="app\cli\version.h">
       <Filter>Header Files\cli</Filter>
     </ClInclude>
     <ClInclude Include="sempq\SEMPQCreator.h">
