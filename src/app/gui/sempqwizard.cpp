@@ -53,7 +53,7 @@ SEMPQIntroPage::SEMPQIntroPage(QWidget *parent)
     setSubTitle("Create Self-Executing MPQ (SEMPQ) files.");
     setPixmap(
             QWizard::LogoPixmap,
-            QPixmap(":/icons/mpqdraft.png").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+            QPixmap(":/icons/mpqdraft.svg").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)
     );
 
     QVBoxLayout *layout = new QVBoxLayout(this);

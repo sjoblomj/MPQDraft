@@ -19,6 +19,9 @@
 
 #pragma once
 
+// Application icon
+#define IDI_MAINICON      1    // Main application icon
+
 // Embedded binaries (Win32 resources)
 #define IDR_PATCHERDLL    159  // MPQDraftDLL.dll embedded in MPQDraft.exe
 #define IDR_SEMPQSTUB     143  // MPQStub.exe embedded in MPQDraft.exe

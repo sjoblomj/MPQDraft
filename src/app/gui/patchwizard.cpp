@@ -57,7 +57,7 @@ PatchIntroPage::PatchIntroPage(QWidget *parent)
     setSubTitle("Load custom MPQ archives with game data, or use plugins to add new features.");
     setPixmap(
             QWizard::LogoPixmap,
-            QPixmap(":/icons/mpqdraft.png").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+            QPixmap(":/icons/mpqdraft.svg").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)
     );
 
     QVBoxLayout *layout = new QVBoxLayout(this);
@@ -972,7 +972,7 @@ void TargetSelectionPage::populateInstalledGames()
         if (!app.iconPath.empty()) {
             item->setIcon(QIcon(QString::fromStdString(app.iconPath)));
         } else {
-            item->setIcon(QIcon(":/icons/not-found.png"));
+            item->setIcon(QIcon(":/icons/not-found.svg"));
         }
 
         // Store data in item
@@ -1014,7 +1014,7 @@ void TargetSelectionPage::populateInstalledGames()
     if (gameList->count() == 0) {
         QListWidgetItem *item = new QListWidgetItem(gameList);
         item->setText("No supported games detected");
-        item->setIcon(QIcon(":/icons/not-found.png"));
+        item->setIcon(QIcon(":/icons/not-found.svg"));
         item->setFlags(Qt::NoItemFlags);  // Make it non-selectable
         item->setForeground(Qt::gray);
     }

@@ -30,14 +30,14 @@ std::vector<SupportedGame> getSupportedGames() {
         game.gameName = "Diablo: Hellfire";
         game.registryKey = "SOFTWARE\\Sierra OnLine\\Setup\\HELLFIRE";
         game.registryValue = "Directory";
-        game.iconPath = ":/icons/blizzard/hellfire.ico";
+        game.iconPath = ":/icons/sierra/hellfire.ico";
 
         GameComponent comp;
         comp.componentName = "Diablo: Hellfire";
         comp.fileName = "Hellfire.exe";
         comp.targetFileName = "Hellfire.exe";
         comp.shuntCount = 1;
-        comp.iconPath = ":/icons/blizzard/hellfire.ico";
+        comp.iconPath = ":/icons/sierra/hellfire.ico";
         comp.extendedRedir = true;
         comp.flags = 0;
         game.components.push_back(comp);

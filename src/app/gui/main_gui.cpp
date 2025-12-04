@@ -9,6 +9,7 @@
 #include "main_gui.h"
 #include <QApplication>
 #include <QMessageBox>
+#include <QIcon>
 #include "mainwindow.h"
 
 // Core Qt GUI initialization - used by both standalone and integrated builds
@@ -22,7 +23,11 @@ static int runQtGuiCore(int argc, char *argv[])
     QApplication::setApplicationName("MPQDraft");
     QApplication::setApplicationVersion("1.0");
 
-    // Create and show main window
+    // Set the application icon (window and taskbar)
+    QIcon appIcon(":/icons/mpqdraft.ico");
+    app.setWindowIcon(appIcon);
+
+    // Create and show the main window
     MainWindow mainWindow;
     mainWindow.show();
 

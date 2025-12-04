@@ -39,7 +39,7 @@ Todo:
 - [x] Remove MFC from CLI tool
 - [x] Add `--help`, `-h`, `--version`, `-v` flags to CLI
 - [x] Add plugin readiness-check to CLI
-- [ ] Replace MFC GUI with a cross-platform GUI framework
+- [x] Replace MFC GUI with a cross-platform GUI framework
 - [ ] Correct `_cdecl`
 - [ ] Use std namespace for `min` and `max` and setup import
 - [ ] Correct casts
@@ -52,4 +52,13 @@ Todo:
 ## Credits
 [Quantam, creator of MPQDraft](http://qstuff.blogspot.com/2010/01/bibliography-programming.html).
 
+### Application
 MPQDraft is licensed under CDDL.
+
+### Graphics and icons
+
+- **src/app/gui/resources/images**: These were created by Joel Steudler for use in MPQDraft. Not for commercial use.
+- **src/app/gui/resources/icons/blizzard**: These are from the games they represent, and owned by Blizzard Entertainment. Not for commercial use.
+- **src/app/gui/resources/icons/sierra**: These are from the games they represent, and owned by Sierra Entertainment. Not for commercial use.
+- **src/app/gui/resources/icons/StarDraft.{png,ico}**: This was taken from StarDraft, a predecessor of MPQDraft, written by separate authors, where it was used as the icon for Self-Executing CWADs (a precursor to Self-Executing MPQs). To be honest, I don't know where this icon originated from, or who created it. Best not used commercially.
+- **src/app/gui/resources/icons/***: Public domain icons
