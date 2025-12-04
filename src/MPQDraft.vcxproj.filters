@@ -45,7 +45,7 @@
     <ClCompile Include="sempq\SEMPQCreator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="app\gamedata.cpp">
+    <ClCompile Include="core\GameData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="app\gui\main.cpp">
@@ -67,6 +67,9 @@
       <Filter>Source Files\gui</Filter>
     </ClCompile>
     <ClCompile Include="gui\CommonPages.cpp">
+      <Filter>Source Files\gui</Filter>
+    </ClCompile>
+    <ClCompile Include="gui\GameDataAdapter.cpp">
       <Filter>Source Files\gui</Filter>
     </ClCompile>
     <ClCompile Include="gui\dib256.cpp">
@@ -122,6 +125,9 @@
     <ClInclude Include="gui\CommonPages.h">
       <Filter>Header Files\gui</Filter>
     </ClInclude>
+    <ClInclude Include="gui\GameDataAdapter.h">
+      <Filter>Header Files\gui</Filter>
+    </ClInclude>
     <ClInclude Include="gui\dib256.h">
       <Filter>Header Files\gui</Filter>
     </ClInclude>
@@ -146,7 +152,7 @@
     <ClInclude Include="sempq\SEMPQCreator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="app\gamedata.h">
+    <ClInclude Include="core\GameData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="app\gui\main.h">

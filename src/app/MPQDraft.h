@@ -9,7 +9,7 @@
 // MPQDraft.h : main header file for the MPQDRAFT application
 //
 // This file now forwards to the actual implementation files:
-// - gamedata.h for game definitions
+// - GameData.h for game definitions
 // - gui/main.h for GUI application class
 
 #if !defined(AFX_MPQDRAFT_H__E554FE73_9CB1_4CFC_8AAF_6299644E02A9__INCLUDED_)
@@ -18,7 +18,7 @@
 #pragma once
 
 // Include game data definitions
-#include "gamedata.h"
+#include "../core/GameData.h"
 
 // Include GUI application class
 #include "gui/main.h"

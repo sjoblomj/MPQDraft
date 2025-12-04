@@ -222,6 +222,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GameDataAdapter.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\dib256.cpp"
 				>
 			</File>
@@ -280,6 +284,10 @@
 			</File>
 			<File
 				RelativePath=".\CommonPages.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GameDataAdapter.h"
 				>
 			</File>
 			<File

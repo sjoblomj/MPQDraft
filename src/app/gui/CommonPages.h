@@ -14,6 +14,7 @@
 #include "../MPQDraft.h"
 #include "../PluginLoader.h"
 #include "resource.h"
+#include "GameDataAdapter.h"
 
 /////////////////////////////////////////////////////////////////////////////
 /*	CPatchTargetPage dialog

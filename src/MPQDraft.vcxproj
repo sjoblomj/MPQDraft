@@ -172,11 +172,12 @@
     <ClCompile Include="core\GameDetection.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="app\gamedata.cpp">
+    <ClCompile Include="core\GameData.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="app\gui\BitmapDialog.cpp" />
     <ClCompile Include="app\gui\CommonPages.cpp" />
+    <ClCompile Include="app\gui\GameDataAdapter.cpp" />
     <ClCompile Include="app\gui\dib256.cpp" />
     <ClCompile Include="app\gui\dibpal.cpp" />
     <ClCompile Include="app\gui\main.cpp" />
@@ -200,7 +201,7 @@
     <ClInclude Include="core\MPQDraftPlugin.h" />
     <ClInclude Include="common\QDebug.h" />
     <ClInclude Include="common\QResource.h" />
-    <ClInclude Include="app\gamedata.h" />
+    <ClInclude Include="core\GameData.h" />
     <ClInclude Include="app\resource_ids.h" />
     <ClInclude Include="sempq\SEMPQCreator.h" />
     <ClInclude Include="app\cli\stdafx_cli.h" />
@@ -209,6 +210,7 @@
     <ClInclude Include="core\Common.h" />
     <ClInclude Include="app\gui\BitmapDialog.h" />
     <ClInclude Include="app\gui\CommonPages.h" />
+    <ClInclude Include="app\gui\GameDataAdapter.h" />
     <ClInclude Include="app\gui\dib256.h" />
     <ClInclude Include="app\gui\dibpal.h" />
     <ClInclude Include="app\gui\main.h" />

@@ -10,6 +10,7 @@
 #include "../MPQDraft.h"
 #include "resource.h"
 #include "CommonPages.h"
+#include "GameDataAdapter.h"
 #include "../../core/GameDetection.h"
 
 #include <string>

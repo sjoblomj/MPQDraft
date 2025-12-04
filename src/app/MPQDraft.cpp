@@ -9,7 +9,7 @@
 // MPQDraft.cpp : Forwards to the actual implementation files
 //
 // This file now just includes the actual implementation:
-// - gamedata.cpp for game definitions
+// - GameData.cpp for game definitions
 // - gui/main.cpp for GUI application class
 
 #include "gui/stdafx_gui.h"
