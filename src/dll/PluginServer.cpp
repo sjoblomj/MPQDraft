@@ -8,7 +8,7 @@
 
 #include <windows.h>
 #include <assert.h>
-#include <QDebug.h>
+#include "../common/QDebug.h"
 #include "MPQDraftDLL.h"
 
 // Trivial constructor and destructor

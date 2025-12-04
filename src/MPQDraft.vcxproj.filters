@@ -48,6 +48,9 @@
     <ClCompile Include="core\GameData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="core\PluginManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="app\gui\main.cpp">
       <Filter>Source Files\gui</Filter>
     </ClCompile>
@@ -153,6 +156,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="core\GameData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="core\PluginManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="app\gui\main.h">

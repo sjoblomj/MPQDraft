@@ -9,10 +9,10 @@
 #include <windows.h>
 #include <assert.h>
 #include <stdio.h>
-#include <QDebug.h>
+#include "../common/QDebug.h"
 #include "Patcher.h"
 #include "../core/PatcherApi.h"
-#include <QInjectDLL.h>
+#include "../common/QInjectDLL.h"
 
 // The maximum length of a patch context name
 #define CONTEXT_NAME_LENGTH 32

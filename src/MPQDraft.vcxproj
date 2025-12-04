@@ -186,7 +186,7 @@
     <ClCompile Include="app\gui\ProgressWnd.cpp" />
     <ClCompile Include="app\gui\SEMPQWizard.cpp" />
     <ClCompile Include="app\MPQDraft.cpp" />
-    <ClCompile Include="app\PluginLoader.cpp">
+    <ClCompile Include="core\PluginManager.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="sempq\SEMPQCreator.cpp">
@@ -207,7 +207,7 @@
     <ClInclude Include="app\cli\stdafx_cli.h" />
     <ClInclude Include="app\cli\MPQDraftCLI.h" />
     <ClInclude Include="app\cli\CommandParser.h" />
-    <ClInclude Include="core\Common.h" />
+    <ClInclude Include="core\PluginManager.h" />
     <ClInclude Include="app\gui\BitmapDialog.h" />
     <ClInclude Include="app\gui\CommonPages.h" />
     <ClInclude Include="app\gui\GameDataAdapter.h" />
@@ -221,7 +221,7 @@
     <ClInclude Include="app\gui\SEMPQWizard.h" />
     <ClInclude Include="app\gui\stdafx_gui.h" />
     <ClInclude Include="app\MPQDraft.h" />
-    <ClInclude Include="app\PluginLoader.h" />
+
   </ItemGroup>
   <ItemGroup>
     <Image Include="app\gui\res\Diablo.ico" />

@@ -12,7 +12,7 @@
 #include "stdafx_cli.h"
 #include "MPQDraftCLI.h"
 #include "CommandParser.h"
-#include "../PluginLoader.h"
+#include "../../core/PluginManager.h"
 #include "../resource_ids.h"
 #include "version.h"
 
@@ -150,52 +150,63 @@ BOOL CMPQDraftCLI::LoadPluginModules(
 	OUT std::vector<MPQDRAFTPLUGINMODULE>& modules
 )
 {
+	PluginManager pluginManager;
+
 	for (size_t i = 0; i < qdpPaths.size(); i++)
 	{
 		const std::string& pluginPath = qdpPaths[i];
 
-		// Load the plugin using the shared utility
-		PluginInfo pluginInfo;
-		if (!LoadPluginInfo(pluginPath.c_str(), pluginInfo))
+		// Load the plugin
+		std::string errorMessage;
+		if (!pluginManager.addPlugin(pluginPath, errorMessage))
 		{
 			printf("ERROR: Unable to load plugin: %s\n", pluginPath.c_str());
+			printf("       %s\n", errorMessage.c_str());
 			QDebugOut("ERROR: Unable to load plugin: <%s>", pluginPath.c_str());
+			return FALSE;
+		}
+
+		const PluginInfo* pluginInfo = pluginManager.getPluginInfo(pluginPath);
+		if (!pluginInfo)
+		{
+			printf("ERROR: Failed to get plugin info for: %s\n", pluginPath.c_str());
+			QDebugOut("ERROR: Failed to get plugin info for: <%s>", pluginPath.c_str());
 			return FALSE;
 		}
 
 		printf("Loaded plugin: %s (ID: 0x%08X, Name: %s)\n",
 			pluginPath.c_str(),
-			pluginInfo.dwPluginID,
-			pluginInfo.strPluginName.c_str());
+			pluginInfo->dwPluginID,
+			pluginInfo->strPluginName.c_str());
 		QDebugOut("Loaded plugin: <%s> (ID: 0x%08X, Name: %s)",
 			pluginPath.c_str(),
-			pluginInfo.dwPluginID,
-			pluginInfo.strPluginName.c_str());
+			pluginInfo->dwPluginID,
+			pluginInfo->strPluginName.c_str());
 
 		// Check if the plugin is ready for patching
-		if (!pluginInfo.pPlugin->ReadyForPatch())
+		if (!pluginInfo->pPlugin->ReadyForPatch())
 		{
 			printf("ERROR: Plugin '%s' is not configured or not ready for patching.\n",
-				pluginInfo.strPluginName.c_str());
+				pluginInfo->strPluginName.c_str());
 			printf("       Please run the GUI version of MPQDraft to configure this plugin first.\n");
-			QDebugOut("ERROR: Plugin '%s' is not ready for patching", pluginInfo.strPluginName.c_str());
+			QDebugOut("ERROR: Plugin '%s' is not ready for patching", pluginInfo->strPluginName.c_str());
 			return FALSE;
 		}
 
-		printf("Plugin '%s' is ready for patching.\n", pluginInfo.strPluginName.c_str());
-		QDebugOut("Plugin '%s' is ready for patching", pluginInfo.strPluginName.c_str());
+		printf("Plugin '%s' is ready for patching.\n", pluginInfo->strPluginName.c_str());
+		QDebugOut("Plugin '%s' is ready for patching", pluginInfo->strPluginName.c_str());
 
-		// Create the module entry
-		MPQDRAFTPLUGINMODULE m;
-		m.dwComponentID = pluginInfo.dwPluginID;
-		m.dwModuleID = 0;
-		m.bExecute = TRUE;
-		strcpy(m.szModuleFileName, pluginInfo.strFileName.c_str());
-		modules.push_back(m);
-
-		// Note: We don't call FreeLibrary here because the DLL needs to stay loaded
-		// for the patcher to use it
+		// Get all modules for this plugin (plugin DLL + any auxiliary modules)
+		std::vector<MPQDRAFTPLUGINMODULE> pluginModules = pluginManager.getPluginModules(pluginPath);
+		for (const auto& m : pluginModules)
+		{
+			modules.push_back(m);
+		}
 	}
+
+	// Note: PluginManager's destructor will call FreeLibrary on the plugin DLLs.
+	// This is fine because the patcher spawns a new process and loads the DLLs
+	// there based on the file paths in the MPQDRAFTPLUGINMODULE entries.
 
 	return TRUE;
 }

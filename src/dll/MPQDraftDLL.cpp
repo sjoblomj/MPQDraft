@@ -9,7 +9,7 @@
 #include <windows.h>
 #include <assert.h>
 #include <crtdbg.h>
-#include <QDebug.h>
+#include "../common/QDebug.h"
 #include "MPQDraftDLL.h"
 
 // Typedefs for the Storm function pointers we're going to use in this DLL
