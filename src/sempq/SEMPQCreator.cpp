@@ -10,9 +10,12 @@
 
 #include "SEMPQCreator.h"
 #include "SEMPQData.h"
+#include "../core/MPQDraftPlugin.h"
+
+#ifdef _WIN32
+// Windows implementation
 #include "../common/QResource.h"
 #include "../app/resource_ids.h"
-#include "../core/MPQDraftPlugin.h"
 #include <windows.h>
 #include <stdio.h>
 #include <shlwapi.h>
@@ -534,3 +537,50 @@ static STUBDATA* CreateStubDataFromParams(const SEMPQCreationParams& params, std
 
 	return pDataSEMPQ;
 }
+
+#else // !_WIN32
+
+// Linux/non-Windows stub implementation
+// SEMPQ creation is Windows-only functionality
+
+bool SEMPQCreator::createSEMPQ(
+	const SEMPQCreationParams& params,
+	ProgressCallback progressCallback,
+	CancellationCheck cancellationCheck,
+	std::string& errorMessage)
+{
+	errorMessage = "SEMPQ creation is only supported on Windows";
+	return false;
+}
+
+bool SEMPQCreator::writeStubToSEMPQ(
+	const SEMPQCreationParams& params,
+	ProgressCallback progressCallback,
+	CancellationCheck cancellationCheck,
+	std::string& errorMessage)
+{
+	errorMessage = "SEMPQ creation is only supported on Windows";
+	return false;
+}
+
+bool SEMPQCreator::writePluginsToSEMPQ(
+	const SEMPQCreationParams& params,
+	ProgressCallback progressCallback,
+	CancellationCheck cancellationCheck,
+	std::string& errorMessage)
+{
+	errorMessage = "SEMPQ creation is only supported on Windows";
+	return false;
+}
+
+bool SEMPQCreator::writeMPQToSEMPQ(
+	const SEMPQCreationParams& params,
+	ProgressCallback progressCallback,
+	CancellationCheck cancellationCheck,
+	std::string& errorMessage)
+{
+	errorMessage = "SEMPQ creation is only supported on Windows";
+	return false;
+}
+
+#endif // _WIN32

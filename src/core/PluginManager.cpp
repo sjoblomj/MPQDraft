@@ -8,7 +8,7 @@
 
 // PluginManager.cpp : Implementation of frontend-free plugin management
 
-#include "pluginmanager.h"
+#include "PluginManager.h"
 #include "../dll/PatcherLimits.h"  // For MAX_MPQDRAFT_PLUGINS, MAX_AUXILIARY_MODULES
 #include <cstring>
 

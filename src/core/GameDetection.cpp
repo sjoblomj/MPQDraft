@@ -7,6 +7,9 @@
 */
 
 #include "GameDetection.h"
+#include "PatcherFlags.h"
+#include <map>
+#include <set>
 
 #ifdef _WIN32
 #include <windows.h>

@@ -10,7 +10,18 @@
 #if !defined(SEMPQDATA_H)
 #define SEMPQDATA_H
 
+#ifdef _WIN32
 #include <windows.h>
+#else
+// Stub types for non-Windows builds
+typedef int BOOL;
+typedef const char* LPCSTR;
+typedef char* LPSTR;
+typedef unsigned long DWORD;
+#define TRUE 1
+#define FALSE 0
+#endif
+
 #include "PatcherFlags.h"
 
 // SEMPQs are fairly complicated. They consist of, in order, the SEMPQ executable stub, and Embedded File System (EFS), and the MPQ itself. Apart from the STUBDATA resource, the SEMPQ portion is invariant. The EFS contains all the plugins and plugin support files, as well as the MPQDraft DLL itself. The MPQ is just the MPQ used when creating the SEMPQ; originally, Storm would not load MPQs which were not at the very end of the disk file, but that restriction has since been removed to support the strong digital signature in Warcraft III.
@@ -43,7 +54,11 @@ struct PATCHTARGETEX
 };
 
 // This STUBDATA is a resource in the SEMPQ used to store info about the patching operation to be performed. This data is overwritten when creating the SEMPQ. Perhaps at some point this should be changed to be a data file embedded in the SEMPQ's EFS, as that would be easier than overwriting the resource. There was a reason for originally using a resource, but it's become obsolete (rather, it was an idea for a feature in the future, which was never actually implemented and ultimately abandoned).
+#ifdef _WIN32
 #include <pshpack1.h>
+#else
+#pragma pack(push, 1)
+#endif
 struct STUBDATA
 {
 	DWORD dwDummy;	// Don't ask what this is; it's a long story
@@ -57,6 +72,10 @@ struct STUBDATA
 
 	// The actual strings used in PATCHTARGETEX will reside here
 };
+#ifdef _WIN32
 #include <poppack.h>
+#else
+#pragma pack(pop)
+#endif
 
 #endif
