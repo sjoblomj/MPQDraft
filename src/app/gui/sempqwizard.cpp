@@ -10,9 +10,9 @@
 
 #include "sempqwizard.h"
 #include "pluginpage.h"
-#include "gamedata_qt.h"
+#include "helpers/gamedata_qt.h"
 #include "common/SempqCreatorMock.h"
-#include "core/sempqparamsbuilder.h"
+#include "helpers/sempqparamsbuilder.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFileDialog>

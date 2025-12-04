@@ -1,8 +1,8 @@
 #ifndef GAMEDATA_QT_H
 #define GAMEDATA_QT_H
 
-#include "core/gamedata.h"
-#include "core/gamedetection.h"
+#include "../../../core/GameData.h"
+#include "../../../core/GameDetection.h"
 #include <QString>
 #include <QVector>
 

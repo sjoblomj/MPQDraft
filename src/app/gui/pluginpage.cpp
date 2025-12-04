@@ -9,7 +9,7 @@
 */
 
 #include "pluginpage.h"
-#include "common/patcher.h"
+#include "../../dll/PatcherLimits.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFileDialog>

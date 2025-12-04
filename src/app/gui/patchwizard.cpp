@@ -10,10 +10,10 @@
 
 #include "patchwizard.h"
 #include "pluginpage.h"
-#include "common/patcher.h"
-#include "core/gamedata.h"
-#include "core/gamedetection.h"
-#include "gamedata_qt.h"
+#include "../../dll/PatcherLimits.h"
+#include "../../core/GameData.h"
+#include "../../core/GameDetection.h"
+#include "helpers/gamedata_qt.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFileDialog>

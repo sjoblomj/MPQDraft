@@ -15,7 +15,7 @@
 #include <vector>
 #include <functional>
 #include <cstdint>
-#include "mpqdraftplugin.h"  // For MPQDRAFTPLUGINMODULE
+#include "../../../core/MPQDraftPlugin.h"  // For MPQDRAFTPLUGINMODULE
 
 // Progress callback function type
 // Parameters: progress (0-100), status text

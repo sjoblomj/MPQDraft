@@ -12,13 +12,9 @@
 #include <windows.h>
 #include "../core/MPQDraftPlugin.h"
 #include "../common/QInjectDLL.h"
+#include "PatcherLimits.h"
 
 // The MPQDraft patcher forms an additional layer of patching outside of the patcher in QInjectDLL. It adds on all the features necessary to do the patching MPQDraft requires, as opposed to merely providing basic patching services.
-
-// These constants define the size of arrays used in the patching process. It should be possible to remove these limitations by dynamically allocating the memory for the arrays; I just haven't (though I'm generally wary of allocating memory in target processes).
-#define MAX_PATCH_MPQS 8
-#define MAX_MPQDRAFT_PLUGINS 8
-#define MAX_AUXILIARY_MODULES 32
 
 // Data and functions related to the patch context
 

@@ -9,9 +9,9 @@
 // sempqparamsbuilder.cpp - Implementation of SEMPQ parameter building logic
 
 #include "sempqparamsbuilder.h"
-#include "gamedata.h"
+#include "../../../core/GameData.h"
+#include "../../../core/PatcherFlags.h"
 #include "../common/SempqCreatorMock.h"
-#include "../common/common.h"
 
 bool SEMPQParamsBuilder::buildParams(
     const SEMPQBasicSettings& basicSettings,

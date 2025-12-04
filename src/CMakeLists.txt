@@ -20,10 +20,10 @@ set(SOURCES
     app/gui/sempqwizard.cpp
     app/gui/pluginpage.cpp
     app/gui/common/SempqCreatorMock.cpp
-    app/gui/core/pluginmanager.cpp
-    app/gui/core/gamedata.cpp
-    app/gui/core/gamedetection.cpp
-    app/gui/core/sempqparamsbuilder.cpp
+    core/PluginManager.cpp
+    core/GameData.cpp
+    core/GameDetection.cpp
+    app/gui/helpers/sempqparamsbuilder.cpp
 )
 
 set(HEADERS
@@ -31,15 +31,16 @@ set(HEADERS
     app/gui/patchwizard.h
     app/gui/sempqwizard.h
     app/gui/pluginpage.h
-    app/gui/gamedata_qt.h
-    app/gui/common/mpqdraftplugin.h
-    app/gui/common/common.h
-    app/gui/common/patcher.h
+    app/gui/helpers/gamedata_qt.h
     app/gui/common/SempqCreatorMock.h
-    app/gui/core/pluginmanager.h
-    app/gui/core/gamedata.h
-    app/gui/core/gamedetection.h
-    app/gui/core/sempqparamsbuilder.h
+    core/PluginManager.h
+    core/GameData.h
+    core/GameDetection.h
+    core/MPQDraftPlugin.h
+    core/PatcherFlags.h
+    core/PatcherApi.h
+    dll/PatcherLimits.h
+    app/gui/helpers/sempqparamsbuilder.h
 )
 
 # Resource files
@@ -73,7 +74,8 @@ endif()
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/app/gui
     ${CMAKE_CURRENT_SOURCE_DIR}/app/gui/common
-    ${CMAKE_CURRENT_SOURCE_DIR}/app/gui/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/app/gui/helpers
+    ${CMAKE_CURRENT_SOURCE_DIR}/core
 )
 
 # Compiler flags for MinGW cross-compilation

@@ -25,7 +25,7 @@
 #include <QThread>
 #include <cstdint>
 
-#include "core/sempqparamsbuilder.h"
+#include "helpers/sempqparamsbuilder.h"
 
 // Forward declarations
 class PluginPage;

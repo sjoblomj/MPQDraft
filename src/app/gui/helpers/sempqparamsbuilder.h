@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
-#include "../common/mpqdraftplugin.h"  // For MPQDRAFTPLUGINMODULE
+#include "../../../core/MPQDraftPlugin.h"  // For MPQDRAFTPLUGINMODULE
 
 // Forward declarations
 struct GameComponent;
