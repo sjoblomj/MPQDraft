@@ -19,7 +19,7 @@ set(SOURCES
     app/gui/patchwizard.cpp
     app/gui/sempqwizard.cpp
     app/gui/pluginpage.cpp
-    app/gui/common/SempqCreatorMock.cpp
+    sempq/SEMPQCreator.cpp
     core/PluginManager.cpp
     core/GameData.cpp
     core/GameDetection.cpp
@@ -32,7 +32,7 @@ set(HEADERS
     app/gui/sempqwizard.h
     app/gui/pluginpage.h
     app/gui/helpers/gamedata_qt.h
-    app/gui/common/SempqCreatorMock.h
+    sempq/SEMPQCreator.h
     core/PluginManager.h
     core/GameData.h
     core/GameDetection.h
@@ -73,9 +73,9 @@ endif()
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/app/gui
-    ${CMAKE_CURRENT_SOURCE_DIR}/app/gui/common
     ${CMAKE_CURRENT_SOURCE_DIR}/app/gui/helpers
     ${CMAKE_CURRENT_SOURCE_DIR}/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/sempq
 )
 
 # Compiler flags for MinGW cross-compilation

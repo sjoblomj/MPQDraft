@@ -11,7 +11,7 @@
 #include "sempqwizard.h"
 #include "pluginpage.h"
 #include "helpers/gamedata_qt.h"
-#include "common/SempqCreatorMock.h"
+#include "../../sempq/SEMPQCreator.h"
 #include "helpers/sempqparamsbuilder.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>

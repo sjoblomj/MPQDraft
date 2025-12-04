@@ -11,7 +11,7 @@
 #include "sempqparamsbuilder.h"
 #include "../../../core/GameData.h"
 #include "../../../core/PatcherFlags.h"
-#include "../common/SempqCreatorMock.h"
+#include "../../../sempq/SEMPQCreator.h"
 
 bool SEMPQParamsBuilder::buildParams(
     const SEMPQBasicSettings& basicSettings,

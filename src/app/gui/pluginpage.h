@@ -16,7 +16,7 @@
 #include <QPushButton>
 #include <QLabel>
 #include "../../core/PluginManager.h"
-#include "common/SempqCreatorMock.h"  // For MPQDRAFTPLUGINMODULE
+#include "../../sempq/SEMPQCreator.h"  // For MPQDRAFTPLUGINMODULE
 
 class PluginPage : public QWizardPage
 {
