@@ -18,7 +18,10 @@
 	#error include 'stdafx.h' before including this file for PCH
 #endif
 
-#include "../../core/Common.h"
+#include "../../core/PatcherFlags.h"
+#include "../../core/PatcherApi.h"
+#include "../../sempq/SEMPQData.h"
+#include "../../core/GameDetection.h"
 #include "../cli/CommandParser.h"
 
 // A couple of functions to derive hash keys from CStrings. No idea why these 

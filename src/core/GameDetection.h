@@ -6,14 +6,13 @@
 	The Initial Developer of the Original Code is Justin Olbrantz. The Original Code Copyright (C) 2008 Justin Olbrantz. All Rights Reserved.
 */
 
-// MPQDraft.cpp : Forwards to the actual implementation files
-//
-// This file now just includes the actual implementation:
-// - GameData.cpp for game definitions
-// - gui/main.cpp for GUI application class
+// Functions for locating installed games
+#if !defined(GAMEDETECTION_H)
+#define GAMEDETECTION_H
 
-#include "gui/stdafx_gui.h"
-#include "MPQDraft.h"
+#include <string>
 
-// The actual implementation is now in gui/main.cpp
-// This file exists only for compatibility with the build system
+// Locates an installed game component file path through the game's registry entry
+std::string locateComponent(const std::string& registryKey, const std::string& registryValue, const std::string& fileName);
+
+#endif

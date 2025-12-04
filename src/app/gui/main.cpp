@@ -16,8 +16,9 @@
 #include <debugapi.h>
 #include "../../core/MPQDraftPlugin.h"
 #include "CommonPages.h"
+#include "GameDataAdapter.h"
 #include "../cli/MPQDraftCLI.h"
-#include "../gamedata.h"
+#include "../../core/GameData.h"
 
 
 #ifdef _DEBUG
@@ -92,6 +93,9 @@ BOOL CMPQDraft::InitInstance()
 #endif
 
 	QResourceInitialize();
+
+	// Initialize legacy game data adapter
+	InitLegacyGameData();
 
 	// Set the registry key MFC will use for saving/loading settings
 	CString strRegKey;
@@ -185,6 +189,9 @@ int CMPQDraft::ExitInstance()
 	// Clean up QResource and any files we may have extracted
 	DeleteTemporaryFiles();
 	QResourceDestroy();
+
+	// Clean up legacy game data adapter
+	CleanupLegacyGameData();
 
 	return CWinApp::ExitInstance();
 }

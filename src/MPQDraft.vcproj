@@ -214,11 +214,15 @@
 				>
 			</File>
 			<File
-				RelativePath=".\Common.cpp"
+				RelativePath=".\core\GameDetection.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\CommonPages.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GameDataAdapter.cpp"
 				>
 			</File>
 			<File
@@ -280,6 +284,10 @@
 			</File>
 			<File
 				RelativePath=".\CommonPages.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GameDataAdapter.h"
 				>
 			</File>
 			<File

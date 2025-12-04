@@ -131,10 +131,10 @@
     <ClCompile Include="common\QResource.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="core\Common.cpp">
+    <ClCompile Include="core\GameDetection.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="app\PluginLoader.cpp">
+    <ClCompile Include="core\PluginManager.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="app\cli\stdafx_cli.cpp">
@@ -150,7 +150,7 @@
     <ClInclude Include="common\QResource.h" />
     <ClInclude Include="core\Common.h" />
     <ClInclude Include="app\resource_ids.h" />
-    <ClInclude Include="app\PluginLoader.h" />
+    <ClInclude Include="core\PluginManager.h" />
     <ClInclude Include="app\cli\stdafx_cli.h" />
     <ClInclude Include="app\cli\MPQDraftCLI.h" />
     <ClInclude Include="app\cli\CommandParser.h" />

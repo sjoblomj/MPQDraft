@@ -11,8 +11,8 @@
 // Other than those things mentioned, that just leaves plugin loading and operation for us to deal with.
 
 #include <windows.h>
-#include <QHookAPI.h>
-#include "../core/Common.h"
+#include "../common/QHookAPI.h"
+#include "../core/PatcherApi.h"
 #include "Patcher.h"
 
 extern "C" BOOL WINAPI MPQDraftInitialize(IN MPQDRAFTPATCHERDATA *pData, IN DWORD nDataSize);

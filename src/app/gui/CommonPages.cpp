@@ -10,12 +10,23 @@
 #include "../MPQDraft.h"
 #include "resource.h"
 #include "CommonPages.h"
+#include "GameDataAdapter.h"
+#include "../../core/GameDetection.h"
+
+#include <string>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+
+// Checks if a game is installed by verifying its first component file exists
+static BOOL IsGameInstalled(const PROGRAMENTRY *lpProgram)
+{
+	return !locateComponent(lpProgram->szRegistryKey, lpProgram->szRegistryValue,
+		lpProgram->files[0].szFileName).empty();
+}
 
 /////////////////////////////////////////////////////////////////////////////
 // CPatchTargetPage property page
@@ -237,8 +248,7 @@ void CPatchTargetPage::FindSupportedApps()
 		lpProgram->szProgramName != NULL; lpProgram++)
 	{
 		// If we're in patch mode, only list those that are found on the HD
-		if (!bListAllApps && 
-			!LocateGame(lpProgram->szRegistryKey, lpProgram->szRegistryValue))
+		if (!bListAllApps && !IsGameInstalled(lpProgram))
 			continue;
 
 		lvi.pszText = (LPSTR)lpProgram->szProgramName;
@@ -276,13 +286,13 @@ void CPatchTargetPage::FindSupportedFiles(const PROGRAMENTRY *lpSelProgram)
 	{
 		if (!bListAllFiles)
 		{
-			if (!LocateComponent(lpSelProgram->szRegistryKey, 
-				lpSelProgram->szRegistryValue, lpFile->szFileName, NULL))
+			if (locateComponent(lpSelProgram->szRegistryKey,
+				lpSelProgram->szRegistryValue, lpFile->szFileName).empty())
 				continue;
 			// If there is also a patch target filename, verify that
 			else if (lpFile->szTargetFileName
-				&& !LocateComponent(lpSelProgram->szRegistryKey, 
-				lpSelProgram->szRegistryValue, lpFile->szTargetFileName, NULL))
+				&& locateComponent(lpSelProgram->szRegistryKey,
+				lpSelProgram->szRegistryValue, lpFile->szTargetFileName).empty())
 				continue;
 		}
 
@@ -496,13 +506,12 @@ BOOL CPatchTargetPage::GetProgramPath(CString &strPath)
 		// Yes. Get its path, if possible
 		const PROGRAMENTRY *lpProgram = GetProgram(m_nSelProgram);
 		const PROGRAMFILEENTRY *lpFile = GetFile(m_nSelFile);
-		char szFilePath[MAX_PATH + 1] = "";
 
-		VERIFY(LocateComponent(lpProgram->szRegistryKey,
-			lpProgram->szRegistryValue, lpFile->szFileName, szFilePath)
-			|| bAllowCustomPaths);
+		std::string filePath = locateComponent(lpProgram->szRegistryKey,
+			lpProgram->szRegistryValue, lpFile->szFileName);
+		VERIFY(!filePath.empty() || bAllowCustomPaths);
 
-		strPath = szFilePath;
+		strPath = filePath.c_str();
 	}
 	else
 	{
@@ -527,18 +536,17 @@ BOOL CPatchTargetPage::GetPatchTargetPath(CString &strPath)
 	{
 		const PROGRAMENTRY *lpProgram = GetProgram(m_nSelProgram);
 		const PROGRAMFILEENTRY *lpFile = GetFile(m_nSelFile);
-		char szFilePath[MAX_PATH + 1] = "";
 
 		// Is the patch target the same as the program path to spawn?
 		if (!strlen(lpFile->szTargetFileName))
 			return TRUE;	// Yes
 
 		// Get the patch target filename this time
-		VERIFY(LocateComponent(lpProgram->szRegistryKey,
-			lpProgram->szRegistryValue, lpFile->szTargetFileName, szFilePath)
-			|| bAllowCustomPaths);
+		std::string filePath = locateComponent(lpProgram->szRegistryKey,
+			lpProgram->szRegistryValue, lpFile->szTargetFileName);
+		VERIFY(!filePath.empty() || bAllowCustomPaths);
 
-		strPath = szFilePath;
+		strPath = filePath.c_str();
 	}
 	else
 	{

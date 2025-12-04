@@ -42,11 +42,11 @@
     <ClCompile Include="common\QResource.cpp">
       <Filter>Source Files\common</Filter>
     </ClCompile>
-    <ClCompile Include="core\Common.cpp">
+    <ClCompile Include="core\GameDetection.cpp">
       <Filter>Source Files\core</Filter>
     </ClCompile>
-    <ClCompile Include="app\PluginLoader.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="core\PluginManager.cpp">
+      <Filter>Source Files\core</Filter>
     </ClCompile>
     <ClCompile Include="app\cli\stdafx_cli.cpp">
       <Filter>Source Files\cli</Filter>
@@ -77,8 +77,8 @@
     <ClInclude Include="app\resource_ids.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="app\PluginLoader.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="core\PluginManager.h">
+      <Filter>Header Files\core</Filter>
     </ClInclude>
     <ClInclude Include="app\cli\stdafx_cli.h">
       <Filter>Header Files\cli</Filter>

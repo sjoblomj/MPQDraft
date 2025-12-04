@@ -20,7 +20,7 @@
 			OutputDirectory=".\Release"
 			IntermediateDirectory=".\Release"
 			ConfigurationType="1"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;..\MPQDraft.vsprops"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;..\..\MPQDraft.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -49,8 +49,6 @@
 				Name="VCCLCompilerTool"
 				PreprocessorDefinitions="WIN32,NDEBUG,_WINDOWS;_CRT_SECURE_NO_WARNINGS"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderThrough="stdafx.h"
-				PrecompiledHeaderFile=".\Release/MPQStub.pch"
 				AssemblerListingLocation=".\Release/"
 				ObjectFile=".\Release/"
 				ProgramDataBaseFileName=".\Release/"
@@ -72,7 +70,7 @@
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
 				AdditionalDependencies="shlwapi.lib psapi.lib"
-				OutputFile="..\MPQStub.exe"
+				OutputFile="..\..\MPQStub.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\Release/MPQStub.pdb"
@@ -138,8 +136,6 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderThrough="stdafx.h"
-				PrecompiledHeaderFile=".\Debug/MPQStub.pch"
 				AssemblerListingLocation=".\Debug/"
 				ObjectFile=".\Debug/"
 				ProgramDataBaseFileName=".\Debug/"
@@ -162,7 +158,7 @@
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
 				AdditionalDependencies="shlwapi.lib psapi.lib"
-				OutputFile="../MPQStub.exe"
+				OutputFile="../../MPQStub.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
@@ -202,7 +198,7 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath="..\Common.cpp"
+				RelativePath="..\..\core\GameDetection.cpp"
 				>
 			</File>
 			<File
@@ -210,36 +206,16 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\Common\QDebug.cpp"
+				RelativePath="..\..\..\Common\QDebug.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Common\QInjectDLL.cpp"
+				RelativePath="..\..\..\Common\QInjectDLL.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Common\QResource.cpp"
+				RelativePath="..\..\..\Common\QResource.cpp"
 				>
-			</File>
-			<File
-				RelativePath=".\stdafx.cpp"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\Stub.rc"
@@ -251,23 +227,19 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
-				RelativePath="..\Common.h"
+				RelativePath="..\..\core\Common.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Common\QDebug.h"
+				RelativePath="..\..\..\Common\QDebug.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Common\QInjectDLL.h"
+				RelativePath="..\..\..\Common\QInjectDLL.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Common\QResource.h"
-				>
-			</File>
-			<File
-				RelativePath=".\stdafx.h"
+				RelativePath="..\..\..\Common\QResource.h"
 				>
 			</File>
 		</Filter>

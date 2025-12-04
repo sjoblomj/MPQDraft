@@ -75,9 +75,7 @@
     </Midl>
     <ClCompile>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MPQDRAFTDLL_EXPORTS;VISUALCPPNET;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeader />
-      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>.\Release/MPQDraftDLL.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <AssemblerListingLocation>.\Release/</AssemblerListingLocation>
       <ObjectFileName>.\Release/</ObjectFileName>
       <ProgramDataBaseFileName>.\Release/</ProgramDataBaseFileName>
@@ -118,9 +116,7 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PrecompiledHeader />
-      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>.\Debug/MPQDraftDLL.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <AssemblerListingLocation>.\Debug/</AssemblerListingLocation>
       <ObjectFileName>.\Debug/</ObjectFileName>
       <ProgramDataBaseFileName>.\Debug/</ProgramDataBaseFileName>
@@ -151,7 +147,7 @@
     <ClCompile Include="..\common\QDebug.cpp" />
     <ClCompile Include="..\common\QHookAPI.cpp" />
     <ClCompile Include="..\common\QInjectDLL.cpp" />
-    <ClCompile Include="..\core\Common.cpp" />
+    <ClCompile Include="..\core\GameDetection.cpp" />
     <ClCompile Include="ExceptionHandlers.cpp" />
     <ClCompile Include="MPQDraftDLL.cpp">
       <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">All</AssemblerOutput>
@@ -159,7 +155,6 @@
     </ClCompile>
     <ClCompile Include="Patcher.cpp" />
     <ClCompile Include="PluginServer.cpp" />
-    <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="MPQDraftDLL.rc" />
@@ -171,7 +166,6 @@
     <ClInclude Include="..\core\Common.h" />
     <ClInclude Include="MPQDraftDLL.h" />
     <ClInclude Include="Patcher.h" />
-    <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

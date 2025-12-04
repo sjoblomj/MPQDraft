@@ -6,14 +6,20 @@
 	The Initial Developer of the Original Code is Justin Olbrantz. The Original Code Copyright (C) 2008 Justin Olbrantz. All Rights Reserved.
 */
 
-// MPQDraft.cpp : Forwards to the actual implementation files
-//
-// This file now just includes the actual implementation:
-// - GameData.cpp for game definitions
-// - gui/main.cpp for GUI application class
+// Patching flags and component/module IDs for the MPQDraft system
+#if !defined(PATCHERFLAGS_H)
+#define PATCHERFLAGS_H
 
-#include "gui/stdafx_gui.h"
-#include "MPQDraft.h"
+// Component and module IDs for MPQDraft modules
+#define MPQDRAFT_COMPONENT 0x2f0b5f48
+#define MPQDRAFTDLL_MODULE 0xa0fcc4e7
 
-// The actual implementation is now in gui/main.cpp
-// This file exists only for compatibility with the build system
+// Patching flags
+// Redirect file open attempts that explicitly specify an archive to open the file in
+#define MPQD_EXTENDED_REDIR 0x10000
+// Do not inject the MPQDraft system into child processes create by the patch target
+#define MPQD_NO_SPAWNING  0x20000
+#define MPQD_USE_D2_STORM 0x40000
+#define MPQD_DETECT_STORM 0x80000
+
+#endif

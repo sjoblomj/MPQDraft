@@ -169,14 +169,15 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx_cli.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="core\Common.cpp">
+    <ClCompile Include="core\GameDetection.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="app\gamedata.cpp">
+    <ClCompile Include="core\GameData.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="app\gui\BitmapDialog.cpp" />
     <ClCompile Include="app\gui\CommonPages.cpp" />
+    <ClCompile Include="app\gui\GameDataAdapter.cpp" />
     <ClCompile Include="app\gui\dib256.cpp" />
     <ClCompile Include="app\gui\dibpal.cpp" />
     <ClCompile Include="app\gui\main.cpp" />
@@ -185,10 +186,10 @@
     <ClCompile Include="app\gui\ProgressWnd.cpp" />
     <ClCompile Include="app\gui\SEMPQWizard.cpp" />
     <ClCompile Include="app\MPQDraft.cpp" />
-    <ClCompile Include="app\PluginLoader.cpp">
+    <ClCompile Include="core\PluginManager.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="app\SEMPQCreator.cpp">
+    <ClCompile Include="sempq\SEMPQCreator.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="app\gui\stdafx_gui.cpp">
@@ -200,15 +201,16 @@
     <ClInclude Include="core\MPQDraftPlugin.h" />
     <ClInclude Include="common\QDebug.h" />
     <ClInclude Include="common\QResource.h" />
-    <ClInclude Include="app\gamedata.h" />
+    <ClInclude Include="core\GameData.h" />
     <ClInclude Include="app\resource_ids.h" />
-    <ClInclude Include="app\SEMPQCreator.h" />
+    <ClInclude Include="sempq\SEMPQCreator.h" />
     <ClInclude Include="app\cli\stdafx_cli.h" />
     <ClInclude Include="app\cli\MPQDraftCLI.h" />
     <ClInclude Include="app\cli\CommandParser.h" />
-    <ClInclude Include="core\Common.h" />
+    <ClInclude Include="core\PluginManager.h" />
     <ClInclude Include="app\gui\BitmapDialog.h" />
     <ClInclude Include="app\gui\CommonPages.h" />
+    <ClInclude Include="app\gui\GameDataAdapter.h" />
     <ClInclude Include="app\gui\dib256.h" />
     <ClInclude Include="app\gui\dibpal.h" />
     <ClInclude Include="app\gui\main.h" />
@@ -219,7 +221,7 @@
     <ClInclude Include="app\gui\SEMPQWizard.h" />
     <ClInclude Include="app\gui\stdafx_gui.h" />
     <ClInclude Include="app\MPQDraft.h" />
-    <ClInclude Include="app\PluginLoader.h" />
+
   </ItemGroup>
   <ItemGroup>
     <Image Include="app\gui\res\Diablo.ico" />
@@ -260,7 +262,7 @@
       <Project>{77d73e31-6d14-45c9-87dd-32a519213ff6}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="stub\MPQStub.vcxproj">
+    <ProjectReference Include="sempq\stub\MPQStub.vcxproj">
       <Project>{c7e295b1-0aa2-4b15-927f-89e725474860}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
