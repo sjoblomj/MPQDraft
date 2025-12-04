@@ -19,12 +19,7 @@
     <Filter Include="Header Files\cli">
       <UniqueIdentifier>{9b8d6e2f-4a3c-5d9b-8f6e-2c5g7b8d0f1a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\gui">
-      <UniqueIdentifier>{1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\gui">
-      <UniqueIdentifier>{2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e}</UniqueIdentifier>
-    </Filter>
+
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="core\GameDetection.cpp">
@@ -51,12 +46,6 @@
     <ClCompile Include="core\PluginManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="app\gui\main.cpp">
-      <Filter>Source Files\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="app\gui\stdafx_gui.cpp">
-      <Filter>Source Files\gui</Filter>
-    </ClCompile>
     <ClCompile Include="app\cli\stdafx_cli.cpp">
       <Filter>Source Files\cli</Filter>
     </ClCompile>
@@ -65,33 +54,6 @@
     </ClCompile>
     <ClCompile Include="app\cli\CommandParser.cpp">
       <Filter>Source Files\cli</Filter>
-    </ClCompile>
-    <ClCompile Include="gui\BitmapDialog.cpp">
-      <Filter>Source Files\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="gui\CommonPages.cpp">
-      <Filter>Source Files\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="gui\GameDataAdapter.cpp">
-      <Filter>Source Files\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="gui\dib256.cpp">
-      <Filter>Source Files\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="gui\dibpal.cpp">
-      <Filter>Source Files\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="gui\MainMenu.cpp">
-      <Filter>Source Files\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="gui\patchwizard.cpp">
-      <Filter>Source Files\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="gui\ProgressWnd.cpp">
-      <Filter>Source Files\gui</Filter>
-    </ClCompile>
-    <ClCompile Include="gui\SEMPQWizard.cpp">
-      <Filter>Source Files\gui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -122,36 +84,6 @@
     <ClInclude Include="app\cli\CommandParser.h">
       <Filter>Header Files\cli</Filter>
     </ClInclude>
-    <ClInclude Include="gui\BitmapDialog.h">
-      <Filter>Header Files\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="gui\CommonPages.h">
-      <Filter>Header Files\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="gui\GameDataAdapter.h">
-      <Filter>Header Files\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="gui\dib256.h">
-      <Filter>Header Files\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="gui\dibpal.h">
-      <Filter>Header Files\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="gui\MainMenu.h">
-      <Filter>Header Files\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="gui\patchwizard.h">
-      <Filter>Header Files\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="gui\ProgressWnd.h">
-      <Filter>Header Files\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="gui\resource.h">
-      <Filter>Header Files\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="gui\SEMPQWizard.h">
-      <Filter>Header Files\gui</Filter>
-    </ClInclude>
     <ClInclude Include="sempq\SEMPQCreator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -161,94 +93,6 @@
     <ClInclude Include="core\PluginManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="app\gui\main.h">
-      <Filter>Header Files\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="app\gui\stdafx_gui.h">
-      <Filter>Header Files\gui</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="gui\res\Diablo.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\Diablo2.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\DLL.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\hellfire.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\lomse.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\MainMenu.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\MinButtonDown.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\MinButtonUp.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\MPQ.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\MPQDraft.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\PatchButtonDown.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\PatchButtonUp.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\SEMPQButtonDown.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\SEMPQButtonUp.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\Starcraft.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\StarEdit.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\War2BNE.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\War2Edit.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\War3.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\War3Edit.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\War3Head.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\War3x.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\Wizard.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\XButtonDown.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="gui\res\XButtonUp.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="MPQDraft.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="MPQDraftDLL.dll">

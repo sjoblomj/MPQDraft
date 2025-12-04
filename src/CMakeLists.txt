@@ -14,37 +14,37 @@ find_package(Qt6 REQUIRED COMPONENTS Core Widgets Svg)
 
 # Source files
 set(SOURCES
-    src/main.cpp
-    src/mainwindow.cpp
-    src/patchwizard.cpp
-    src/sempqwizard.cpp
-    src/pluginpage.cpp
-    src/common/SempqCreatorMock.cpp
-    src/core/pluginmanager.cpp
-    src/core/gamedata.cpp
-    src/core/gamedetection.cpp
-    src/core/sempqparamsbuilder.cpp
+    app/gui/main.cpp
+    app/gui/mainwindow.cpp
+    app/gui/patchwizard.cpp
+    app/gui/sempqwizard.cpp
+    app/gui/pluginpage.cpp
+    app/gui/common/SempqCreatorMock.cpp
+    app/gui/core/pluginmanager.cpp
+    app/gui/core/gamedata.cpp
+    app/gui/core/gamedetection.cpp
+    app/gui/core/sempqparamsbuilder.cpp
 )
 
 set(HEADERS
-    src/mainwindow.h
-    src/patchwizard.h
-    src/sempqwizard.h
-    src/pluginpage.h
-    src/gamedata_qt.h
-    src/common/mpqdraftplugin.h
-    src/common/common.h
-    src/common/patcher.h
-    src/common/SempqCreatorMock.h
-    src/core/pluginmanager.h
-    src/core/gamedata.h
-    src/core/gamedetection.h
-    src/core/sempqparamsbuilder.h
+    app/gui/mainwindow.h
+    app/gui/patchwizard.h
+    app/gui/sempqwizard.h
+    app/gui/pluginpage.h
+    app/gui/gamedata_qt.h
+    app/gui/common/mpqdraftplugin.h
+    app/gui/common/common.h
+    app/gui/common/patcher.h
+    app/gui/common/SempqCreatorMock.h
+    app/gui/core/pluginmanager.h
+    app/gui/core/gamedata.h
+    app/gui/core/gamedetection.h
+    app/gui/core/sempqparamsbuilder.h
 )
 
 # Resource files
 set(RESOURCES
-    resources/mpqdraft.qrc
+    app/gui/resources/mpqdraft.qrc
 )
 
 # Create executable
@@ -71,9 +71,9 @@ endif()
 
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/common
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/app/gui
+    ${CMAKE_CURRENT_SOURCE_DIR}/app/gui/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/app/gui/core
 )
 
 # Compiler flags for MinGW cross-compilation
@@ -95,4 +95,3 @@ endif()
 install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION bin
 )
-
