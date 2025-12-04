@@ -6,7 +6,16 @@
 	The Initial Developer of the Original Code is Justin Olbrantz. The Original Code Copyright (C) 2008 Justin Olbrantz. All Rights Reserved.
 */
 
-// stdafx_cli.cpp : source file that includes just the standard includes
-// This file is used to generate the precompiled header for CLI components.
+// main_cli.h : CLI entry point declaration
 
-#include "stdafx_cli.h"
+#ifndef MAIN_CLI_H
+#define MAIN_CLI_H
+
+// Entry point for the CLI
+// Called from the main entry point when CLI arguments are provided
+// lpCmdLine: Command line string (without the executable name)
+// Returns: 0 on success, non-zero on failure
+int runCli(const char* lpCmdLine);
+
+#endif // MAIN_CLI_H
+

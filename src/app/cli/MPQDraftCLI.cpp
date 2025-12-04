@@ -9,7 +9,12 @@
 // MPQDraftCLI.cpp : Implementation of command-line interface for MPQDraft
 //
 
-#include "stdafx_cli.h"
+#include <windows.h>
+#include <shlwapi.h>
+#include <stdio.h>
+#include <string>
+#include <vector>
+#include "../../common/QDebug.h"
 #include "MPQDraftCLI.h"
 #include "CommandParser.h"
 #include "../../core/PluginManager.h"

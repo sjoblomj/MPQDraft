@@ -14,7 +14,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core Widgets Svg)
 
 # Source files
 set(SOURCES
-    app/gui/main.cpp
+    app/gui/main_gui.cpp
     app/gui/mainwindow.cpp
     app/gui/patchwizard.cpp
     app/gui/sempqwizard.cpp
@@ -27,6 +27,7 @@ set(SOURCES
 )
 
 set(HEADERS
+    app/gui/main_gui.h
     app/gui/mainwindow.h
     app/gui/patchwizard.h
     app/gui/sempqwizard.h
