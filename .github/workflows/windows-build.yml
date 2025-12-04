@@ -21,28 +21,9 @@ jobs:
           target: 'desktop'
           arch: 'win32_msvc2019'
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v1
-
-      - name: Build MPQDraft DLL and Stub with MSBuild
+      - name: Build all with CMake
         run: |
-          msbuild src/dll/MPQDraftDLL.vcxproj /p:Configuration=Release /m
-          msbuild src/sempq/stub/MPQStub.vcxproj /p:Configuration=Release /m
-
-      - name: Copy DLL and Stub to src directory for resource embedding
-        run: |
-          # The .rc file expects MPQDraftDLL.dll and MPQStub.exe in the src directory
-          Copy-Item -Path "src/Release/MPQDraftDLL.dll" -Destination "src/MPQDraftDLL.dll" -ErrorAction SilentlyContinue
-          Copy-Item -Path "src/dll/Release/MPQDraftDLL.dll" -Destination "src/MPQDraftDLL.dll" -ErrorAction SilentlyContinue
-          Copy-Item -Path "src/MPQStub.exe" -Destination "src/MPQStub.exe" -ErrorAction SilentlyContinue
-          Copy-Item -Path "src/sempq/stub/Release/MPQStub.exe" -Destination "src/MPQStub.exe" -ErrorAction SilentlyContinue
-          # Verify files exist
-          if (!(Test-Path "src/MPQDraftDLL.dll")) { Write-Error "MPQDraftDLL.dll not found"; exit 1 }
-          if (!(Test-Path "src/MPQStub.exe")) { Write-Error "MPQStub.exe not found"; exit 1 }
-
-      - name: Build MPQDraft Qt GUI with CMake
-        run: |
-          cmake -B build -S src -A Win32 -DCMAKE_BUILD_TYPE=Release
+          cmake -B build -S src -A Win32
           cmake --build build --config Release
 
       - name: Set artifact name
