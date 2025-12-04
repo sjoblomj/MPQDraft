@@ -33,6 +33,15 @@
 #include <QScrollBar>
 #include <QMenu>
 
+#ifdef _WIN32
+#include "../../core/PatcherApi.h"
+#include "../../core/PluginManager.h"
+#include "../../common/QResource.h"
+#include "../../common/QDebug.h"
+#include "../resource_ids.h"
+#include <shlwapi.h>
+#endif
+
 // Stylesheet for invalid input fields
 static const char* INVALID_FIELD_STYLE = "QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }";
 
@@ -1557,5 +1566,140 @@ void PatchWizard::performPatch()
     for (const std::string& plugin : plugins) { qDebug() << "Plugin:" << QString::fromStdString(plugin); }
     qDebug() << "===========================";
 
-    // TODO: Call the actual patcher DLL
+#ifdef _WIN32
+    // Extract the patcher DLL to a temporary location
+    char szPatcherPath[MAX_PATH + 1];
+    if (!ExtractTempResource(NULL, MAKEINTRESOURCE(IDR_PATCHERDLL), "DLL", szPatcherPath))
+    {
+        QMessageBox::critical(this, tr("Error"), tr("Failed to extract patcher DLL"));
+        qDebug("Failed to extract patcher DLL");
+        return;
+    }
+
+    // Load the patcher DLL
+    HMODULE hDLL = GetModuleHandleA(szPatcherPath);
+    if (!hDLL)
+    {
+        hDLL = LoadLibraryA(szPatcherPath);
+        if (!hDLL)
+        {
+            QMessageBox::critical(this, tr("Error"), tr("Failed to load patcher DLL: %1").arg(szPatcherPath));
+            qDebug("Failed to load patcher DLL: %s", szPatcherPath);
+            return;
+        }
+    }
+
+    // Get the patcher function
+    MPQDraftPatcherPtr MPQDraftPatcher = (MPQDraftPatcherPtr)GetProcAddress(hDLL, "MPQDraftPatcher");
+    if (!MPQDraftPatcher)
+    {
+        QMessageBox::critical(this, tr("Error"), tr("Failed to get MPQDraftPatcher function"));
+        qDebug("Failed to get MPQDraftPatcher function");
+        return;
+    }
+
+    // Load plugin modules
+    std::vector<MPQDRAFTPLUGINMODULE> modules;
+    if (!plugins.empty())
+    {
+        PluginManager pluginManager;
+        for (const std::string& pluginPath : plugins)
+        {
+            std::string errorMessage;
+            if (!pluginManager.addPlugin(pluginPath, errorMessage))
+            {
+                QMessageBox::critical(this, tr("Error"),
+                    tr("Failed to load plugin: %1\n%2").arg(QString::fromStdString(pluginPath), QString::fromStdString(errorMessage)));
+                qDebug("Failed to load plugin: %s - %s", pluginPath.c_str(), errorMessage.c_str());
+                return;
+            }
+
+            const PluginInfo* pluginInfo = pluginManager.getPluginInfo(pluginPath);
+            if (!pluginInfo)
+            {
+                QMessageBox::critical(this, tr("Error"),
+                    tr("Failed to get plugin info for: %1").arg(QString::fromStdString(pluginPath)));
+                qDebug("Failed to get plugin info for: %s", pluginPath.c_str());
+                return;
+            }
+
+            // Get all modules for this plugin
+            std::vector<MPQDRAFTPLUGINMODULE> pluginModules = pluginManager.getPluginModules(pluginPath);
+            for (const auto& m : pluginModules)
+            {
+                modules.push_back(m);
+            }
+        }
+    }
+
+    // Convert MPQ paths to LPCSTR array
+    std::vector<std::string> mpqStdStrings;
+    std::vector<const char*> mpqPtrs;
+    for (const QString& mpq : mpqs)
+    {
+        mpqStdStrings.push_back(mpq.toStdString());
+    }
+    for (const std::string& mpq : mpqStdStrings)
+    {
+        mpqPtrs.push_back(mpq.c_str());
+    }
+
+    // Build flags
+    DWORD dwFlags = 0;
+    if (extendedRedir)
+        dwFlags |= MPQD_EXTENDED_REDIR;
+    if (noSpawning)
+        dwFlags |= MPQD_NO_SPAWNING;
+
+    // Build paths
+    std::string programPath = targetPath.toStdString();
+    std::string parametersStr = parameters.toStdString();
+
+    char szCommandLine[MAX_PATH * 2];
+    char szCurDir[MAX_PATH + 1];
+    char szStartDir[MAX_PATH + 1];
+
+    // Get the startup directory (directory of the target program)
+    strcpy(szStartDir, programPath.c_str());
+    PathRemoveFileSpecA(szStartDir);
+
+    // Get the current directory (directory of MPQDraft)
+    GetModuleFileNameA(NULL, szCurDir, MAX_PATH);
+    PathRemoveFileSpecA(szCurDir);
+
+    // Build the command line
+    wsprintfA(szCommandLine, "\"%s\" %s", programPath.c_str(), parametersStr.c_str());
+
+    // Get startup info
+    STARTUPINFOA si;
+    GetStartupInfoA(&si);
+
+    // Execute the patcher
+    qDebug("Calling MPQDraftPatcher with %d MPQs and %d modules", (int)mpqPtrs.size(), (int)modules.size());
+    BOOL bPatchSuccess = MPQDraftPatcher(
+        programPath.c_str(),       // Application name
+        szCommandLine,             // Command line
+        NULL,                      // Process attributes
+        NULL,                      // Thread attributes
+        FALSE,                     // Inherit handles
+        0,                         // Creation flags
+        NULL,                      // Environment
+        szStartDir,                // Current directory
+        &si,                       // Startup info
+        dwFlags,                   // Patching flags
+        szCurDir,                  // MPQDraft directory
+        programPath.c_str(),       // Spawn path (same as target)
+        (DWORD)shuntCount,         // Shunt count
+        (DWORD)mpqPtrs.size(),     // Number of MPQs
+        (DWORD)modules.size(),     // Number of modules
+        mpqPtrs.empty() ? NULL : const_cast<LPCSTR*>(&mpqPtrs[0]),  // MPQ array
+        modules.empty() ? NULL : const_cast<MPQDRAFTPLUGINMODULE*>(&modules[0])  // Module array
+    );
+
+    if (!bPatchSuccess)
+    {
+        QMessageBox::critical(this, tr("Error"), tr("MPQDraftPatcher failed"));
+        qDebug("MPQDraftPatcher failed");
+    }
+#endif
 }
