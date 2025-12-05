@@ -918,6 +918,32 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     customRegLayout->addSpacing(10);
 
+    // Command-Line Parameters
+    QHBoxLayout *customRegParamsLayout = new QHBoxLayout();
+    QLabel *customRegParamsLabel = new QLabel(tr("Command-Line Parameters (optional):"), customRegContentWidget);
+    customRegParamsLayout->addWidget(customRegParamsLabel);
+
+    QLabel *customRegParamsHelp = new QLabel(customRegContentWidget);
+    customRegParamsHelp->setText(" ? ");
+    customRegParamsHelp->setStyleSheet(
+            "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
+            "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+            "max-width: 16px; min-height: 16px; max-height: 16px; "
+            "qproperty-alignment: AlignCenter; }");
+    customRegParamsHelp->setToolTip(
+            tr("<b>Command-Line Parameters</b><br><br>"
+               "Optional arguments that will be passed to the target executable when it launches.<br><br>"
+               "These parameters are passed directly to the game executable and have no effect on MPQDraft itself."));
+    customRegParamsHelp->setCursor(Qt::WhatsThisCursor);
+    customRegParamsLayout->addWidget(customRegParamsHelp);
+    customRegParamsLayout->addStretch();
+    customRegLayout->addLayout(customRegParamsLayout);
+
+    customRegParametersEdit = new QLineEdit(customRegContentWidget);
+    customRegLayout->addWidget(customRegParametersEdit);
+
+    customRegLayout->addSpacing(10);
+
     // Advanced flags section
     QLabel *flagsLabel = new QLabel("<b>Advanced Flags:</b>", customRegContentWidget);
     customRegLayout->addWidget(flagsLabel);
@@ -953,6 +979,42 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     noSpawningLayout->addStretch();
     customRegLayout->addLayout(noSpawningLayout);
+
+    // Extended file redirection checkbox
+    QHBoxLayout *customRegExtendedRedirLayout = new QHBoxLayout();
+
+    customRegExtendedRedirCheckbox = new QCheckBox(tr("Use extended file redirection"), customRegContentWidget);
+    customRegExtendedRedirCheckbox->setChecked(true);  // Default to true
+    customRegExtendedRedirLayout->addWidget(customRegExtendedRedirCheckbox);
+
+    QLabel *customRegExtendedRedirHelp = new QLabel(customRegContentWidget);
+    customRegExtendedRedirHelp->setText(" ? ");
+    customRegExtendedRedirHelp->setStyleSheet(
+            "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
+            "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+            "max-width: 16px; min-height: 16px; max-height: 16px; "
+            "qproperty-alignment: AlignCenter; }");
+    customRegExtendedRedirHelp->setToolTip(
+            tr("<b>Extended File Redirection (MPQD_EXTENDED_REDIR)</b><br><br>"
+               "Blizzard games use Storm.dll to access MPQ archives. Some Storm functions "
+               "(like SFileOpenFileEx) can bypass the normal MPQ priority chain by accepting "
+               "a specific archive handle.<br><br>"
+               "When enabled, MPQDraft hooks these functions to force them to search through "
+               "the entire MPQ priority chain (including your custom MPQs), even when the game "
+               "tries to read from a specific archive.<br><br>"
+               "<b>When to enable:</b> Most Blizzard games including StarCraft and Warcraft III "
+               "require this for mods to work correctly.<br><br>"
+               "<b>When to disable:</b> Only disable if you're certain the target program doesn't "
+               "use these Storm functions, or if you experience compatibility issues."));
+    customRegExtendedRedirHelp->setCursor(Qt::WhatsThisCursor);
+    customRegExtendedRedirLayout->addWidget(customRegExtendedRedirHelp);
+
+    extendedRedirRefLabel = new QLabel(customRegContentWidget);
+    extendedRedirRefLabel->setStyleSheet("QLabel { color: #808080; }");  // Gray text
+    customRegExtendedRedirLayout->addWidget(extendedRedirRefLabel);
+
+    customRegExtendedRedirLayout->addStretch();
+    customRegLayout->addLayout(customRegExtendedRedirLayout);
 
     customRegLayout->addStretch();
 
@@ -1072,6 +1134,32 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     customLayout->addSpacing(10);
 
+    // Command-Line Parameters
+    QHBoxLayout *customTargetParamsLayout = new QHBoxLayout();
+    QLabel *customTargetParamsLabel = new QLabel(tr("Command-Line Parameters (optional):"), customTargetContentWidget);
+    customTargetParamsLayout->addWidget(customTargetParamsLabel);
+
+    QLabel *customTargetParamsHelp = new QLabel(customTargetContentWidget);
+    customTargetParamsHelp->setText(" ? ");
+    customTargetParamsHelp->setStyleSheet(
+            "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
+            "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+            "max-width: 16px; min-height: 16px; max-height: 16px; "
+            "qproperty-alignment: AlignCenter; }");
+    customTargetParamsHelp->setToolTip(
+            tr("<b>Command-Line Parameters</b><br><br>"
+               "Optional arguments that will be passed to the target executable when it launches.<br><br>"
+               "These parameters are passed directly to the game executable and have no effect on MPQDraft itself."));
+    customTargetParamsHelp->setCursor(Qt::WhatsThisCursor);
+    customTargetParamsLayout->addWidget(customTargetParamsHelp);
+    customTargetParamsLayout->addStretch();
+    customLayout->addLayout(customTargetParamsLayout);
+
+    customTargetParametersEdit = new QLineEdit(customTargetContentWidget);
+    customLayout->addWidget(customTargetParametersEdit);
+
+    customLayout->addSpacing(10);
+
     // Advanced flags section
     QLabel *customTargetFlagsLabel = new QLabel("<b>Advanced Flags:</b>", customTargetContentWidget);
     customLayout->addWidget(customTargetFlagsLabel);
@@ -1104,6 +1192,38 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     customTargetNoSpawningLayout->addStretch();
     customLayout->addLayout(customTargetNoSpawningLayout);
 
+    // Extended file redirection checkbox
+    QHBoxLayout *customTargetExtendedRedirLayout = new QHBoxLayout();
+
+    customTargetExtendedRedirCheckbox = new QCheckBox(tr("Use extended file redirection"), customTargetContentWidget);
+    customTargetExtendedRedirCheckbox->setChecked(true);  // Default to true
+    customTargetExtendedRedirLayout->addWidget(customTargetExtendedRedirCheckbox);
+
+    QLabel *customTargetExtendedRedirHelp = new QLabel(customTargetContentWidget);
+    customTargetExtendedRedirHelp->setText(" ? ");
+    customTargetExtendedRedirHelp->setStyleSheet(
+            "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
+            "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+            "max-width: 16px; min-height: 16px; max-height: 16px; "
+            "qproperty-alignment: AlignCenter; }");
+    customTargetExtendedRedirHelp->setToolTip(
+            tr("<b>Extended File Redirection (MPQD_EXTENDED_REDIR)</b><br><br>"
+               "Blizzard games use Storm.dll to access MPQ archives. Some Storm functions "
+               "(like SFileOpenFileEx) can bypass the normal MPQ priority chain by accepting "
+               "a specific archive handle.<br><br>"
+               "When enabled, MPQDraft hooks these functions to force them to search through "
+               "the entire MPQ priority chain (including your custom MPQs), even when the game "
+               "tries to read from a specific archive.<br><br>"
+               "<b>When to enable:</b> Most Blizzard games including StarCraft and Warcraft III "
+               "require this for mods to work correctly.<br><br>"
+               "<b>When to disable:</b> Only disable if you're certain the target program doesn't "
+               "use these Storm functions, or if you experience compatibility issues."));
+    customTargetExtendedRedirHelp->setCursor(Qt::WhatsThisCursor);
+    customTargetExtendedRedirLayout->addWidget(customTargetExtendedRedirHelp);
+
+    customTargetExtendedRedirLayout->addStretch();
+    customLayout->addLayout(customTargetExtendedRedirLayout);
+
     customLayout->addStretch();
 
     // Set the content widget in the scroll area and add scroll area to tab
@@ -1119,92 +1239,14 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
 
     mainLayout->addWidget(tabWidget);
 
-    mainLayout->addSpacing(10);
-
-    //=========================================================================
-    // Common controls (below tabs)
-    //=========================================================================
-    QHBoxLayout *paramsLayout = new QHBoxLayout();
-    QLabel *paramsLabel = new QLabel("Command-Line Parameters (optional):", this);
-    paramsLayout->addWidget(paramsLabel);
-
-    QLabel *paramsHelp = new QLabel(this);
-    paramsHelp->setText(" ? ");
-    paramsHelp->setStyleSheet(
-        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
-        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
-        "max-width: 16px; min-height: 16px; max-height: 16px; "
-        "qproperty-alignment: AlignCenter; }");
-    paramsHelp->setToolTip(
-        "<b>Command-Line Parameters</b><br><br>"
-        "Optional arguments that will be passed to the target executable when it launches.<br><br>"
-        "These parameters are passed directly to the game executable and have no effect on MPQDraft itself.");
-    paramsHelp->setCursor(Qt::WhatsThisCursor);
-    paramsLayout->addWidget(paramsHelp);
-    paramsLayout->addStretch();
-    mainLayout->addLayout(paramsLayout);
-
-    parametersEdit = new QLineEdit(this);
-    mainLayout->addWidget(parametersEdit);
-
-    mainLayout->addSpacing(10);
-
-    // Extended redir checkbox (common to both modes)
-    QHBoxLayout *extendedRedirLayout = new QHBoxLayout();
-
-    extendedRedirCheckbox = new QCheckBox("Use extended file redirection", this);
-    extendedRedirCheckbox->setChecked(true);  // Default to true
-    extendedRedirLayout->addWidget(extendedRedirCheckbox);
-
-    // Info icon with detailed explanation
-    QLabel *infoIcon = new QLabel(this);
-    infoIcon->setText(" ? ");
-    infoIcon->setStyleSheet(
-        "QLabel { "
-        "background-color: #0079ff; "
-        "color: white; "
-        "border-radius: 10px; "
-        "font-weight: bold; "
-        "font-size: 12px; "
-        "padding: 2px; "
-        "min-width: 16px; "
-        "max-width: 16px; "
-        "min-height: 16px; "
-        "max-height: 16px; "
-        "qproperty-alignment: AlignCenter; "
-        "}");
-    infoIcon->setToolTip(
-        "<b>Extended File Redirection (MPQD_EXTENDED_REDIR)</b><br><br>"
-        "Blizzard games use Storm.dll to access MPQ archives. Some Storm functions "
-        "(like SFileOpenFileEx) can bypass the normal MPQ priority chain by accepting "
-        "a specific archive handle.<br><br>"
-        "When enabled, MPQDraft hooks these functions to force them to search through "
-        "the entire MPQ priority chain (including your custom MPQs), even when the game "
-        "tries to read from a specific archive.<br><br>"
-        "<b>When to enable:</b> Most Blizzard games including StarCraft and Warcraft III "
-        "require this for mods to work correctly.<br><br>"
-        "<b>When to disable:</b> Only disable if you're certain the target program doesn't "
-        "use these Storm functions, or if you experience compatibility issues.");
-    infoIcon->setCursor(Qt::WhatsThisCursor);
-    extendedRedirLayout->addWidget(infoIcon);
-
-    extendedRedirRefLabel = new QLabel(this);
-    extendedRedirRefLabel->setStyleSheet("QLabel { color: #808080; }");  // Gray text
-    extendedRedirRefLabel->setVisible(false);  // Hidden by default (shown only in the Custom Registry tab)
-    extendedRedirLayout->addWidget(extendedRedirRefLabel);
-
-    extendedRedirLayout->addStretch();
-    mainLayout->addLayout(extendedRedirLayout);
-
     // Now that all widgets are created, connect the signals
     connect(tabWidget, &QTabWidget::currentChanged, this, &SEMPQTargetPage::onTabChanged);
-    connect(extendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
+    connect(customRegExtendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
+    connect(customTargetExtendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
 
     // Connect field changes to save settings
     connect(gameList, &QListWidget::currentRowChanged, this, &SEMPQTargetPage::saveSettings);
     connect(tabWidget, &QTabWidget::currentChanged, this, &SEMPQTargetPage::saveSettings);
-    connect(parametersEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::saveSettings);
-    connect(extendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::saveSettings);
     connect(customRegKeyEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::saveSettings);
     connect(customRegValueEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::saveSettings);
     connect(customRegExeEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::saveSettings);
@@ -1212,9 +1254,13 @@ SEMPQTargetPage::SEMPQTargetPage(QWidget *parent)
     connect(customRegShuntCountSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &SEMPQTargetPage::saveSettings);
     connect(customRegIsFullPathCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::saveSettings);
     connect(customRegNoSpawningCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::saveSettings);
+    connect(customRegParametersEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::saveSettings);
+    connect(customRegExtendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::saveSettings);
     connect(customPathEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::saveSettings);
     connect(customTargetShuntCountSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &SEMPQTargetPage::saveSettings);
     connect(customTargetNoSpawningCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::saveSettings);
+    connect(customTargetParametersEdit, &QLineEdit::textChanged, this, &SEMPQTargetPage::saveSettings);
+    connect(customTargetExtendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::saveSettings);
 
     // Initialize Custom Registry placeholders with the first game from gamedata
     updateCustomRegistryPlaceholders();
@@ -1229,17 +1275,19 @@ bool SEMPQTargetPage::isRegistryBased() const
 SEMPQTargetSettings SEMPQTargetPage::getTargetSettings() const
 {
     SEMPQTargetSettings settings;
-    settings.extendedRedir = extendedRedirCheckbox->isChecked();
 
     int tabIndex = tabWidget->currentIndex();
     if (tabIndex == 0) {
         // Mode 1: Supported Games (Registry-based)
+        // For supported games, extendedRedir comes from the component's default
         settings.mode = SEMPQTargetMode::SUPPORTED_GAME;
         settings.selectedComponent = selectedComponent;
+        settings.extendedRedir = selectedComponent ? selectedComponent->extendedRedir : true;
 
     } else if (tabIndex == 1) {
         // Mode 2: Custom Registry
         settings.mode = SEMPQTargetMode::CUSTOM_REGISTRY;
+        settings.extendedRedir = customRegExtendedRedirCheckbox->isChecked();
         settings.customRegistryKey        = customRegKeyEdit       ->text().trimmed().toStdString();
         settings.customRegistryValue      = customRegValueEdit     ->text().trimmed().toStdString();
         settings.customRegistryExe        = customRegExeEdit       ->text().trimmed().toStdString();
@@ -1249,7 +1297,7 @@ SEMPQTargetSettings SEMPQTargetPage::getTargetSettings() const
 
         // Build flags for custom registry mode
         settings.customRegistryFlags = 0;
-        if (extendedRedirCheckbox->isChecked()) {
+        if (customRegExtendedRedirCheckbox->isChecked()) {
             settings.customRegistryFlags |= MPQD_EXTENDED_REDIR;
         }
         if (customRegNoSpawningCheckbox->isChecked()) {
@@ -1259,6 +1307,7 @@ SEMPQTargetSettings SEMPQTargetPage::getTargetSettings() const
     } else {
         // Mode 3: Custom Target (Hardcoded Path)
         settings.mode = SEMPQTargetMode::CUSTOM_PATH;
+        settings.extendedRedir = customTargetExtendedRedirCheckbox->isChecked();
         settings.customTargetPath = customPathEdit->text().toStdString();
         settings.customTargetShuntCount = customTargetShuntCountSpinBox->value();
         settings.customTargetNoSpawning = customTargetNoSpawningCheckbox->isChecked();
@@ -1269,7 +1318,16 @@ SEMPQTargetSettings SEMPQTargetPage::getTargetSettings() const
 
 QString SEMPQTargetPage::getParameters() const
 {
-    return parametersEdit->text();
+    int tabIndex = tabWidget->currentIndex();
+    if (tabIndex == 1) {
+        // Custom Registry tab
+        return customRegParametersEdit->text();
+    } else if (tabIndex == 2) {
+        // Custom Target tab
+        return customTargetParametersEdit->text();
+    }
+    // Supported Games tab - no parameters
+    return QString();
 }
 
 void SEMPQTargetPage::onGameSelectionChanged(QListWidgetItem *current, QListWidgetItem *previous)
@@ -1331,7 +1389,6 @@ void SEMPQTargetPage::onTabChanged(int index)
         clearWhitespaceOnlyFields();
         updateCustomRegistryPlaceholders();
     }
-    extendedRedirRefLabel->setVisible(index == 1);  // Only show reference label in Custom Registry tab
 
     updateExtendedRedirCheckbox();
     emit completeChanged();
@@ -1365,47 +1422,52 @@ void SEMPQTargetPage::validateCustomPath()
 
 void SEMPQTargetPage::updateExtendedRedirCheckbox()
 {
-    if (!extendedRedirCheckbox) {
-        return;  // Not initialized yet
-    }
-
     // Temporarily disconnect to avoid triggering warning when we update programmatically
-    disconnect(extendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
+    disconnect(customRegExtendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
+    disconnect(customTargetExtendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
 
-    if (isRegistryBased() && selectedComponent) {
-        // Set to the default for the selected component
-        extendedRedirCheckbox->setChecked(selectedComponent->extendedRedir);
+    if (selectedComponent) {
+        // Set Custom Registry checkbox to the default for the selected component
+        customRegExtendedRedirCheckbox->setChecked(selectedComponent->extendedRedir);
     } else {
-        // Custom target - default to true (most games need it)
-        extendedRedirCheckbox->setChecked(true);
+        // No component selected - default to true
+        customRegExtendedRedirCheckbox->setChecked(true);
     }
+
+    // Custom Target always defaults to true (most games need it)
+    customTargetExtendedRedirCheckbox->setChecked(true);
+
     // Reset warning flag when changing games
     warnOnExtendedRedirChange = true;
 
-    // Reconnect the signal
-    connect(extendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
+    // Reconnect the signals
+    connect(customRegExtendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
+    connect(customTargetExtendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
 }
 
 void SEMPQTargetPage::onExtendedRedirChanged(int state)
 {
     Q_UNUSED(state);
 
-    // Only warn if we have a selection and haven't warned yet
+    // Only warn if we haven't warned yet
     if (!warnOnExtendedRedirChange) {
         return;
     }
 
-    // For registry-based, only warn if there's a selected component.
-    // For custom target, always warn on the first change
-    if (isRegistryBased() && !selectedComponent) {
+    // Determine which checkbox triggered this (based on current tab)
+    int tabIndex = tabWidget->currentIndex();
+    QCheckBox *checkbox = (tabIndex == 1) ? customRegExtendedRedirCheckbox : customTargetExtendedRedirCheckbox;
+
+    // For Custom Registry tab, only warn if there's a selected component
+    if (tabIndex == 1 && !selectedComponent) {
         return;
     }
 
     QMessageBox msgBox(this);
     msgBox.setIcon(QMessageBox::Question);
-    msgBox.setWindowTitle("Extended File Redirection");
-    msgBox.setText("It is highly recommended that you do not change 'Use extended file redirection' "
-                   "unless you are completely sure what you are doing. Do you wish to continue?");
+    msgBox.setWindowTitle(tr("Extended File Redirection"));
+    msgBox.setText(tr("It is highly recommended that you do not change 'Use extended file redirection' "
+                   "unless you are completely sure what you are doing. Do you wish to continue?"));
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     msgBox.setDefaultButton(QMessageBox::No);
     int result = msgBox.exec();
@@ -1415,9 +1477,9 @@ void SEMPQTargetPage::onExtendedRedirChanged(int state)
         warnOnExtendedRedirChange = false;
     } else {
         // User cancelled - revert the change
-        disconnect(extendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
-        extendedRedirCheckbox->setChecked(!extendedRedirCheckbox->isChecked());
-        connect(extendedRedirCheckbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
+        disconnect(checkbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
+        checkbox->setChecked(!checkbox->isChecked());
+        connect(checkbox, &QCheckBox::stateChanged, this, &SEMPQTargetPage::onExtendedRedirChanged);
     }
 }
 
@@ -1508,28 +1570,28 @@ void SEMPQTargetPage::saveSettings()
     // Save current tab
     settings.setValue("currentTab", tabWidget->currentIndex());
 
-    // Save common settings
-    settings.setValue("parameters", parametersEdit->text());
-    settings.setValue("extendedRedir", extendedRedirCheckbox->isChecked());
-
     // Save the selected game (if any)
     if (selectedComponent) {
         settings.setValue("selectedGame", gameList->currentItem()->text());
     }
 
     // Save Custom Registry settings
-    settings.setValue("customRegKey",        customRegKeyEdit           ->text());
-    settings.setValue("customRegValue",      customRegValueEdit         ->text());
-    settings.setValue("customRegExe",        customRegExeEdit           ->text());
-    settings.setValue("customRegTargetFile", customRegTargetFileEdit    ->text());
-    settings.setValue("customRegShuntCount", customRegShuntCountSpinBox ->value());
-    settings.setValue("customRegIsFullPath", customRegIsFullPathCheckbox->isChecked());
-    settings.setValue("customRegNoSpawning", customRegNoSpawningCheckbox->isChecked());
+    settings.setValue("customRegKey",          customRegKeyEdit              ->text());
+    settings.setValue("customRegValue",        customRegValueEdit            ->text());
+    settings.setValue("customRegExe",          customRegExeEdit              ->text());
+    settings.setValue("customRegTargetFile",   customRegTargetFileEdit       ->text());
+    settings.setValue("customRegShuntCount",   customRegShuntCountSpinBox    ->value());
+    settings.setValue("customRegIsFullPath",   customRegIsFullPathCheckbox   ->isChecked());
+    settings.setValue("customRegNoSpawning",   customRegNoSpawningCheckbox   ->isChecked());
+    settings.setValue("customRegParameters",   customRegParametersEdit       ->text());
+    settings.setValue("customRegExtendedRedir",customRegExtendedRedirCheckbox->isChecked());
 
     // Save Custom Target settings
-    settings.setValue("customTargetPath",       customPathEdit->text());
-    settings.setValue("customTargetShuntCount", customTargetShuntCountSpinBox->value());
-    settings.setValue("customTargetNoSpawning", customTargetNoSpawningCheckbox->isChecked());
+    settings.setValue("customTargetPath",         customPathEdit                   ->text());
+    settings.setValue("customTargetShuntCount",   customTargetShuntCountSpinBox    ->value());
+    settings.setValue("customTargetNoSpawning",   customTargetNoSpawningCheckbox   ->isChecked());
+    settings.setValue("customTargetParameters",   customTargetParametersEdit       ->text());
+    settings.setValue("customTargetExtendedRedir",customTargetExtendedRedirCheckbox->isChecked());
 
     settings.endGroup();
 }
@@ -1541,10 +1603,12 @@ void SEMPQTargetPage::loadSettings()
 
     // Block signals while loading to avoid triggering saves
     const std::initializer_list<QObject*> widgets = {
-        tabWidget, parametersEdit, extendedRedirCheckbox, gameList,
+        tabWidget, gameList,
         customRegKeyEdit, customRegValueEdit, customRegExeEdit, customRegTargetFileEdit,
         customRegShuntCountSpinBox, customRegIsFullPathCheckbox, customRegNoSpawningCheckbox,
-        customPathEdit, customTargetShuntCountSpinBox, customTargetNoSpawningCheckbox
+        customRegParametersEdit, customRegExtendedRedirCheckbox,
+        customPathEdit, customTargetShuntCountSpinBox, customTargetNoSpawningCheckbox,
+        customTargetParametersEdit, customTargetExtendedRedirCheckbox
     };
     for (QObject *widget : widgets) {
         widget->blockSignals(true);
@@ -1554,11 +1618,9 @@ void SEMPQTargetPage::loadSettings()
     int savedTab = settings.value("currentTab", 0).toInt();
     tabWidget->setCurrentIndex(savedTab);
 
-    // Restore common settings
-    parametersEdit->setText(settings.value("parameters", "").toString());
-
-    // Save the extended redir value to restore later (after game selection updates it)
-    bool savedExtendedRedir = settings.value("extendedRedir", true).toBool();
+    // Save the extended redir values to restore later (after game selection updates them)
+    bool savedCustomRegExtendedRedir = settings.value("customRegExtendedRedir", true).toBool();
+    bool savedCustomTargetExtendedRedir = settings.value("customTargetExtendedRedir", true).toBool();
 
     // Restore selected game
     QString selectedGame = settings.value("selectedGame", "").toString();
@@ -1572,18 +1634,20 @@ void SEMPQTargetPage::loadSettings()
     }
 
     // Restore Custom Registry settings
-    customRegKeyEdit           ->setText   (settings.value("customRegKey",        "")   .toString());
-    customRegValueEdit         ->setText   (settings.value("customRegValue",      "")   .toString());
-    customRegExeEdit           ->setText   (settings.value("customRegExe",        "")   .toString());
-    customRegTargetFileEdit    ->setText   (settings.value("customRegTargetFile", "")   .toString());
-    customRegShuntCountSpinBox ->setValue  (settings.value("customRegShuntCount", 0)    .toInt());
-    customRegIsFullPathCheckbox->setChecked(settings.value("customRegIsFullPath", false).toBool());
-    customRegNoSpawningCheckbox->setChecked(settings.value("customRegNoSpawning", false).toBool());
+    customRegKeyEdit              ->setText   (settings.value("customRegKey",          "")   .toString());
+    customRegValueEdit            ->setText   (settings.value("customRegValue",        "")   .toString());
+    customRegExeEdit              ->setText   (settings.value("customRegExe",          "")   .toString());
+    customRegTargetFileEdit       ->setText   (settings.value("customRegTargetFile",   "")   .toString());
+    customRegShuntCountSpinBox    ->setValue  (settings.value("customRegShuntCount",   0)    .toInt());
+    customRegIsFullPathCheckbox   ->setChecked(settings.value("customRegIsFullPath",   false).toBool());
+    customRegNoSpawningCheckbox   ->setChecked(settings.value("customRegNoSpawning",   false).toBool());
+    customRegParametersEdit       ->setText   (settings.value("customRegParameters",   "")   .toString());
 
     // Restore Custom Target settings
-    customPathEdit->setText(settings.value("customTargetPath", "").toString());
-    customTargetShuntCountSpinBox->setValue(settings.value("customTargetShuntCount", 0).toInt());
-    customTargetNoSpawningCheckbox->setChecked(settings.value("customTargetNoSpawning", false).toBool());
+    customPathEdit                   ->setText   (settings.value("customTargetPath",         "")   .toString());
+    customTargetShuntCountSpinBox    ->setValue  (settings.value("customTargetShuntCount",   0)    .toInt());
+    customTargetNoSpawningCheckbox   ->setChecked(settings.value("customTargetNoSpawning",   false).toBool());
+    customTargetParametersEdit       ->setText   (settings.value("customTargetParameters",   "")   .toString());
 
     // Unblock signals
     for (QObject *widget : widgets) {
@@ -1605,11 +1669,15 @@ void SEMPQTargetPage::loadSettings()
     }
     onTabChanged(savedTab);
 
-    // Restore the extended redir checkbox AFTER all updates (which overwrite it with defaults).
+    // Restore the extended redir checkboxes AFTER all updates (which overwrite them with defaults).
     // Block signals to avoid triggering the warning dialog
-    extendedRedirCheckbox->blockSignals(true);
-    extendedRedirCheckbox->setChecked(savedExtendedRedir);
-    extendedRedirCheckbox->blockSignals(false);
+    customRegExtendedRedirCheckbox->blockSignals(true);
+    customRegExtendedRedirCheckbox->setChecked(savedCustomRegExtendedRedir);
+    customRegExtendedRedirCheckbox->blockSignals(false);
+
+    customTargetExtendedRedirCheckbox->blockSignals(true);
+    customTargetExtendedRedirCheckbox->setChecked(savedCustomTargetExtendedRedir);
+    customTargetExtendedRedirCheckbox->blockSignals(false);
 
     // Update the enabled state of filename fields based on isFullPath checkbox
     onIsFullPathChanged(0);

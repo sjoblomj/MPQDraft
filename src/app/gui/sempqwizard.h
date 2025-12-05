@@ -152,6 +152,8 @@ private:
     QSpinBox *customRegShuntCountSpinBox;
     QCheckBox *customRegIsFullPathCheckbox;
     QCheckBox *customRegNoSpawningCheckbox;
+    QLineEdit *customRegParametersEdit;
+    QCheckBox *customRegExtendedRedirCheckbox;
 
     // Paste buttons for Custom Registry
     QPushButton *pasteRegKeyButton;
@@ -171,10 +173,8 @@ private:
     QLabel *warningLabel;
     QSpinBox *customTargetShuntCountSpinBox;
     QCheckBox *customTargetNoSpawningCheckbox;
-
-    // Common controls
-    QLineEdit *parametersEdit;
-    QCheckBox *extendedRedirCheckbox;
+    QLineEdit *customTargetParametersEdit;
+    QCheckBox *customTargetExtendedRedirCheckbox;
 
     // Track whether to warn about extended redir changes
     bool warnOnExtendedRedirChange;
