@@ -108,6 +108,14 @@ private:
 		CancellationCheck cancellationCheck,
 		std::string& errorMessage
 	);
+
+	// Optional: Write custom icon to SEMPQ (called after writeStubToSEMPQ if iconPath is set)
+	bool writeIconToSEMPQ(
+		const SEMPQCreationParams& params,
+		ProgressCallback progressCallback,
+		CancellationCheck cancellationCheck,
+		std::string& errorMessage
+	);
 };
 
 #endif // SEMPQCREATOR_H
