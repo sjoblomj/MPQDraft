@@ -1,4 +1,4 @@
-name: Build MPQDraft Windows binaries
+name: Build MPQDraft Windows binary
 
 on:
   push:
@@ -13,54 +13,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v1
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '5.15.2'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win32_msvc2019'
 
-      - name: Install Visual Studio MFC components
-        shell: pwsh
+      - name: Build all with CMake
         run: |
-          $installer = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe'
-          $vswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
-
-          Write-Host "Checking for Visual Studio installer: $installer"
-          if (-not (Test-Path $installer)) {
-            Write-Host "vs_installer not found at $installer. Skipping install step."
-            exit 0
-          }
-
-          if (-not (Test-Path $vswhere)) {
-            Write-Host "vswhere not found at $vswhere. Skipping install step."
-            exit 0
-          }
-
-          $inst = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath -format value 2>$null
-          if (-not $inst) {
-            Write-Host 'No Visual Studio installation found via vswhere. Skipping install step.'
-            exit 0
-          }
-
-          $instPath = $inst.Trim()
-          Write-Host "Found Visual Studio at: $instPath"
-
-          # Component group for Desktop C++ (includes MFC)
-          $component0 = 'Microsoft.VisualStudio.ComponentGroup.NativeDesktop.MFC'
-          $component1 = 'Microsoft.VisualStudio.Component.VC.14.29.16.11.MFC'
-          $args = "modify --installPath `"$instPath`" --add $component0 --add $component1 --passive --norestart"
-
-          Write-Host "Invoking vs_installer: $args"
-          $p = Start-Process -FilePath $installer -ArgumentList $args -Wait -PassThru -NoNewWindow
-          Write-Host "vs_installer exit code: $($p.ExitCode)"
-
-          if ($p.ExitCode -ne 0) {
-            Write-Host 'Visual Studio modify returned non-zero. The hosted runner may not support modifying installed VS. Build may still fail due to missing MFC.'
-            # Do not fail the job here; let the build step surface the error with clearer message
-          } else {
-            Write-Host 'Visual Studio components modified successfully.'
-          }
-
-      - name: Build MPQDraft solution
-        run: |
-          msbuild src/MPQDraft.sln /p:Configuration=Release /m
+          cmake -B build -S src -A Win32
+          cmake --build build --config Release
 
       - name: Set artifact name
         shell: pwsh
@@ -92,12 +56,41 @@ jobs:
 
           # Get current date in ISO format
           $date = (Get-Date).ToString('yyyy-MM-dd')
+          Add-Content -Path $env:GITHUB_ENV -Value "BUILD_DATE=$date"
 
-          # Copy GUI executable with date in filename
-          Copy-Item -Path "src/Release/MPQDraft.exe" -Destination "artifacts/MPQDraft-$date.exe"
+          # Copy Qt GUI executable with date in filename
+          Copy-Item -Path "build/Release/MPQDraftQt.exe" -Destination "artifacts/MPQDraft-$date.exe"
 
-          # Copy CLI executable with date in filename
-          Copy-Item -Path "src/Release/MPQDraftCLI.exe" -Destination "artifacts/MPQDraftCLI-$date.exe"
+          # Copy Qt DLLs needed for the application
+          & windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw "artifacts/MPQDraft-$date.exe"
+
+      # =========================================================================
+      # Enigma Virtual Box - bundles all DLLs into a single executable
+      # To disable: comment out or remove the two steps below
+      # =========================================================================
+      - name: Install Enigma Virtual Box
+        shell: pwsh
+        run: |
+          $evbUrl = "https://enigmaprotector.com/assets/files/enigmavb.exe"
+          Invoke-WebRequest -Uri $evbUrl -OutFile "enigmavb_setup.exe"
+          Start-Process -FilePath "enigmavb_setup.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+
+      - name: Bundle into single executable
+        shell: pwsh
+        run: |
+          $evbConsole = "C:\Program Files (x86)\Enigma Virtual Box\enigmavbconsole.exe"
+          $date = $env:BUILD_DATE
+          $inputExe = (Resolve-Path "artifacts/MPQDraft-$date.exe").Path
+          $outputExe = (Resolve-Path "artifacts").Path + "\MPQDraft-$date-bundled.exe"
+
+          # Generate and run EVB project
+          & .\tools\generate-evb.ps1 -InputExe $inputExe -OutputExe $outputExe -EvbFile "mpqdraft.evb"
+          & $evbConsole "mpqdraft.evb"
+
+          # Replace the folder-based artifacts with the single exe
+          Get-ChildItem -Path "artifacts" -Exclude "MPQDraft-$date-bundled.exe" | Remove-Item -Recurse -Force
+          Rename-Item -Path $outputExe -NewName "MPQDraft-$date.exe"
+      # =========================================================================
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

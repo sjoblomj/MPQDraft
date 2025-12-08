@@ -107,7 +107,21 @@
 #ifndef QDPLUGIN_H
 #define QDPLUGIN_H
 
+#ifdef _WIN32
 #include <windows.h>
+#else
+// Stub types for non-Windows builds
+typedef void* HWND;
+typedef int BOOL;
+typedef unsigned long DWORD;
+typedef char* LPSTR;
+typedef const char* LPCSTR;
+typedef DWORD* LPDWORD;
+#define WINAPI
+#define IN
+#define OUT
+#define OPTIONAL
+#endif
 
 // The maximum length of a plugin module's filename. INCLUDES final NULL.
 #define MPQDRAFT_MAX_PATH 264
@@ -117,12 +131,16 @@
 
 /*
 	MPQDRAFTPLUGINMODULE
-	
+
 	Structure used by IMPQDraftPlugin::GetModules to notify MPQDraft of any
 	files (called plugin modules) that are to be loaded. Read description of
 	that function for more information.
 */
+#ifdef _WIN32
 #include <pshpack1.h>
+#endif
+
+#pragma pack(push, 1)
 struct MPQDRAFTPLUGINMODULE
 {
 	/* dwComponentID: The ID of the plugin. Should be the same value as is
@@ -136,7 +154,11 @@ struct MPQDRAFTPLUGINMODULE
 	// szModuleFileName: The absolute path of the plugin module file.
 	char szModuleFileName[MPQDRAFT_MAX_PATH];
 };
+#pragma pack(pop)
+
+#ifdef _WIN32
 #include <poppack.h>
+#endif
 
 /*
 	IMPQDraftServer

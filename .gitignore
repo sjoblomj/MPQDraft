@@ -369,3 +369,6 @@ FodyWeavers.xsd
 
 # Jetbrains IDE files
 .idea/
+
+# Generated version header (created by CMake from version.h.in)
+src/app/cli/version.h

@@ -6,10 +6,13 @@
 	The Initial Developer of the Original Code is Justin Olbrantz. The Original Code Copyright (C) 2008 Justin Olbrantz. All Rights Reserved.
 */
 
-// main_cli.cpp : Entry point for the MFC-free CLI executable
-//
+// main_cli.cpp : CLI entry point logic
 
-#include "stdafx_cli.h"
+#include "main_cli.h"
+#include <windows.h>
+#include <stdio.h>
+#include "../../common/QDebug.h"
+#include "../../common/QResource.h"
 #include "MPQDraftCLI.h"
 #include "CommandParser.h"
 #include "../resource_ids.h"
@@ -34,22 +37,17 @@ static BOOL GetPatcherDLLPath(char* szPatcherPath, DWORD dwBufferSize)
 }
 
 /////////////////////////////////////////////////////////////////////////////
-// Entry point
+// CLI entry point - called from main entry point
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+int runCli(const char* lpCmdLine)
 {
-	// Initialize QResource system
-	QResourceInitialize();
-
 	// Parse command line
 	CommandParser cmdParser;
 	bool parseStatus = cmdParser.ParseCommandLine(lpCmdLine);
 
 	if (cmdParser.IsVersionRequested())
 	{
-        PrintVersion();
-		DeleteTemporaryFiles();
-		QResourceDestroy();
+		PrintVersion();
 		return 0;
 	}
 
@@ -68,8 +66,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 		PrintHelp();
 
-		DeleteTemporaryFiles();
-		QResourceDestroy();
 		return cmdParser.IsHelpRequested() ? 0 : 1;
 	}
 
@@ -84,19 +80,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	{
 		printf("Failed to get patcher DLL path\n");
 		QDebugOut("Failed to get patcher DLL path");
-
-		DeleteTemporaryFiles();
-		QResourceDestroy();
 		return 1;
 	}
 
 	// Create CLI handler and execute
 	CMPQDraftCLI cli;
 	BOOL bSuccess = cli.Execute(target.c_str(), mpqs, plugins, szPatcherPath);
-
-	// Clean up
-	DeleteTemporaryFiles();
-	QResourceDestroy();
 
 	return bSuccess ? 0 : 1;
 }

@@ -10,7 +10,45 @@
 #if !defined(PATCHERAPI_H)
 #define PATCHERAPI_H
 
+#ifdef _WIN32
 #include <windows.h>
+#else
+// Stub types for non-Windows builds
+typedef void* LPVOID;
+typedef void* LPSECURITY_ATTRIBUTES;
+typedef const char* LPCSTR;
+typedef char* LPSTR;
+typedef unsigned long DWORD;
+typedef int BOOL;
+
+struct STARTUPINFO {
+    DWORD cb;
+    LPSTR lpReserved;
+    LPSTR lpDesktop;
+    LPSTR lpTitle;
+    DWORD dwX;
+    DWORD dwY;
+    DWORD dwXSize;
+    DWORD dwYSize;
+    DWORD dwXCountChars;
+    DWORD dwYCountChars;
+    DWORD dwFillAttribute;
+    DWORD dwFlags;
+    unsigned short wShowWindow;
+    unsigned short cbReserved2;
+    unsigned char* lpReserved2;
+    void* hStdInput;
+    void* hStdOutput;
+    void* hStdError;
+};
+typedef STARTUPINFO* LPSTARTUPINFO;
+
+#define WINAPI
+#define IN
+#define OUT
+#define OPTIONAL
+#endif
+
 #include "PatcherFlags.h"
 #include "MPQDraftPlugin.h"
 
@@ -30,6 +68,8 @@
     If FALSE is returned, the patching was unsuccessful, and the process
     should be terminated.
 */
+
+// Function pointer type for the patcher DLL
 typedef BOOL (WINAPI *MPQDraftPatcherPtr)(
 	// These first 10 parameters are nothing other than the parameters passed to CreateProcess, and used for just that.
 	IN LPCSTR lpszApplicationName,
@@ -62,6 +102,7 @@ typedef BOOL (WINAPI *MPQDraftPatcherPtr)(
 	IN OPTIONAL const MPQDRAFTPLUGINMODULE *lpAuxModules
 );
 
+// Function pointer type for GetMPQDraftPlugin
 typedef BOOL (WINAPI *GetMPQDraftPluginPtr)(OUT IMPQDraftPlugin **lppMPQDraftPlugin);
 
 #endif

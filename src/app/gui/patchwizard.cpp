@@ -1,718 +1,1705 @@
 /*
-	The contents of this file are subject to the Common Development and Distribution License Version 1.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.sun.com/cddl/cddl.html.
+    PatchWizard - Wizard for patching a game executable with MPQs and plugins
 
-	Software distributed under the License is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the specific language governing rights and limitations under the License.
-
-	The Initial Developer of the Original Code is Justin Olbrantz. The Original Code Copyright (C) 2008 Justin Olbrantz. All Rights Reserved.
+    This wizard has 4 pages:
+    0. Introduction
+    1. Select target executable (game to patch)
+    2. Select MPQ files to load
+    3. Select and configure plugins
 */
 
-// PatchWizard.cpp : implementation file
-//
+#include "patchwizard.h"
+#include "pluginpage.h"
+#include "../../dll/PatcherLimits.h"
+#include "../../core/GameData.h"
+#include "../../core/GameDetection.h"
+#include "helpers/gamedata_qt.h"
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QLabel>
+#include <QPixmap>
+#include <QPainter>
+#include <QFileInfo>
+#include <QDir>
+#include <QIcon>
+#include <QScrollArea>
+#include <QFrame>
+#include <QListWidget>
+#include <QDebug>
+#include <QSettings>
+#include <QComboBox>
+#include <QScrollBar>
+#include <QMenu>
 
-#include "stdafx_gui.h"
-#include "../MPQDraft.h"
-#include "resource.h"
-#include "PatchWizard.h"
-
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#undef THIS_FILE
-static char THIS_FILE[] = __FILE__;
+#ifdef _WIN32
+#include "../../core/PatcherApi.h"
+#include "../../core/PluginManager.h"
+#include "../../common/QResource.h"
+#include "../../common/QDebug.h"
+#include "../resource_ids.h"
+#include <shlwapi.h>
 #endif
 
-/////////////////////////////////////////////////////////////////////////////
-// CPatchWizardPage1 property page
+// Stylesheet for invalid input fields
+static const char* INVALID_FIELD_STYLE = "QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }";
 
-IMPLEMENT_DYNCREATE(CPatchWizardPage1, CPatchTargetPage)
+// Data roles for game list items (stored via QListWidgetItem::setData)
+enum GameListDataRole {
+    ExtendedRedirRole = Qt::UserRole,       // bool: use extended redirection
+    ExecutablePathRole,                     // QString: path to executable
+    ShuntCountRole,                         // int: shunt count
+    NoSpawningRole,                         // bool: disable spawning
+    IsOverriddenRole,                       // bool: is from user settings (not auto-detected)
+    ParametersRole,                         // QString: command line parameters
+    IsSupportedGameRole                     // bool: is a supported game (vs custom executable)
+};
 
-CPatchWizardPage1::CPatchWizardPage1() 
-	: CPatchTargetPage(FALSE, IDS_PATCHWIZARD1TITLE, IDS_PATCHWIZARD1INFO)
+//=============================================================================
+// Page 0: Introduction
+//=============================================================================
+PatchIntroPage::PatchIntroPage(QWidget *parent)
+    : QWizardPage(parent)
 {
-	//{{AFX_DATA_INIT(CPatchWizardPage1)
-	//}}AFX_DATA_INIT
+    setTitle("Welcome to MPQDraft Patch Wizard");
+    setSubTitle("Load custom MPQ archives with game data, or use plugins to add new features.");
+    setPixmap(
+            QWizard::LogoPixmap,
+            QPixmap(":/icons/mpqdraft.svg").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+    );
+
+    QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    QLabel *introLabel = new QLabel(
+        "<p>Follow these steps to patch a game executable with custom MPQ archives (allowing you "
+        "to change game assets), and plugins (allowing you to change game behavior).</p>"
+
+        "<p><b>What are MPQs?</b><br>"
+        "MPQs are archives containing game data such as graphics, sounds and other resources. "
+        "They were used extensively by Blizzard Entertainment, but also Sierra OnLine's "
+        "Lords of Magic.</p>"
+
+        "<p><b>What is MPQDraft?</b><br>"
+        "MPQDraft allows you to modify games by loading custom MPQ files and plugins "
+        "without permanently modifying the game installation.</p>"
+
+        "<p><b>What you can do:</b></p>"
+        "<ul>"
+        "<li>Load custom graphics, sounds, and other game data from MPQ files provided by you.</li>"
+        "<li>Enable plugins that add new features or modify game behavior.</li>"
+        "<li>Launch the game with your modifications applied temporarily.</li>"
+        "</ul>"
+
+        "<p><b>How it works:</b><br>"
+        "MPQDraft intercepts the game's file access and redirects it to your custom MPQ files, "
+        "allowing you to run modifications without altering the original game files.</p>"
+
+        "<p>Click <b>Next</b> to begin selecting your target game and MPQ files.</p>"
+    );
+    introLabel->setWordWrap(true);
+    introLabel->setTextFormat(Qt::RichText);
+    introLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+
+    QScrollArea *scrollArea = new QScrollArea(this);
+    scrollArea->setWidget(introLabel);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+
+    layout->addWidget(scrollArea);
 }
 
-CPatchWizardPage1::~CPatchWizardPage1()
+//=============================================================================
+// Page 1: Target Selection
+//=============================================================================
+TargetSelectionPage::TargetSelectionPage(QWidget *parent)
+    : QWizardPage(parent)
 {
+    setTitle("Select Target Executable");
+    setSubTitle("Choose the game executable to patch.");
+    setPixmap(
+            QWizard::LogoPixmap,
+            QPixmap(":/icons/blizzard/bnet.png").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+    );
+
+    QVBoxLayout *mainLayout = new QVBoxLayout(this);
+
+    // Create tab widget
+    tabWidget = new QTabWidget(this);
+    mainLayout->addWidget(tabWidget);
+
+    //=========================================================================
+    // Tab 1: Detected Games
+    //=========================================================================
+    QWidget *detectedGamesTab = new QWidget(tabWidget);
+    QVBoxLayout *detectedLayout = new QVBoxLayout(detectedGamesTab);
+
+    QLabel *detectedLabel = new QLabel(
+        "The following games have been detected on your computer, based on the "
+        "Windows Registry. Select a game from the list below, and MPQDraft will "
+        "automatically use the correct settings.",
+        detectedGamesTab);
+    detectedLabel->setWordWrap(true);
+    detectedLayout->addWidget(detectedLabel);
+
+    detectedLayout->addSpacing(10);
+
+    gameList = new QListWidget(detectedGamesTab);
+    gameList->setIconSize(QSize(32, 32));
+    gameList->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(gameList, &QListWidget::currentItemChanged, this, &TargetSelectionPage::onGameSelectionChanged);
+    connect(gameList, &QListWidget::customContextMenuRequested, this, &TargetSelectionPage::onGameListContextMenu);
+    detectedLayout->addWidget(gameList);
+
+    // Populate the list with detected games
+    populateInstalledGames();
+
+    tabWidget->addTab(detectedGamesTab, "Detected &Games");
+
+    //=========================================================================
+    // Tab 2: Custom Executable
+    //=========================================================================
+    QWidget *customExeTab = new QWidget(tabWidget);
+    QVBoxLayout *customTabLayout = new QVBoxLayout(customExeTab);
+    customTabLayout->setContentsMargins(0, 0, 0, 0);
+
+    // Add scroll area
+    QScrollArea *customScrollArea = new QScrollArea(customExeTab);
+    customScrollArea->setWidgetResizable(true);
+    customScrollArea->setFrameShape(QFrame::NoFrame);
+    customScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+    // Set background to match tab background (white)
+    QPalette scrollPalette = customScrollArea->palette();
+    scrollPalette.setColor(QPalette::Window, Qt::white);
+    customScrollArea->setPalette(scrollPalette);
+    customScrollArea->setAutoFillBackground(true);
+
+    customTabLayout->addWidget(customScrollArea);
+
+    QWidget *customScrollWidget = new QWidget();
+    customScrollArea->setWidget(customScrollWidget);
+    QVBoxLayout *customLayout = new QVBoxLayout(customScrollWidget);
+
+    QLabel *customLabel = new QLabel(
+        "Browse for an executable and configure patching options manually.",
+        customScrollWidget);
+    customLabel->setWordWrap(true);
+    customLayout->addWidget(customLabel);
+
+    customLayout->addSpacing(10);
+
+    // Target path
+    QLabel *targetLabel = new QLabel("<b>Executable Path:</b>", customScrollWidget);
+    customLayout->addWidget(targetLabel);
+
+    QHBoxLayout *targetLayout = new QHBoxLayout();
+    customTargetPathEdit = new QLineEdit(customScrollWidget);
+    customTargetPathEdit->setPlaceholderText("Path to game executable (e.g., StarCraft.exe)");
+    customBrowseButton = new QPushButton("Bro&wse...", customScrollWidget);
+    connect(customBrowseButton, &QPushButton::clicked, this, &TargetSelectionPage::onBrowseClicked);
+    connect(customTargetPathEdit, &QLineEdit::textChanged, this, &TargetSelectionPage::onTargetPathChanged);
+    targetLayout->addWidget(customTargetPathEdit);
+    targetLayout->addWidget(customBrowseButton);
+    customLayout->addLayout(targetLayout);
+
+    customLayout->addSpacing(15);
+
+    // Advanced Settings - collapsible section
+    QPushButton *advancedToggle = new QPushButton("Advanced &Settings", customScrollWidget);
+    advancedToggle->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
+    advancedToggle->setFlat(true);
+    advancedToggle->setStyleSheet("QPushButton { text-align: left; font-weight: bold; }");
+    advancedToggle->setCursor(Qt::PointingHandCursor);
+    customLayout->addWidget(advancedToggle);
+
+    advancedWidget = new QWidget(customScrollWidget);
+    advancedWidget->setVisible(false);  // Hidden by default
+    QVBoxLayout *advancedLayout = new QVBoxLayout(advancedWidget);
+    advancedLayout->setContentsMargins(20, 0, 0, 0);  // Indent the content
+
+    // Connect toggle button - capture pointer to widget
+    QWidget *advancedWidgetPtr = advancedWidget;
+    connect(advancedToggle, &QPushButton::clicked, [advancedToggle, advancedWidgetPtr, customScrollWidget]() {
+        bool isVisible = advancedWidgetPtr->isVisible();
+        advancedWidgetPtr->setVisible(!isVisible);
+        advancedToggle->setIcon(customScrollWidget->style()->standardIcon(
+            isVisible ? QStyle::SP_ArrowRight : QStyle::SP_ArrowDown));
+    });
+
+    // Parameters with help icon
+    QHBoxLayout *paramsLayout = new QHBoxLayout();
+    QLabel *paramsLabel = new QLabel("<b>Command-line Parameters (optional):</b>", advancedWidget);
+    paramsLayout->addWidget(paramsLabel);
+
+    QLabel *paramsHelp = new QLabel(advancedWidget);
+    paramsHelp->setText(" ? ");
+    paramsHelp->setStyleSheet(
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    paramsHelp->setToolTip(
+        "<b>Command-Line Parameters</b><br><br>"
+        "Optional arguments that will be passed to the target executable when it launches.<br><br>"
+        "These parameters are passed directly to the game executable and have no effect on MPQDraft itself.");
+    paramsHelp->setCursor(Qt::WhatsThisCursor);
+    paramsLayout->addWidget(paramsHelp);
+    paramsLayout->addStretch();
+    advancedLayout->addLayout(paramsLayout);
+
+    customParametersEdit = new QLineEdit(advancedWidget);
+    advancedLayout->addWidget(customParametersEdit);
+
+    advancedLayout->addSpacing(10);
+
+    // Extended redirect option with info icon
+    QHBoxLayout *extendedRedirLayout = new QHBoxLayout();
+
+    customExtendedRedirCheck = new QCheckBox("Use extended file redirection", advancedWidget);
+    customExtendedRedirCheck->setChecked(true);  // Default to checked (most games need it)
+    extendedRedirLayout->addWidget(customExtendedRedirCheck);
+
+    // Info icon with detailed explanation
+    QLabel *extendedRedirHelp = new QLabel(advancedWidget);
+    extendedRedirHelp->setText(" ? ");
+    extendedRedirHelp->setStyleSheet(
+        "QLabel { "
+        "background-color: #0079ff; "
+        "color: white; "
+        "border-radius: 10px; "
+        "font-weight: bold; "
+        "font-size: 12px; "
+        "padding: 2px; "
+        "min-width: 16px; "
+        "max-width: 16px; "
+        "min-height: 16px; "
+        "max-height: 16px; "
+        "qproperty-alignment: AlignCenter; "
+        "}");
+    extendedRedirHelp->setToolTip(
+        "<b>Extended File Redirection (MPQD_EXTENDED_REDIR)</b><br><br>"
+        "Blizzard games use Storm.dll to access MPQ archives. Some Storm functions "
+        "(like SFileOpenFileEx) can bypass the normal MPQ priority chain by accepting "
+        "a specific archive handle.<br><br>"
+        "When enabled, MPQDraft hooks these functions to force them to search through "
+        "the entire MPQ priority chain (including your custom MPQs), even when the game "
+        "tries to read from a specific archive.<br><br>"
+        "<b>When to enable:</b> Most Blizzard games including StarCraft and Warcraft III "
+        "require this for mods to work correctly.<br><br>"
+        "<b>When to disable:</b> Only disable if you're certain the target program doesn't "
+        "use these Storm functions, or if you experience compatibility issues.");
+    extendedRedirHelp->setCursor(Qt::WhatsThisCursor);
+    extendedRedirLayout->addWidget(extendedRedirHelp);
+
+    extendedRedirLayout->addStretch();
+    advancedLayout->addLayout(extendedRedirLayout);
+    advancedLayout->addSpacing(10);
+
+    // Shunt Count
+    QHBoxLayout *shuntCountLabelLayout = new QHBoxLayout();
+    QLabel *shuntCountLabel = new QLabel("<b>Shunt Count:</b>", advancedWidget);
+    shuntCountLabelLayout->addWidget(shuntCountLabel);
+
+    QLabel *shuntCountHelp = new QLabel(advancedWidget);
+    shuntCountHelp->setText(" ? ");
+    shuntCountHelp->setStyleSheet(
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    shuntCountHelp->setToolTip(
+        "<b>Shunt Count</b><br><br>"
+        "The number of times the game restarts itself before MPQDraft activates patching.<br><br>"
+        "<b>0 (default):</b> Activate immediately when the game starts. Use this for most games.<br><br>"
+        "<b>1:</b> Wait for the game to restart itself once before activating. Some games with "
+        "copy protection (like Diablo) restart themselves after checking the CD, so MPQDraft "
+        "needs to wait for this restart.<br><br>"
+        "<b>Higher values:</b> Rarely needed, but available if a game restarts multiple times "
+        "during its startup sequence.");
+    shuntCountHelp->setCursor(Qt::WhatsThisCursor);
+    shuntCountLabelLayout->addWidget(shuntCountHelp);
+    shuntCountLabelLayout->addStretch();
+    advancedLayout->addLayout(shuntCountLabelLayout);
+
+    customShuntCountSpinBox = new QSpinBox(advancedWidget);
+    customShuntCountSpinBox->setMinimum(0);
+    customShuntCountSpinBox->setMaximum(INT_MAX);
+    customShuntCountSpinBox->setValue(0);
+    advancedLayout->addWidget(customShuntCountSpinBox);
+
+    advancedLayout->addSpacing(10);
+
+    // No Spawning flag
+    QHBoxLayout *noSpawningLayout = new QHBoxLayout();
+
+    customNoSpawningCheck = new QCheckBox("Do not inject into child processes", advancedWidget);
+    customNoSpawningCheck->setChecked(false);  // Default to unchecked
+    noSpawningLayout->addWidget(customNoSpawningCheck);
+
+    QLabel *noSpawningHelp = new QLabel(advancedWidget);
+    noSpawningHelp->setText(" ? ");
+    noSpawningHelp->setStyleSheet(
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    noSpawningHelp->setToolTip(
+        "<b>Do Not Inject Into Child Processes (MPQD_NO_SPAWNING)</b><br><br>"
+        "By default, MPQDraft injects itself into any child processes created by the game. "
+        "This ensures that patches work even if the game launches additional executables.<br><br>"
+        "<b>When to enable:</b> Some games launch helper processes (updaters, launchers, "
+        "crash reporters) that don't need patching and may cause issues if MPQDraft injects "
+        "into them. Enable this flag to prevent injection into child processes.<br><br>"
+        "<b>When to disable (default):</b> Most games work fine with child process injection, "
+        "and some games require it for patches to work correctly.");
+    noSpawningHelp->setCursor(Qt::WhatsThisCursor);
+    noSpawningLayout->addWidget(noSpawningHelp);
+
+    noSpawningLayout->addStretch();
+    advancedLayout->addLayout(noSpawningLayout);
+
+    customLayout->addWidget(advancedWidget);
+    customLayout->addSpacing(15);
+
+    // Remember Application - collapsible section
+    QPushButton *rememberAppToggle = new QPushButton("&Remember Application", customScrollWidget);
+    rememberAppToggle->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
+    rememberAppToggle->setFlat(true);
+    rememberAppToggle->setStyleSheet("QPushButton { text-align: left; font-weight: bold; }");
+    rememberAppToggle->setCursor(Qt::PointingHandCursor);
+    customLayout->addWidget(rememberAppToggle);
+
+    QWidget *rememberAppWidget = new QWidget(customScrollWidget);
+    rememberAppWidget->setVisible(false);  // Hidden by default
+    QVBoxLayout *rememberAppLayout = new QVBoxLayout(rememberAppWidget);
+    rememberAppLayout->setContentsMargins(20, 0, 0, 0);  // Indent the content
+
+    // Connect toggle button
+    connect(rememberAppToggle, &QPushButton::clicked, [rememberAppToggle, rememberAppWidget, customScrollWidget]() {
+        bool isVisible = rememberAppWidget->isVisible();
+        rememberAppWidget->setVisible(!isVisible);
+        rememberAppToggle->setIcon(customScrollWidget->style()->standardIcon(
+            isVisible ? QStyle::SP_ArrowRight : QStyle::SP_ArrowDown));
+    });
+
+    // Information box with icon
+    QWidget *infoWidget = new QWidget(rememberAppWidget);
+    infoWidget->setStyleSheet(
+        "QWidget { "
+        "background-color: #d1ecf1; "
+        "border: 1px solid #17a2b8; "
+        "border-radius: 4px; "
+        "}");
+    QHBoxLayout *infoLayout = new QHBoxLayout(infoWidget);
+    infoLayout->setContentsMargins(10, 10, 10, 10);
+    infoLayout->setSpacing(8);
+
+    // Info icon (save-to-list.svg scaled to 64x64)
+    QLabel *infoIcon = new QLabel(infoWidget);
+    QPixmap infoPixmap(":/icons/save-to-list.svg");
+    infoIcon->setPixmap(infoPixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    infoIcon->setAlignment(Qt::AlignTop);
+    infoIcon->setStyleSheet("QLabel { background-color: transparent; border: none; }");
+    infoIcon->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    infoLayout->addWidget(infoIcon);
+
+    // Info text
+    QLabel *rememberAppLabel = new QLabel(
+            "Save the above custom executable configuration to make it appear in the Detected Games list. "
+            "You can override settings for pre-configured games or add entirely new applications. "
+            "The data is saved to the Windows Registry.<br><br>"
+            "Choose an existing game from the dropdown to override its settings, or type a new name to add "
+            "a custom application.", infoWidget);
+    rememberAppLabel->setWordWrap(true);
+    rememberAppLabel->setStyleSheet("QLabel { color: #0c5460; background-color: transparent; border: none; }");
+    infoLayout->addWidget(rememberAppLabel, 1);  // Stretch factor of 1 to take remaining space
+
+    rememberAppLayout->addWidget(infoWidget);
+    rememberAppLayout->addSpacing(10);
+
+    // Horizontal layout for dropdown and image
+    QHBoxLayout *dropdownImageLayout = new QHBoxLayout();
+
+    // Left side: Application Name dropdown
+    QVBoxLayout *dropdownLayout = new QVBoxLayout();
+    QLabel *appNameLabel = new QLabel("Application Name:", rememberAppWidget);
+    dropdownLayout->addWidget(appNameLabel);
+
+    QComboBox *appNameCombo = new QComboBox(rememberAppWidget);
+    appNameCombo->setEditable(true);
+    appNameCombo->setInsertPolicy(QComboBox::NoInsert);
+
+    // Populate with all supported game components
+    std::vector<SupportedGame> games = getSupportedGames();
+    for (const auto &game : games) {
+        for (const auto &component : game.components) {
+            // Display format: "Game Name - Component Name" or just "Game Name" for single component
+            QString displayName = QString::fromStdString(game.gameName);
+            if (game.components.size() != 1) {
+                displayName += " - " + QString::fromStdString(component.componentName);
+            }
+            appNameCombo->addItem(displayName);
+        }
+    }
+
+    dropdownLayout->addWidget(appNameCombo);
+    dropdownImageLayout->addLayout(dropdownLayout);
+
+    dropdownImageLayout->addSpacing(10);
+
+    // Right side: Image label (64x64)
+    QLabel *rememberAppImageLabel = new QLabel(rememberAppWidget);
+    rememberAppImageLabel->setFixedSize(64, 64);
+    rememberAppImageLabel->setAlignment(Qt::AlignCenter);
+    rememberAppImageLabel->setStyleSheet("QLabel { border: 1px solid #ccc; }");
+    dropdownImageLayout->addWidget(rememberAppImageLabel);
+
+    rememberAppLayout->addLayout(dropdownImageLayout);
+
+    rememberAppLayout->addSpacing(10);
+
+    // Icon path input (hidden by default, but takes up space)
+    QLabel *iconPathLabel = new QLabel("Application icon (optional):", rememberAppWidget);
+    rememberAppLayout->addWidget(iconPathLabel);
+
+    QHBoxLayout *iconPathLayout = new QHBoxLayout();
+    QLineEdit *iconPathEdit = new QLineEdit(rememberAppWidget);
+    iconPathEdit->setPlaceholderText("Path to icon file");
+    QPushButton *browseIconButton = new QPushButton("Browse &Icon...", rememberAppWidget);
+    iconPathLayout->addWidget(iconPathEdit);
+    iconPathLayout->addWidget(browseIconButton);
+    rememberAppLayout->addLayout(iconPathLayout);
+
+    // Hide icon controls by default but keep their space in layout
+    iconPathLabel->hide();
+    iconPathEdit->hide();
+    browseIconButton->hide();
+
+    // Set size policy to maintain space when hidden
+    QSizePolicy spLabel = iconPathLabel->sizePolicy();
+    spLabel.setRetainSizeWhenHidden(true);
+    iconPathLabel->setSizePolicy(spLabel);
+
+    QSizePolicy spEdit = iconPathEdit->sizePolicy();
+    spEdit.setRetainSizeWhenHidden(true);
+    iconPathEdit->setSizePolicy(spEdit);
+
+    QSizePolicy spButton = browseIconButton->sizePolicy();
+    spButton.setRetainSizeWhenHidden(true);
+    browseIconButton->setSizePolicy(spButton);
+
+    rememberAppLayout->addSpacing(10);
+
+    // Save button
+    QPushButton *saveAppButton = new QPushButton("Save", rememberAppWidget);
+    saveAppButton->setMinimumHeight(40);
+    saveAppButton->setEnabled(false);  // Start disabled
+    rememberAppLayout->addWidget(saveAppButton);
+
+    // Browse icon button
+    connect(browseIconButton, &QPushButton::clicked, [iconPathEdit, this]() {
+        QSettings settings;
+        QString startDir = settings.value("PatchWizard/Directories/rememberAppIcon", QString()).toString();
+
+        QString fileName = QFileDialog::getOpenFileName(
+            this,
+            "Select Icon",
+            startDir,
+            "Images (*.png *.jpg *.jpeg *.bmp *.gif *.svg *.ico);;All Files (*.*)"
+        );
+        if (!fileName.isEmpty()) {
+            iconPathEdit->setText(fileName);
+            settings.setValue("PatchWizard/Directories/rememberAppIcon", QFileInfo(fileName).absolutePath());
+        }
+    });
+
+    // Validate both executable path and icon path
+    auto validateSaveButton = [this, iconPathEdit, rememberAppImageLabel, saveAppButton, appNameCombo]() {
+        QString appName = appNameCombo->currentText().trimmed();
+        if (appName.isEmpty()) {
+            saveAppButton->setEnabled(false);
+            return;
+        }
+
+        // Check if this is a pre-configured game
+        const auto &games = getSupportedGames();
+        bool isPreConfigured = false;
+        for (const auto &game : games) {
+            for (const auto &component : game.components) {
+                QString displayName = QString::fromStdString(game.gameName);
+                if (game.components.size() != 1) {
+                    displayName += " - " + QString::fromStdString(component.componentName);
+                }
+                if (displayName == appName) {
+                    isPreConfigured = true;
+                    break;
+                }
+            }
+            if (isPreConfigured) break;
+        }
+
+        // For pre-configured games, we don't need to validate the executable path
+        // (it will use the default path from gamedata)
+        bool executableValid = isPreConfigured;
+        if (!isPreConfigured) {
+            // For custom applications, check executable path
+            QString executablePath = customTargetPathEdit->text().trimmed();
+            if (!executablePath.isEmpty()) {
+                QFileInfo execFileInfo(executablePath);
+                executableValid = execFileInfo.exists() && execFileInfo.isFile();
+            }
+        }
+
+        // Check icon path (only relevant for custom applications)
+        QString iconPath = iconPathEdit->text().trimmed();
+        bool iconValid = true;  // Empty is valid
+        if (!iconPath.isEmpty()) {
+            QFileInfo iconFileInfo(iconPath);
+            if (!iconFileInfo.exists() || !iconFileInfo.isFile()) {
+                iconValid = false;
+                iconPathEdit->setStyleSheet("QLineEdit { border: 2px solid #ff6b6b; background-color: #ffe0e0; }");
+            } else {
+                iconPathEdit->setStyleSheet("");
+                // Try to load as image
+                QPixmap pixmap(iconPath);
+                if (!pixmap.isNull()) {
+                    rememberAppImageLabel->setPixmap(pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                }
+            }
+        } else {
+            iconPathEdit->setStyleSheet("");
+        }
+
+        // Enable save button if executable is valid (or pre-configured) and the icon is valid
+        saveAppButton->setEnabled(executableValid && iconValid);
+    };
+
+    connect(iconPathEdit, &QLineEdit::textChanged, validateSaveButton);
+    connect(customTargetPathEdit, &QLineEdit::textChanged, validateSaveButton);
+    connect(appNameCombo, &QComboBox::currentTextChanged, validateSaveButton);
+
+    // Helper lambda to generate the display name for a component
+    auto getDisplayName = [](const SupportedGame &game, const GameComponent &component) -> QString {
+        // Display format: "Game Name - Component Name" or just "Game Name" for single component
+        QString displayName = QString::fromStdString(game.gameName);
+        if (game.components.size() != 1) {
+            displayName += " - " + QString::fromStdString(component.componentName);
+        }
+        return displayName;
+    };
+
+    // Update image and visibility when dropdown changes
+    connect(appNameCombo, &QComboBox::currentTextChanged,
+            [games, getDisplayName, iconPathLabel, iconPathEdit, browseIconButton, validateSaveButton, rememberAppImageLabel](const QString &text) {
+
+        // Find component by display name and load its icon
+        bool isPreConfigured = false;
+        for (const auto &game : games) {
+            for (const auto &component : game.components) {
+                if (getDisplayName(game, component) == text) {
+                    QPixmap pixmap(QString::fromStdString(component.iconPath));
+                    if (!pixmap.isNull()) {
+                        rememberAppImageLabel->setPixmap(pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                    }
+                    isPreConfigured = true;
+                    break;
+                }
+            }
+            if (isPreConfigured) break;
+        }
+
+        if (isPreConfigured) {
+            // Hide icon controls and clear icon path
+            iconPathLabel->hide();
+            iconPathEdit->hide();
+            browseIconButton->hide();
+            iconPathEdit->setText("");
+        } else {
+            // Show icon controls for custom application
+            iconPathLabel->show();
+            iconPathEdit->show();
+            browseIconButton->show();
+            // Clear the image if no custom icon is set
+            if (iconPathEdit->text().trimmed().isEmpty()) {
+                rememberAppImageLabel->clear();
+            } else {
+                validateSaveButton();
+            }
+        }
+    });
+
+    // Set initial image if there's a default selection
+    if (appNameCombo->count() > 0) {
+        QString initialText = appNameCombo->currentText();
+        for (const auto &game : games) {
+            for (const auto &component : game.components) {
+                if (getDisplayName(game, component) == initialText) {
+                    QPixmap pixmap(QString::fromStdString(component.iconPath));
+                    if (!pixmap.isNull()) {
+                        rememberAppImageLabel->setPixmap(pixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                    }
+                    break;
+                }
+            }
+        }
+        // Run initial validation to enable Save button if appropriate
+        validateSaveButton();
+    }
+
+    // Save button action
+    connect(saveAppButton, &QPushButton::clicked, [this, appNameCombo, iconPathEdit]() {
+        QString appName = appNameCombo->currentText().trimmed();
+        if (appName.isEmpty()) {
+            return;
+        }
+
+        // Get values from Custom Executable tab
+        QString executablePath = customTargetPathEdit->text().trimmed();
+        QString parameters = customParametersEdit->text();
+        int shuntCount = customShuntCountSpinBox->value();
+        bool extendedRedir = customExtendedRedirCheck->isChecked();
+        bool noSpawning = customNoSpawningCheck->isChecked();
+        QString iconPath = iconPathEdit->text().trimmed();
+
+        // Save to QSettings
+        QSettings settings;
+        settings.beginGroup("CustomApplications");
+        settings.beginGroup(appName);
+        settings.setValue("executablePath", executablePath);
+        settings.setValue("parameters", parameters);
+        settings.setValue("shuntCount", shuntCount);
+        settings.setValue("extendedRedir", extendedRedir);
+        settings.setValue("noSpawning", noSpawning);
+        if (!iconPath.isEmpty()) {
+            settings.setValue("iconPath", iconPath);
+        } else {
+            settings.remove("iconPath");
+        }
+        settings.endGroup();
+        settings.endGroup();
+
+        // Refresh the game list to show the new/updated application
+        populateInstalledGames();
+
+        // Show a success message
+        QMessageBox::information(this, "Application Saved",
+            QString("'%1' has been saved successfully and added to the Detected Games list.").arg(appName));
+    });
+
+    customLayout->addWidget(rememberAppWidget);
+
+    customLayout->addStretch();
+
+    tabWidget->addTab(customExeTab, "Custom &Executable");
+
+    // Connect text change to completeChanged signal for validation
+    connect(customTargetPathEdit, &QLineEdit::textChanged, this, &TargetSelectionPage::completeChanged);
+    connect(tabWidget, &QTabWidget::currentChanged, this, &TargetSelectionPage::completeChanged);
+
+    // Connect field changes to save settings
+    connect(gameList, &QListWidget::currentRowChanged, this, &TargetSelectionPage::saveSettings);
+    connect(tabWidget, &QTabWidget::currentChanged, this, &TargetSelectionPage::saveSettings);
+    connect(customTargetPathEdit, &QLineEdit::textChanged, this, &TargetSelectionPage::saveSettings);
+    connect(customParametersEdit, &QLineEdit::textChanged, this, &TargetSelectionPage::saveSettings);
+    connect(customExtendedRedirCheck, &QCheckBox::stateChanged, this, &TargetSelectionPage::saveSettings);
+    connect(customShuntCountSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &TargetSelectionPage::saveSettings);
+    connect(customNoSpawningCheck, &QCheckBox::stateChanged, this, &TargetSelectionPage::saveSettings);
 }
 
-BOOL CPatchWizardPage1::OnSetActive() 
+bool TargetSelectionPage::isComplete() const
 {
-	// Simply set up the button states
-	CPatchWizard *pWizard = (CPatchWizard *)GetParent();
-	pWizard->SetWizardButtons(PSWIZB_NEXT);
+    int currentTab = tabWidget->currentIndex();
 
-	return CPropertyPage::OnSetActive();
+    if (currentTab == 0) {
+        // Detected Games tab - complete if a game is selected and the path is valid
+        QListWidgetItem *current = gameList->currentItem();
+        if (!current) {
+            return false;
+        }
+
+        // Check if the executable path is valid
+        QString executablePath = current->data(ExecutablePathRole).toString();
+        QFileInfo fileInfo(executablePath);
+        return fileInfo.exists() && fileInfo.isFile();
+    } else {
+        // Custom Executable tab - complete if the target path is valid
+        QString targetPath = customTargetPathEdit->text().trimmed();
+        if (targetPath.isEmpty()) {
+            return false;
+        }
+
+        // Check if the file exists and is a valid file
+        QFileInfo fileInfo(targetPath);
+        return fileInfo.exists() && fileInfo.isFile();
+    }
 }
 
-BEGIN_MESSAGE_MAP(CPatchWizardPage1, CPatchTargetPage)
-	//{{AFX_MSG_MAP(CPatchWizardPage1)
-	//}}AFX_MSG_MAP
-END_MESSAGE_MAP()
-
-/////////////////////////////////////////////////////////////////////////////
-// CPatchWizardPage1 message handlers
-
-/////////////////////////////////////////////////////////////////////////////
-// CPatchWizardPage2 property page
-
-IMPLEMENT_DYNCREATE(CPatchWizardPage2, CPropertyPage)
-
-CPatchWizardPage2::CPatchWizardPage2() : CPropertyPage(CPatchWizardPage2::IDD)
+void TargetSelectionPage::initializePage()
 {
-	//{{AFX_DATA_INIT(CPatchWizardPage2)
-		// NOTE: the ClassWizard will add member initialization here
-	//}}AFX_DATA_INIT
-
-	m_bUpdatingList = FALSE;
+    loadSettings();
+    QWizardPage::initializePage();
 }
 
-CPatchWizardPage2::~CPatchWizardPage2()
+void TargetSelectionPage::cleanupPage()
 {
+    QWizardPage::cleanupPage();
 }
 
-void CPatchWizardPage2::DoDataExchange(CDataExchange* pDX)
+void TargetSelectionPage::saveSettings()
 {
-	CPropertyPage::DoDataExchange(pDX);
-	//{{AFX_DATA_MAP(CPatchWizardPage2)
-	DDX_Control(pDX, IDC_MPQS, m_ctlPatchMPQs);
-	//}}AFX_DATA_MAP
+    QSettings settings;
+    settings.beginGroup("PatchWizard/Target");
+
+    // Save current tab
+    settings.setValue("currentTab", tabWidget->currentIndex());
+
+    // Save custom executable settings
+    settings.setValue("customTargetPath", customTargetPathEdit->text());
+    settings.setValue("customParameters", customParametersEdit->text());
+    settings.setValue("customExtendedRedir", customExtendedRedirCheck->isChecked());
+    settings.setValue("customShuntCount", customShuntCountSpinBox->value());
+    settings.setValue("customNoSpawning", customNoSpawningCheck->isChecked());
+
+    // Save the selected game (if any)
+    QListWidgetItem *currentItem = gameList->currentItem();
+    if (currentItem) {
+        settings.setValue("selectedGame", currentItem->text());
+    }
+
+    settings.endGroup();
 }
 
-BOOL CPatchWizardPage2::OnSetActive() 
+void TargetSelectionPage::loadSettings()
 {
-	// Set the wizard buttons
-	CPatchWizard *pWizard = (CPatchWizard *)GetParent();
-	pWizard->SetWizardButtons(PSWIZB_BACK | PSWIZB_NEXT);
+    QSettings settings;
+    settings.beginGroup("PatchWizard/Target");
 
-	return CPropertyPage::OnSetActive();
+    // Block signals while loading to avoid triggering saves
+    tabWidget->blockSignals(true);
+    customTargetPathEdit->blockSignals(true);
+    customParametersEdit->blockSignals(true);
+    customExtendedRedirCheck->blockSignals(true);
+    customShuntCountSpinBox->blockSignals(true);
+    customNoSpawningCheck->blockSignals(true);
+    gameList->blockSignals(true);
+
+    // Restore tab
+    int savedTab = settings.value("currentTab", 0).toInt();
+    tabWidget->setCurrentIndex(savedTab);
+
+    // Restore custom executable settings
+    customTargetPathEdit->setText(settings.value("customTargetPath", "").toString());
+    customParametersEdit->setText(settings.value("customParameters", "").toString());
+    customExtendedRedirCheck->setChecked(settings.value("customExtendedRedir", true).toBool());
+    customShuntCountSpinBox->setValue(settings.value("customShuntCount", 0).toInt());
+    customNoSpawningCheck->setChecked(settings.value("customNoSpawning", false).toBool());
+
+    // Restore selected game
+    QString selectedGame = settings.value("selectedGame", "").toString();
+    if (!selectedGame.isEmpty()) {
+        for (int i = 0; i < gameList->count(); ++i) {
+            if (gameList->item(i)->text() == selectedGame) {
+                gameList->setCurrentRow(i);
+                break;
+            }
+        }
+    }
+
+    // Unblock signals
+    tabWidget->blockSignals(false);
+    customTargetPathEdit->blockSignals(false);
+    customParametersEdit->blockSignals(false);
+    customExtendedRedirCheck->blockSignals(false);
+    customShuntCountSpinBox->blockSignals(false);
+    customNoSpawningCheck->blockSignals(false);
+    gameList->blockSignals(false);
+
+    settings.endGroup();
+
+    // Manually trigger validation to update the page's complete state
+    // This is necessary because we blocked signals during loading
+    validateTargetPath();
+    emit completeChanged();
 }
 
-BOOL CPatchWizardPage2::OnKillActive() 
+QString TargetSelectionPage::getTargetPath() const
 {
-	if (!CPropertyPage::OnKillActive())
-		return FALSE;
+    int currentTab = tabWidget->currentIndex();
 
-	// As with all the other pages, we do our verification when the page 
-	// changes. Here, we need to verify that the user has not selected too 
-	// many MPQs. Count them.
-	int nMPQs = m_ctlPatchMPQs.GetItemCount(), nNumSelMPQs = 0;
-	for (int iMPQ = 0; iMPQ < nMPQs; iMPQ++)
-	{
-		MPQListMap::CPair *lpMPQEntry = 
-			(MPQListMap::CPair *)m_ctlPatchMPQs.GetItemData(iMPQ);
-		if (lpMPQEntry->value)
-			nNumSelMPQs++;
-	}
-
-	if (nNumSelMPQs > MAX_PATCH_MPQS)
-	{
-		// Too many
-		CString strMessage;
-		strMessage.Format(IDS_TOOMANYMPQS, MAX_PATCH_MPQS);
-
-		MessageBox(strMessage, NULL, MB_OK | MB_ICONEXCLAMATION);
-
-		return FALSE;
-	}
-	
-	return TRUE;
+    if (currentTab == 0) {
+        // Detected Games tab - get the path from selected game
+        QListWidgetItem *current = gameList->currentItem();
+        if (current) {
+            return current->data(ExecutablePathRole).toString();
+        }
+        return QString();
+    } else {
+        // Custom Executable tab
+        return customTargetPathEdit->text();
+    }
 }
 
-BOOL CPatchWizardPage2::ListDirectoryMPQs()
+QString TargetSelectionPage::getParameters() const
 {
-	// Here we can search for whatever file types we can use to patch stuff. 
-	// There are a wide variety of things that use MPQs - Starcraft maps, 
-	// Warcraft 3 maps, even SEMPQs. However, most of these have very specific
-	// uses, and aren't relevant to us. As of right now, the only other 
-	// non-MPQ extension I know of that is used for patches is D2M - Diablo II
-	// Mod Manager. If there are any others, they can be added here.
-	// It doesn't matter what order we list them, as we're going to sort the 
-	// entire list afterwards.
-	CString strFilter;
+    int currentTab = tabWidget->currentIndex();
 
-	strFilter.LoadString(IDS_MPQFILTER);
-	if (!ListMPQsBySpec(strFilter))
-		return FALSE;
-
-	strFilter.LoadString(IDS_D2MFILTER);
-	if (!ListMPQsBySpec(strFilter))
-		return FALSE;
-
-	return TRUE;
+    if (currentTab == 0) {
+        // Detected Games tab - get parameters from the selected item
+        QListWidgetItem *currentItem = gameList->currentItem();
+        if (currentItem) {
+            return currentItem->data(ParametersRole).toString();
+        }
+        return QString();
+    } else {
+        // Custom Executable tab
+        return customParametersEdit->text();
+    }
 }
 
-BOOL CPatchWizardPage2::ListMPQsBySpec(LPCSTR lpszFileSpec)
+bool TargetSelectionPage::useExtendedRedir() const
 {
-	// Simply make the full wildcard path spec, then use it with CFileFind to 
-	// find all files of this type.
-	CFileFind find;
-	char szFileFilter[MAX_PATH + 1];
+    int currentTab = tabWidget->currentIndex();
 
-	strcpy(szFileFilter, m_strMPQDir);
-	PathAddBackslash(szFileFilter);
-	strcat(szFileFilter, lpszFileSpec);
-
-	BOOL bFound = find.FindFile(szFileFilter), bFalse = FALSE;
-	while (bFound)
-	{
-		bFound = find.FindNextFile();
-
-		if (!AddMPQ(find.GetFilePath(), &bFalse))
-			return FALSE;
-	}
-
-	return TRUE;
+    if (currentTab == 0) {
+        // Detected Games tab - get from selected game's data
+        QListWidgetItem *current = gameList->currentItem();
+        if (current) {
+            return current->data(ExtendedRedirRole).toBool();
+        }
+        return true;  // Default to true
+    } else {
+        // Custom Executable tab
+        return customExtendedRedirCheck->isChecked();
+    }
 }
 
-BOOL CPatchWizardPage2::AddMPQ(LPCSTR lpszFileName, LPBOOL lpbSelected)
+int TargetSelectionPage::getShuntCount() const
 {
-	CString strFileName;
-	SanitizeFilePath(lpszFileName, strFileName);
+    int currentTab = tabWidget->currentIndex();
 
-	// Check to see if we already have this MPQ in the list
-	MPQListMap::CPair *lpMPQEntry = m_mapMPQs.PLookup(strFileName);
-	if (lpMPQEntry)
-	{
-		// We already do. Find it in the list view so we can update it
-		LVFINDINFO findInfo;
-		findInfo.flags = LVFI_PARAM;
-		findInfo.lParam = (LPARAM)lpMPQEntry;
-
-		int iMPQ = m_ctlPatchMPQs.FindItem(&findInfo);
-		ASSERT(iMPQ != -1);
-
-		if (lpbSelected)
-			// Set the selection. We can rely on the item changed handler to 
-			// update the list, if necessary.
-			m_ctlPatchMPQs.SetCheck(iMPQ);
-
-		// Highlight it in the list and bring it into focus
-		m_ctlPatchMPQs.SetItemState(iMPQ, LVIS_SELECTED, LVIS_SELECTED);
-		m_ctlPatchMPQs.EnsureVisible(iMPQ, TRUE);
-
-		return TRUE;
-	}
-
-	// It's not already in the list. Add it to the list. Note that we're not 
-	// adding it as checked. This is because we have to call SetCheck anyway, 
-	// so we might as well just let that do the work for us.
-	m_mapMPQs.SetAt(strFileName, FALSE);
-	lpMPQEntry = m_mapMPQs.PLookup(strFileName);
-
-	// Now add it to the list view
-	LVITEM lvItem;
-	lvItem.mask = LVIF_IMAGE | LVIF_TEXT | LVIF_PARAM;
-	lvItem.iItem = 100000;
-	lvItem.iSubItem = 0;
-	lvItem.iImage = theApp.GetIconIndex(IDI_MPQ);
-	lvItem.lParam = (LPARAM)lpMPQEntry;
-
-	// If it's in the initial MPQ directory, display only the filename. If 
-	// it's from another directory, display the entire path.
-	if (_strnicmp(strFileName, m_strInitialMPQDir, 
-		m_strInitialMPQDir.GetLength()) == 0)
-		lvItem.pszText = PathFindFileName(strFileName);
-	else
-		lvItem.pszText = (LPSTR)strFileName.GetString();
-
-	int iMPQ = m_ctlPatchMPQs.InsertItem(&lvItem);
-	if (iMPQ == -1)
-		return FALSE;
-
-	// Lastly, select the MPQ if desired.
-	if (lpbSelected && *lpbSelected)
-		m_ctlPatchMPQs.SetCheck(iMPQ, TRUE);
-
-	return TRUE;
+    if (currentTab == 0) {
+        // Detected Games tab - get from stored data
+        QListWidgetItem *current = gameList->currentItem();
+        if (current) {
+            return current->data(ShuntCountRole).toInt();
+        }
+        return 0;
+    } else {
+        // Custom Executable tab
+        return customShuntCountSpinBox->value();
+    }
 }
 
-BOOL CPatchWizardPage2::MoveMPQ(int nFrom, int nTo)
+bool TargetSelectionPage::useNoSpawning() const
 {
-	ASSERT(nFrom >= 0);
-	ASSERT(nTo >= 0);
-	ASSERT(nFrom < m_ctlPatchMPQs.GetItemCount());
-	ASSERT(nFrom != nTo);
+    int currentTab = tabWidget->currentIndex();
 
-	// Just insert a new copy of the item, then delete the original. Easy. The
-	// only nontrivial part is making sure you act on the right indices, as 
-	// the indices of the ones we're working with may change due to the 
-	// addition.
-	MPQListMap::CPair *lpFromMPQ = 
-		(MPQListMap::CPair *)m_ctlPatchMPQs.GetItemData(nFrom);
-	ASSERT(lpFromMPQ);
-
-	// Get the info for the old one
-	CString strFileName = m_ctlPatchMPQs.GetItemText(nFrom, 0);
-	BOOL bSelected = m_ctlPatchMPQs.GetCheck(nFrom);
-
-	// Insert the item into its new position. If the new position is before 
-	// the old one, we can use the new index directly. If it's >= the old 
-	// one, however, we need to add one, as the old one is still there for 
-	// the moment, and we have to hop over it.
-	LVITEM lvItem;
-	lvItem.mask = LVIF_IMAGE | LVIF_TEXT | LVIF_PARAM;
-	lvItem.iItem = (nFrom < nTo ? nTo + 1 : nTo);
-	lvItem.iSubItem = 0;
-	lvItem.pszText = (LPSTR)strFileName.GetString();
-	lvItem.iImage = theApp.GetIconIndex(IDI_MPQ);
-	lvItem.lParam = (LPARAM)lpFromMPQ;
-
-	int iMPQ = m_ctlPatchMPQs.InsertItem(&lvItem);
-	if (iMPQ == -1)
-		return FALSE;
-
-	// Check the new one if necessary
-	if (bSelected)
-		m_ctlPatchMPQs.SetCheck(iMPQ);
-
-	// Delete the old item. Here we also have to be careful with the index. If
-	// the new position was inserted above the old one, with need to increase 
-	// the target index by 1. The case of = also results in the new one being 
-	// above the old one.
-	m_ctlPatchMPQs.DeleteItem(nTo <= nFrom ? nFrom + 1 : nFrom);
-
-	return TRUE;
+    if (currentTab == 0) {
+        // Detected Games tab - get from stored data
+        QListWidgetItem *current = gameList->currentItem();
+        if (current) {
+            return current->data(NoSpawningRole).toBool();
+        }
+        return false;
+    } else {
+        // Custom Executable tab
+        return customNoSpawningCheck->isChecked();
+    }
 }
 
-int CALLBACK CPatchWizardPage2::CompareMPQs(
-	LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
+void TargetSelectionPage::validateTargetPath()
 {
-	// Two-level comparison. Sort first by file name (excluding path). If that
-	// fails (the two are equal), compare the full file path.
-	MPQListMap::CPair *lpMPQEntry1 = (MPQListMap::CPair *)lParam1,
-		*lpMPQEntry2 = (MPQListMap::CPair *)lParam2;
+    QString targetPath = customTargetPathEdit->text().trimmed();
 
-	int result = _stricmp(PathFindFileName(lpMPQEntry1->key), 
-		PathFindFileName(lpMPQEntry2->key));
-	if (result != 0)
-		return result;
+    if (targetPath.isEmpty()) {
+        customTargetPathEdit->setStyleSheet("");
+        customTargetPathEdit->setToolTip("");
+        return;
+    }
 
-	return _stricmp(lpMPQEntry1->key, lpMPQEntry2->key);
+    QFileInfo fileInfo(targetPath);
+    if (!fileInfo.exists()) {
+        customTargetPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
+        customTargetPathEdit->setToolTip("File does not exist");
+    } else if (!fileInfo.isFile()) {
+        customTargetPathEdit->setStyleSheet(INVALID_FIELD_STYLE);
+        customTargetPathEdit->setToolTip("Path is not a file");
+    } else {
+        customTargetPathEdit->setStyleSheet("");
+        customTargetPathEdit->setToolTip("");
+    }
 }
 
-BEGIN_MESSAGE_MAP(CPatchWizardPage2, CPropertyPage)
-	//{{AFX_MSG_MAP(CPatchWizardPage2)
-	ON_BN_CLICKED(IDC_BROWSE, OnBrowse)
-	ON_BN_CLICKED(IDC_MOVEUP, OnMoveUp)
-	ON_BN_CLICKED(IDC_MOVEDOWN, OnMoveDown)
-	ON_NOTIFY(LVN_ITEMCHANGED, IDC_MPQS, OnItemChangedMPQs)
-	//}}AFX_MSG_MAP
-END_MESSAGE_MAP()
-
-/////////////////////////////////////////////////////////////////////////////
-// CPatchWizardPage2 message handlers
-
-BOOL CPatchWizardPage2::OnInitDialog() 
+void TargetSelectionPage::onTargetPathChanged()
 {
-	CPropertyPage::OnInitDialog();
-
-	// Load the settings from the registry
-	LoadSettings();
-
-	// Set up the list view - title, styles, image list, and the column. As 
-	// the title is the current MPQ path, we must do this after LoadSettings 
-	// has been called.
-	CString strTitle;
-	strTitle.Format(IDS_MPQLISTHEADER, m_strInitialMPQDir);
-
-	m_ctlPatchMPQs.SetExtendedStyle(LVS_EX_CHECKBOXES);
-	m_ctlPatchMPQs.InsertColumn(0, strTitle);
-	m_ctlPatchMPQs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
-	m_ctlPatchMPQs.SetImageList(&theApp.GetSmallIcons(), LVSIL_SMALL);
-
-	// List the MPQs and sort the ones initially listed
-	ListDirectoryMPQs();
-	m_ctlPatchMPQs.SortItems(CompareMPQs, 0);
-
-	// Return FALSE, as we have not set focus to a control
-	return TRUE;
+    validateTargetPath();
 }
 
-void CPatchWizardPage2::OnItemChangedMPQs(NMHDR* pNMHDR, LRESULT* pResult) 
+void TargetSelectionPage::populateInstalledGames()
 {
-	*pResult = 0;
+    gameList->clear();
 
-	// Filter out notifications sent while one of the update functions is 
-	// messing with the list, or due to things other than the state changing.
-	NM_LISTVIEW* pNMListView = (NM_LISTVIEW*)pNMHDR;
-	if (m_bUpdatingList || (pNMListView->uChanged != LVIF_STATE))
-		return;
+    // Load custom applications from QSettings into ApplicationData vector
+    std::vector<ApplicationData> overrides;
+    QSettings settings;
+    settings.beginGroup("CustomApplications");
+    QStringList customAppNames = settings.childGroups();
+    for (const QString& appName : customAppNames) {
+        settings.beginGroup(appName);
+        ApplicationData app;
+        app.displayText = appName.toStdString();
+        app.executablePath = settings.value("executablePath").toString().toStdString();
+        app.iconPath = settings.value("iconPath").toString().toStdString();
+        app.parameters = settings.value("parameters").toString().toStdString();
+        app.extendedRedir = settings.value("extendedRedir", true).toBool();
+        app.shuntCount = settings.value("shuntCount", 0).toInt();
+        app.noSpawning = settings.value("noSpawning", false).toBool();
+        settings.endGroup();
+        overrides.push_back(app);
+    }
+    settings.endGroup();
 
-	MPQListMap::CPair *lpMPQEntry = (MPQListMap::CPair *)
-		m_ctlPatchMPQs.GetItemData(pNMListView->iItem);
+    // Build merged application list
+    std::vector<ApplicationEntry> applications = buildInstalledApplicationList(overrides);
 
-	// Check if there's been a change to the check state
-	BOOL bSelect = m_ctlPatchMPQs.GetCheck(pNMListView->iItem);
-	if ((bSelect != FALSE) == (lpMPQEntry->value != FALSE))
-		// There hasn't. This is either a change not related to check state, 
-		// or one of our functions has desynced the list and view. Ignore.
-		return;
+    // Create UI items for each application
+    for (const ApplicationEntry& entry : applications) {
+        const ApplicationData& app = entry.data;
 
-	// The state has changed. Update the list version.
-	lpMPQEntry->value = bSelect;
+        // Check if path is valid
+        QFileInfo fileInfo(QString::fromStdString(app.executablePath));
+        bool pathInvalid = !fileInfo.exists() || !fileInfo.isFile();
+
+        QListWidgetItem *item = new QListWidgetItem(gameList);
+        item->setText(QString::fromStdString(app.displayText));
+
+        // Set icon
+        if (!app.iconPath.empty()) {
+            item->setIcon(QIcon(QString::fromStdString(app.iconPath)));
+        } else {
+            item->setIcon(QIcon(":/icons/not-found.svg"));
+        }
+
+        // Store data in item
+        item->setData(ExtendedRedirRole, app.extendedRedir);
+        item->setData(ExecutablePathRole, QString::fromStdString(app.executablePath));
+        item->setData(ShuntCountRole, app.shuntCount);
+        item->setData(NoSpawningRole, app.noSpawning);
+        item->setData(IsOverriddenRole, entry.isOverridden);
+        item->setData(ParametersRole, QString::fromStdString(app.parameters));
+        item->setData(IsSupportedGameRole, entry.isSupportedGame);
+
+        // Color coding and tooltips
+        if (pathInvalid) {
+            QFont font = item->font();
+            font.setItalic(true);
+            item->setFont(font);
+            item->setForeground(Qt::red);
+            if (entry.isOverridden && entry.isSupportedGame) {
+                item->setToolTip("Executable not found - Right click to reset");
+            } else if (entry.isOverridden) {
+                item->setToolTip("Executable not found - Right click to remove");
+            } else {
+                item->setToolTip("Executable not found");
+            }
+        } else if (entry.isOverridden) {
+            QFont font = item->font();
+            font.setItalic(true);
+            item->setFont(font);
+            item->setForeground(Qt::blue);
+            if (entry.isSupportedGame) {
+                item->setToolTip("Default values modified - Right click to reset");
+            } else {
+                item->setToolTip("Custom application - Right click to remove");
+            }
+        }
+    }
+
+    // Show message if no games at all
+    if (gameList->count() == 0) {
+        QListWidgetItem *item = new QListWidgetItem(gameList);
+        item->setText("No supported games detected");
+        item->setIcon(QIcon(":/icons/not-found.svg"));
+        item->setFlags(Qt::NoItemFlags);  // Make it non-selectable
+        item->setForeground(Qt::gray);
+    }
 }
 
-void CPatchWizardPage2::OnBrowse() 
+void TargetSelectionPage::onGameSelectionChanged(QListWidgetItem *current, QListWidgetItem *previous)
 {
-	// Load the settings for the dialog
-	CString strFilter, strTitle;
-	strFilter.LoadString(IDS_OPENMPQSETTINGS);
-	strTitle.LoadString(IDS_OPENPATCHMPQ);
+    Q_UNUSED(previous);
 
-	// Set up the dialog and run it
-	CFileDialog dlg(TRUE, NULL, NULL, OFN_ALLOWMULTISELECT | OFN_EXPLORER | 
-		OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_PATHMUSTEXIST, strFilter);
-	dlg.m_ofn.lpstrTitle = strTitle;
-	dlg.m_ofn.lpstrInitialDir = m_strMPQDir;
+    if (!current) {
+        return;
+    }
 
-	if (dlg.DoModal() != IDOK)
-		return;	// Cancelled
-
-	// Add each selected MPQ
-	CString strFilePath;
-	POSITION pos = dlg.GetStartPosition();
-	while (pos != NULL)
-	{
-		strFilePath = dlg.GetNextPathName(pos);
-
-		BOOL bTrue = TRUE;
-		AddMPQ(strFilePath, &bTrue);
-	}
-
-	// Update the current MPQ directory if the user changed the directory
-	char szMPQDir[MAX_PATH] = "";
-	strcpy(szMPQDir, dlg.GetPathName());
-	PathRemoveFileSpec(szMPQDir);
-	m_strMPQDir = szMPQDir;
+    // Emit completeChanged to update wizard buttons
+    emit completeChanged();
 }
 
-BOOL CPatchWizardPage2::SaveSettings()
+void TargetSelectionPage::onGameListContextMenu(const QPoint &pos)
 {
-	// Just one setting to write: the MPQ directory
-	CString strRegPatchHdr, strRegMPQDir;
-	strRegPatchHdr.LoadString(IDS_PATCHKEY);
-	strRegMPQDir.LoadString(IDS_MPQDIRKEY);
+    QListWidgetItem *item = gameList->itemAt(pos);
+    if (!item) {
+        return;
+    }
 
-	theApp.WriteProfileString(strRegPatchHdr, strRegMPQDir, m_strMPQDir);
+    // Only show the context menu for items from QSettings
+    bool isFromSettings = item->data(IsOverriddenRole).toBool();
+    if (!isFromSettings) {
+        return;
+    }
 
-	return TRUE;
+    QString appName = item->text();
+    bool isSupportedGame = item->data(IsSupportedGameRole).toBool();
+
+    // Create context menu
+    QMenu contextMenu(this);
+    QAction *action;
+
+    if (isSupportedGame) {
+        action = contextMenu.addAction("Reset to default values");
+    } else {
+        action = contextMenu.addAction("Remove from list");
+    }
+
+    // Show menu and handle action
+    QAction *selectedAction = contextMenu.exec(gameList->mapToGlobal(pos));
+    if (selectedAction == action) {
+        // Remove from QSettings
+        QSettings settings;
+        settings.beginGroup("CustomApplications");
+        settings.remove(appName);
+        settings.endGroup();
+
+        // Refresh the game list
+        populateInstalledGames();
+    }
 }
 
-BOOL CPatchWizardPage2::LoadSettings()
+void TargetSelectionPage::onBrowseClicked()
 {
-	// Same as with saving: just one setting
-	CString strRegPatchHdr, strRegMPQDir;
-	strRegPatchHdr.LoadString(IDS_PATCHKEY);
-	strRegMPQDir.LoadString(IDS_MPQDIRKEY);
-	LPCSTR lpszStartupPath = theApp.GetStartupPath();
+    QSettings settings;
+    QString startDir = settings.value("PatchWizard/Directories/customTarget", QString()).toString();
 
-	m_strMPQDir = theApp.GetProfileString(strRegPatchHdr, 
-		strRegMPQDir, lpszStartupPath);
-	if (!PathIsDirectory(m_strMPQDir))
-		m_strMPQDir = lpszStartupPath;
-	// Make sure we sanitize the path, as we're going to be using strcmp on it
-	SanitizeFilePath(m_strMPQDir, m_strInitialMPQDir);
+    QString fileName = QFileDialog::getOpenFileName(
+        this,
+        "Select Target Executable",
+        startDir,
+        "Executables (*.exe);;All Files (*.*)"
+    );
 
-	return TRUE;
+    if (!fileName.isEmpty()) {
+        customTargetPathEdit->setText(fileName);
+        settings.setValue("PatchWizard/Directories/customTarget", QFileInfo(fileName).absolutePath());
+
+        // Set focus based on whether Advanced Settings is expanded
+        if (advancedWidget->isVisible()) {
+            customParametersEdit->setFocus();
+        } else {
+            customTargetPathEdit->setFocus();
+        }
+    }
 }
 
-void CPatchWizardPage2::OnMoveUp() 
+
+//=============================================================================
+// Page 2: MPQ Selection
+//=============================================================================
+MPQSelectionPage::MPQSelectionPage(QWidget *parent)
+    : QWizardPage(parent)
 {
-	// Get the MPQ to move
-	POSITION pos = m_ctlPatchMPQs.GetFirstSelectedItemPosition();
-	if (!pos)
-		return;	// No highlighted MPQ
+    setTitle("Select MPQ Files");
+    setSubTitle("Add MPQ files to load. Files are loaded in order (files higher up have higher priority).");
+    setPixmap(
+            QWizard::LogoPixmap,
+            QPixmap(":/icons/mpq.svg").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+    );
 
-	int nItemPos = m_ctlPatchMPQs.GetNextSelectedItem(pos),
-		nNewItemPos = nItemPos - 1;
-	if (nNewItemPos < 0)
-		return;	// We're at the top of the list view. Ignore.
+    QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
-	// Move it. Highlight it after the move, as movement actually creates a 
-	// new list entry, which obviously won't be highlighted.
-	MoveMPQ(nItemPos, nNewItemPos);
-	m_ctlPatchMPQs.SetItemState(nNewItemPos, 
-		LVIS_SELECTED, LVIS_SELECTED);
+    // Warning label at top
+    warningLabel = new QLabel(this);
+    warningLabel->setWordWrap(true);
+    warningLabel->hide();
+    mainLayout->addWidget(warningLabel);
+
+    // Horizontal layout for the list and buttons
+    QHBoxLayout *contentLayout = new QHBoxLayout();
+
+    // MPQ list
+    mpqListWidget = new QListWidget(this);
+    mpqListWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    mpqListWidget->setDragDropMode(QAbstractItemView::InternalMove);
+    mpqListWidget->setDefaultDropAction(Qt::MoveAction);
+    connect(mpqListWidget, &QListWidget::itemChanged, this, &MPQSelectionPage::onItemChanged);
+    connect(mpqListWidget, &QListWidget::itemSelectionChanged, this, &MPQSelectionPage::onSelectionChanged);
+    contentLayout->addWidget(mpqListWidget);
+
+    // Buttons
+    QVBoxLayout *buttonLayout = new QVBoxLayout();
+    addButton = new QPushButton("Add &MPQs...", this);
+    addFolderButton = new QPushButton("Add &Folder...", this);
+    removeButton = new QPushButton("&Remove", this);
+    moveUpButton = new QPushButton("Move &Up", this);
+    moveDownButton = new QPushButton("Move &Down", this);
+
+    // Initially disable buttons that require selection
+    removeButton->setEnabled(false);
+    moveUpButton->setEnabled(false);
+    moveDownButton->setEnabled(false);
+
+    connect(addButton, &QPushButton::clicked, this, &MPQSelectionPage::onAddClicked);
+    connect(addFolderButton, &QPushButton::clicked, this, &MPQSelectionPage::onAddFolderClicked);
+    connect(removeButton, &QPushButton::clicked, this, &MPQSelectionPage::onRemoveClicked);
+    connect(moveUpButton, &QPushButton::clicked, this, &MPQSelectionPage::onMoveUpClicked);
+    connect(moveDownButton, &QPushButton::clicked, this, &MPQSelectionPage::onMoveDownClicked);
+
+    buttonLayout->addWidget(addButton);
+    buttonLayout->addWidget(addFolderButton);
+    buttonLayout->addWidget(removeButton);
+    buttonLayout->addSpacing(20);
+    buttonLayout->addWidget(moveUpButton);
+    buttonLayout->addWidget(moveDownButton);
+    buttonLayout->addStretch();
+
+    contentLayout->addLayout(buttonLayout);
+    mainLayout->addLayout(contentLayout);
 }
 
-void CPatchWizardPage2::OnMoveDown() 
+QStringList MPQSelectionPage::getSelectedMPQs() const
 {
-	// Exactly the same as with OnMoveUp
-	POSITION pos = m_ctlPatchMPQs.GetFirstSelectedItemPosition();
-	if (!pos)
-		return;
-
-	int nItemPos = m_ctlPatchMPQs.GetNextSelectedItem(pos),
-		nNewItemPos = nItemPos + 1;
-	if (nNewItemPos >= m_ctlPatchMPQs.GetItemCount())
-		return;	// It's the last item in the list view
-
-	MoveMPQ(nItemPos, nNewItemPos);
-	m_ctlPatchMPQs.SetItemState(nNewItemPos, 
-		LVIS_SELECTED, LVIS_SELECTED);
+    QStringList mpqs;
+    for (int i = 0; i < mpqListWidget->count(); ++i) {
+        QListWidgetItem *item = mpqListWidget->item(i);
+        if (item->checkState() == Qt::Checked) {
+            mpqs.append(item->text());
+        }
+    }
+    return mpqs;
 }
 
-BOOL CPatchWizardPage2::GetSelectedMPQs(MPQPathList &MPQPaths)
+bool MPQSelectionPage::isComplete() const
 {
-	// MPQDraftPatch takes MPQs as an array of LPCSTRs, so we have to build it
-	MPQPaths.RemoveAll();
-
-	// Scan through the list looking for selected MPQs
-	DWORD nMPQs = m_ctlPatchMPQs.GetItemCount();
-	for (DWORD iMPQ = 0; iMPQ < nMPQs; iMPQ++)
-	{
-		MPQListMap::CPair *lpMPQEntry = 
-			(MPQListMap::CPair *)m_ctlPatchMPQs.GetItemData(iMPQ);
-		if (!lpMPQEntry->value)
-			continue;	// It's not selected
-
-		// I get the feeling it's a bad idea to go calling GetString on all 
-		// of the CStrings in the MPQ list. So, we're going to allocate 
-		// buffers for each path, and add it.
-		LPSTR lpszMPQPath = NULL;
-		try
-		{
-			lpszMPQPath = new char[lpMPQEntry->key.GetLength() + 1];
-			strcpy(lpszMPQPath, lpMPQEntry->key);
-
-			MPQPaths.Add(lpszMPQPath);
-		}
-		catch (...)
-		{
-			// Out of memory. Free the buffer, if there is one, and all the 
-			// buffers allocated previously.
-			if (lpszMPQPath)
-				delete [] lpszMPQPath;
-			FreeSelectedMPQs(MPQPaths);
-
-			return FALSE;
-		}
-	}
-
-	return TRUE;
+    // Page is complete if we don't have too many MPQs selected
+    return getSelectedMPQs().count() <= MAX_PATCH_MPQS;
 }
 
-void CPatchWizardPage2::FreeSelectedMPQs(MPQPathList &MPQPaths)
+bool MPQSelectionPage::validatePage()
 {
-	// Free all the buffers and clear the list
-	for (int iMPQ = 0; iMPQ < MPQPaths.GetSize(); iMPQ++)
-		delete [] (LPSTR)MPQPaths[iMPQ];
+    // If there are items but none are checked, warn the user
+    if (mpqListWidget->count() > 0 && getSelectedMPQs().isEmpty()) {
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this,
+            "No MPQs Selected",
+            "You have MPQ files in the list, but none are selected (checked). "
+            "Do you want to proceed without any MPQ files?",
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No
+        );
 
-	MPQPaths.RemoveAll();
+        return reply == QMessageBox::Yes;
+    }
+
+    return true;
 }
 
-/////////////////////////////////////////////////////////////////////////////
-// CPatchWizardPage3 property page
-
-IMPLEMENT_DYNCREATE(CPatchWizardPage3, CPropertyPage)
-
-CPatchWizardPage3::CPatchWizardPage3() 
-: CPluginPage(FALSE, IDS_PATCHWIZARD3TITLE)
+void MPQSelectionPage::initializePage()
 {
-	//{{AFX_DATA_INIT(CPatchWizardPage3)
-	//}}AFX_DATA_INIT
+    loadSettings();
+    QWizardPage::initializePage();
 }
 
-CPatchWizardPage3::~CPatchWizardPage3()
+void MPQSelectionPage::cleanupPage()
 {
+    QWizardPage::cleanupPage();
 }
 
-BEGIN_MESSAGE_MAP(CPatchWizardPage3, CPluginPage)
-	//{{AFX_MSG_MAP(CPatchWizardPage3)
-	//}}AFX_MSG_MAP
-END_MESSAGE_MAP()
-
-/////////////////////////////////////////////////////////////////////////////
-// CPatchWizardPage3 message handlers
-
-BOOL CPatchWizardPage3::OnSetActive() 
+void MPQSelectionPage::saveSettings()
 {
-	// Set the buttons like usual
-	CPatchWizard *pWizard = (CPatchWizard *)GetParent();
-	pWizard->SetWizardButtons(PSWIZB_BACK | PSWIZB_FINISH);
-	
-	// This page is special because it's the only page that depends on data 
-	// from a previous page (namely CPatchTargetPage). Here we need to get 
-	// the selected program from that page and update ourself with it.
-	CPatchWizardPage1 *pPage1 = &pWizard->m_firstPage;
+    QSettings settings;
+    settings.beginGroup("PatchWizard/MPQ");
 
-	CString strProgramPath;
-	pPage1->m_ctlProgramPath.GetWindowText(strProgramPath);
-	if (SetPatchTarget(strProgramPath))
-		ListPlugins();	// The target has changed. Refresh the plugin list.
+    // Save the last MPQ directory
+    settings.setValue("lastDirectory", lastMPQDirectory);
 
-	return CPropertyPage::OnSetActive();
+    // Clear old MPQ entries first
+    settings.remove("mpqs");
+
+    // Save the MPQ list with checked state (manual index management)
+    settings.beginGroup("mpqs");
+    for (int i = 0; i < mpqListWidget->count(); ++i) {
+        settings.beginGroup(QString::number(i));
+        QListWidgetItem *item = mpqListWidget->item(i);
+        settings.setValue("path", item->text());
+        settings.setValue("checked", item->checkState() == Qt::Checked);
+        settings.endGroup();
+    }
+    settings.endGroup();
+
+    settings.endGroup();
 }
 
-BOOL CPatchWizardPage3::OnWizardFinish() 
+void MPQSelectionPage::loadSettings()
 {
-	// Use OnKillActive to verify that there aren't too many selected plugins 
-	// or modules.
-	if (!OnKillActive())
-		return FALSE;
+    QSettings settings;
+    settings.beginGroup("PatchWizard/MPQ");
 
-	// Verify that all plugins are configured and ready to rock
-	if (!PluginsReady())
-		return FALSE;
+    // Block signals while loading to avoid triggering saves
+    mpqListWidget->blockSignals(true);
 
-	// Do it
-	CPatchWizard *pWizard = (CPatchWizard *)GetParent();
-	if (!pWizard->DoPatch())
-		return FALSE;
+    // Restore last MPQ directory
+    lastMPQDirectory = settings.value("lastDirectory", QDir::currentPath()).toString();
 
-	// Close the wizard
-	return CPropertyPage::OnWizardFinish();
+    // Restore MPQ list (manual index management)
+    settings.beginGroup("mpqs");
+    int i = 0;
+    while (true) {
+        settings.beginGroup(QString::number(i));
+        if (!settings.contains("path")) {
+            settings.endGroup();
+            break;
+        }
+
+        QString path = settings.value("path").toString();
+        bool checked = settings.value("checked", true).toBool();
+        settings.endGroup();
+
+        // Only add if the file still exists
+        if (QFileInfo::exists(path)) {
+            addMPQFile(path, checked);
+        }
+
+        ++i;
+    }
+    settings.endGroup();
+
+    // Unblock signals
+    mpqListWidget->blockSignals(false);
+
+    settings.endGroup();
 }
 
-/////////////////////////////////////////////////////////////////////////////
-// CPatchWizard
-
-IMPLEMENT_DYNAMIC(CPatchWizard, CPropertySheet)
-
-CPatchWizard::CPatchWizard(UINT nIDCaption, CWnd* pParentWnd, UINT iSelectPage)
-	: CPropertySheet(nIDCaption, pParentWnd, iSelectPage)
+void MPQSelectionPage::validateMPQList()
 {
-	AddPage(&m_firstPage);
-	AddPage(&m_secondPage);
-	AddPage(&m_thirdPage);
+    int mpqCount = mpqListWidget->count();
+    int checkedCount = 0;
 
-	SetWizardMode();
+    // Count checked MPQs and check for missing files
+    QStringList missingFiles;
+    for (int i = 0; i < mpqCount; ++i) {
+        QListWidgetItem *item = mpqListWidget->item(i);
+        QString mpqPath = item->text();
+        QFileInfo fileInfo(mpqPath);
+
+        if (item->checkState() == Qt::Checked) {
+            checkedCount++;
+        }
+
+        if (!fileInfo.exists()) {
+            missingFiles.append(QFileInfo(mpqPath).fileName());
+            item->setForeground(Qt::red);
+            item->setToolTip("File does not exist");
+        } else {
+            item->setForeground(QColor());
+            item->setToolTip("");
+        }
+    }
+
+    // Check if too many checked MPQs
+    if (checkedCount > MAX_PATCH_MPQS) {
+        warningLabel->setText(QString("<font color='#d32f2f'><b>Warning:</b> Too many MPQ files selected (%1/%2). "
+                                     "Please uncheck some files.</font>")
+                            .arg(checkedCount).arg(MAX_PATCH_MPQS));
+        warningLabel->show();
+        return;
+    }
+
+    if (!missingFiles.isEmpty()) {
+        warningLabel->setText(QString("<font color='#d32f2f'><b>Warning:</b> Some MPQ files do not exist: %1</font>")
+                            .arg(missingFiles.join(", ")));
+        warningLabel->show();
+    } else {
+        warningLabel->hide();
+    }
 }
 
-CPatchWizard::CPatchWizard(LPCTSTR pszCaption, 
-	CWnd* pParentWnd, UINT iSelectPage)
-	: CPropertySheet(pszCaption, pParentWnd, iSelectPage)
+void MPQSelectionPage::onItemChanged()
 {
-	AddPage(&m_firstPage);
-	AddPage(&m_secondPage);
-	AddPage(&m_thirdPage);
-
-	SetWizardMode();
+    validateMPQList();
+    emit completeChanged();
+    saveSettings();  // Save whenever items change (check state, order, etc.)
 }
 
-CPatchWizard::~CPatchWizard()
+void MPQSelectionPage::addMPQFile(const QString &fileName, bool checked)
 {
+    // Don't add duplicates - silently filter them out
+    for (int i = 0; i < mpqListWidget->count(); ++i) {
+        if (mpqListWidget->item(i)->text() == fileName) {
+            return;  // Already in the list
+        }
+    }
+
+    QListWidgetItem *item = new QListWidgetItem(fileName);
+    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+    item->setCheckState(checked ? Qt::Checked : Qt::Unchecked);
+
+    // Add MPQ icon
+    QIcon mpqIcon(":/icons/mpq.svg");
+    item->setIcon(mpqIcon);
+
+    mpqListWidget->addItem(item);
 }
 
-BOOL CPatchWizard::DoPatch()
+void MPQSelectionPage::onAddClicked()
 {
-	CString strMessage;
+    // Use the last directory if available
+    QString startDir = lastMPQDirectory.isEmpty() ? QDir::currentPath() : lastMPQDirectory;
 
-	// Save the settings of all the pages to the registry
-	m_firstPage.SaveSettings();
-	m_secondPage.SaveSettings();
-	m_thirdPage.SaveSettings();
+    QStringList fileNames = QFileDialog::getOpenFileNames(
+        this,
+        "Select MPQ Files",
+        startDir,
+        "MPQ Archives (*.mpq);;All Files (*.*)"
+    );
 
-	// Load the DLL and find the patcher function
-	MPQDraftPatcherPtr MPQDraftPatcher = GetPatcher();
-	if (!MPQDraftPatcher)
-	{
-		strMessage.LoadString(IDS_PATCHFAILED);
-		MessageBox(strMessage, NULL, MB_OK | MB_ICONSTOP);
+    // Save the directory for next time
+    if (!fileNames.isEmpty()) {
+        lastMPQDirectory = QFileInfo(fileNames.first()).absolutePath();
+    }
 
-		return FALSE;
-	}
+    // Clear selection before adding new items
+    mpqListWidget->clearSelection();
 
-	// Get the program to patch and the command line parameters
-	CString strProgramPath, strSpawnPath, strParameters;
-	m_firstPage.GetParameters(strParameters);
-	if (!m_firstPage.GetProgramPath(strProgramPath) ||
-		!m_firstPage.GetPatchTargetPath(strSpawnPath))
-	{
-		strMessage.LoadString(IDS_PATCHFAILED);
-		MessageBox(strMessage, NULL, MB_OK | MB_ICONSTOP);
+    for (const QString &fileName : fileNames) {
+        int oldCount = mpqListWidget->count();
+        addMPQFile(fileName, true);  // Add as checked
 
-		return FALSE;
-	}
+        // Select the newly added item (if it was actually added)
+        if (mpqListWidget->count() > oldCount) {
+            mpqListWidget->item(mpqListWidget->count() - 1)->setSelected(true);
+        }
+    }
 
-	// Compile the flags
-	DWORD dwFlags = 0;
-
-	if (m_firstPage.RedirOpenFileEx())
-		dwFlags |= MPQD_EXTENDED_REDIR;
-	if (!strSpawnPath.GetLength())
-		m_firstPage.GetProgramPath(strSpawnPath);
-
-	// Get the MPQs to use for patching
-	CPatchWizardPage2::MPQPathList MPQs;
-	CPluginPage::PluginModuleList modules;
-
-	BOOL bPatchSuccess = FALSE;
-
-	if (m_secondPage.GetSelectedMPQs(MPQs)
-		&& m_thirdPage.GetSelectedPluginsAndModules(NULL, modules))
-	{
-		// Build the command line from the program and parameters
-		char szCommandLine[MAX_PATH * 2], szCurDir[MAX_PATH + 1],
-			szStartDir[MAX_PATH + 1];
-
-		strcpy(szStartDir, strProgramPath);
-		PathRemoveFileSpec(szStartDir);
-
-		GetModuleFileName(NULL, szCurDir, MAX_PATH);
-		PathRemoveFileSpec(szCurDir);
-
-		wsprintf(szCommandLine, "\"%s\" %s", strProgramPath, strParameters);
-
-		// Hide our windows during the patch
-		CWnd *pMainMenu = AfxGetMainWnd();
-		ASSERT(pMainMenu);
-		
-		ShowWindow(SW_HIDE);
-		pMainMenu->ShowWindow(SW_HIDE);
-
-		// Use the same environment as for MPQDraft
-		STARTUPINFO si;
-		GetStartupInfo(&si);
-
-		// Do it
-		bPatchSuccess = MPQDraftPatcher(strProgramPath, szCommandLine, NULL, 
-			NULL, FALSE, 0, NULL, szStartDir, &si, dwFlags, szCurDir, 
-			strSpawnPath, 0, MPQs.GetSize(), modules.GetSize(), 
-			MPQs.GetData(), modules.GetData());
-			bPatchSuccess = TRUE;
-
-		// Restore our windows
-		pMainMenu->ShowWindow(SW_RESTORE);
-		ShowWindow(SW_RESTORE);
-	}
-
-	m_secondPage.FreeSelectedMPQs(MPQs);
-
-	if (!bPatchSuccess)
-	{
-		strMessage.LoadString(IDS_PATCHFAILED);
-		MessageBox(strMessage, NULL, MB_OK | MB_ICONSTOP);
-	}
-
-	return bPatchSuccess;
+    validateMPQList();
+    saveSettings();  // Save after adding MPQs
 }
 
-MPQDraftPatcherPtr CPatchWizard::GetPatcher()
+void MPQSelectionPage::onAddFolderClicked()
 {
-	// Get patcher DLL path
-	CString *lpstrPatcherDLL = theApp.GetPatcherDLLPath();
-	if (!lpstrPatcherDLL)
-		return NULL;
+    // Use the last directory if available
+    QString startDir = lastMPQDirectory.isEmpty() ? QDir::currentPath() : lastMPQDirectory;
 
-	// Load it
-	HMODULE hDLL = GetModuleHandle(*lpstrPatcherDLL);
-	if (!hDLL)
-	{
-		hDLL = LoadLibrary(*lpstrPatcherDLL);
-		if (!hDLL)
-			return NULL;
-	}
+    QString folderPath = QFileDialog::getExistingDirectory(
+        this,
+        "Select Folder Containing MPQ Files",
+        startDir,
+        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
+    );
 
-	// Get the pointer to the patcher
-	return (MPQDraftPatcherPtr)GetProcAddress(hDLL, "MPQDraftPatcher");
+    if (folderPath.isEmpty()) {
+        return;  // User cancelled
+    }
+
+    // Save the directory for next time
+    lastMPQDirectory = folderPath;
+
+    // Find all MPQ files in the selected folder
+    QDir dir(folderPath);
+    QStringList mpqFiles = dir.entryList(QStringList() << "*.mpq" << "*.MPQ", QDir::Files);
+
+    // Clear selection before adding new items
+    mpqListWidget->clearSelection();
+
+    for (const QString &fileName : mpqFiles) {
+        QString fullPath = dir.absoluteFilePath(fileName);
+        int oldCount = mpqListWidget->count();
+        addMPQFile(fullPath, false);  // Add as unchecked
+
+        // Select the newly added item (if it was actually added)
+        if (mpqListWidget->count() > oldCount) {
+            mpqListWidget->item(mpqListWidget->count() - 1)->setSelected(true);
+        }
+    }
+
+    validateMPQList();
+    saveSettings();  // Save after adding folder
 }
 
-BEGIN_MESSAGE_MAP(CPatchWizard, CPropertySheet)
-	//{{AFX_MSG_MAP(CPatchWizard)
-	//}}AFX_MSG_MAP
-END_MESSAGE_MAP()
+void MPQSelectionPage::onRemoveClicked()
+{
+    QList<QListWidgetItem*> selected = mpqListWidget->selectedItems();
+    for (QListWidgetItem *item : selected) {
+        delete item;
+    }
+    saveSettings();  // Save after removing MPQs
+    validateMPQList();
+}
 
-/////////////////////////////////////////////////////////////////////////////
-// CPatchWizard message handlers
+void MPQSelectionPage::onMoveUpClicked()
+{
+    int currentRow = mpqListWidget->currentRow();
+    if (currentRow > 0) {
+        QListWidgetItem *item = mpqListWidget->takeItem(currentRow);
+        mpqListWidget->insertItem(currentRow - 1, item);
+        mpqListWidget->setCurrentRow(currentRow - 1);
+        saveSettings();  // Save after reordering
+    }
+}
+
+void MPQSelectionPage::onMoveDownClicked()
+{
+    int currentRow = mpqListWidget->currentRow();
+    if (currentRow >= 0 && currentRow < mpqListWidget->count() - 1) {
+        QListWidgetItem *item = mpqListWidget->takeItem(currentRow);
+        mpqListWidget->insertItem(currentRow + 1, item);
+        mpqListWidget->setCurrentRow(currentRow + 1);
+        saveSettings();  // Save after reordering
+    }
+}
+
+void MPQSelectionPage::onSelectionChanged()
+{
+    int selectedCount = mpqListWidget->selectedItems().count();
+
+    // Remove button: enabled if 1 or more items selected
+    removeButton->setEnabled(selectedCount >= 1);
+
+    // Move Up/Down buttons: enabled only if exactly 1 item selected
+    moveUpButton  ->setEnabled(selectedCount == 1);
+    moveDownButton->setEnabled(selectedCount == 1);
+}
+
+//=============================================================================
+// Main Wizard
+//=============================================================================
+PatchWizard::PatchWizard(QWidget *parent)
+    : QWizard(parent)
+{
+    setWindowTitle("MPQDraft Patch Wizard");
+    setWizardStyle(QWizard::ModernStyle);
+    setOption(QWizard::HaveHelpButton, false);
+
+    // Enable the minimize and maximize buttons - use the Window flag instead of Dialog
+    setWindowFlags(Qt::Window | Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint);
+
+    // Set the wizard sidebar image with margin and frame
+    QPixmap originalPixmap(":/images/wizard.png");
+    int innerMargin = 10;  // Space between frame and image
+    int outerMargin = 25;  // Space between canvas edge and frame
+    int frameWidth = 1;
+
+    // Calculate total canvas size
+    QPixmap pixmapWithMargin(originalPixmap.width()  + innerMargin * 2 + frameWidth * 2 + outerMargin * 2,
+                             originalPixmap.height() + innerMargin * 2 + frameWidth * 2 + outerMargin * 2);
+    pixmapWithMargin.fill(Qt::transparent);
+    QPainter painter(&pixmapWithMargin);
+    painter.setRenderHint(QPainter::Antialiasing, false);
+
+    // Calculate positions
+    int frameX = outerMargin;
+    int frameY = outerMargin;
+    int frameRectWidth  = originalPixmap.width()  + innerMargin * 2 + frameWidth * 2;
+    int frameRectHeight = originalPixmap.height() + innerMargin * 2 + frameWidth * 2;
+    int imageX = outerMargin + frameWidth + innerMargin;
+    int imageY = outerMargin + frameWidth + innerMargin;
+
+    // Draw the background inside the frame (light gray)
+    painter.fillRect(frameX + frameWidth, frameY + frameWidth,
+                     frameRectWidth - frameWidth * 2, frameRectHeight - frameWidth * 2,
+                     QColor(200, 200, 200));
+
+    // Draw the frame border
+    painter.setPen(QPen(QColor(100, 100, 100), frameWidth));  // Dark gray
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRect(frameX, frameY, frameRectWidth - 1, frameRectHeight - 1);
+
+    // Draw the image inside the frame
+    painter.drawPixmap(imageX, imageY, originalPixmap);
+
+    painter.end();
+    setPixmap(QWizard::WatermarkPixmap, pixmapWithMargin);
+
+    // Create pages
+    introPage  = new PatchIntroPage(this);
+    targetPage = new TargetSelectionPage(this);
+    mpqPage    = new MPQSelectionPage(this);
+    pluginPage = new PluginPage(this);
+
+    addPage(introPage);
+    addPage(targetPage);
+    addPage(mpqPage);
+    addPage(pluginPage);
+
+    setMinimumSize(600, 550);
+}
+
+void PatchWizard::accept()
+{
+    performPatch();
+    QWizard::accept();
+}
+
+void PatchWizard::performPatch()
+{
+    // Get data from pages
+    QString targetPath = targetPage->getTargetPath();
+    QString parameters = targetPage->getParameters();
+    bool extendedRedir = targetPage->useExtendedRedir();
+    int shuntCount     = targetPage->getShuntCount();
+    bool noSpawning    = targetPage->useNoSpawning();
+    QStringList mpqs   = mpqPage   ->getSelectedMPQs();
+    std::vector<std::string> plugins = pluginPage->getSelectedPluginPaths();
+
+    // Print all user choices to console
+    qDebug() << "=== Patch Configuration ===";
+    qDebug() << "Target:"         << targetPath;
+    qDebug() << "Parameters:"     << (parameters.isEmpty() ? "(none)" : parameters);
+    qDebug() << "Extended Redir:" << (extendedRedir ? "Yes" : "No");
+    qDebug() << "No Spawning:"    << (noSpawning    ? "Yes" : "No");
+    qDebug() << "Shunt Count:"    << shuntCount;
+    qDebug() << "MPQs:"           << mpqs;
+    for (const std::string& plugin : plugins) { qDebug() << "Plugin:" << QString::fromStdString(plugin); }
+    qDebug() << "===========================";
+
+#ifdef _WIN32
+    // Extract the patcher DLL to a temporary location
+    char szPatcherPath[MAX_PATH + 1];
+    if (!ExtractTempResource(NULL, MAKEINTRESOURCE(IDR_PATCHERDLL), "DLL", szPatcherPath))
+    {
+        QMessageBox::critical(this, tr("Error"), tr("Failed to extract patcher DLL"));
+        qDebug("Failed to extract patcher DLL");
+        return;
+    }
+
+    // Load the patcher DLL
+    HMODULE hDLL = GetModuleHandleA(szPatcherPath);
+    if (!hDLL)
+    {
+        hDLL = LoadLibraryA(szPatcherPath);
+        if (!hDLL)
+        {
+            QMessageBox::critical(this, tr("Error"), tr("Failed to load patcher DLL: %1").arg(szPatcherPath));
+            qDebug("Failed to load patcher DLL: %s", szPatcherPath);
+            return;
+        }
+    }
+
+    // Get the patcher function
+    MPQDraftPatcherPtr MPQDraftPatcher = (MPQDraftPatcherPtr)GetProcAddress(hDLL, "MPQDraftPatcher");
+    if (!MPQDraftPatcher)
+    {
+        QMessageBox::critical(this, tr("Error"), tr("Failed to get MPQDraftPatcher function"));
+        qDebug("Failed to get MPQDraftPatcher function");
+        return;
+    }
+
+    // Load plugin modules
+    std::vector<MPQDRAFTPLUGINMODULE> modules;
+    if (!plugins.empty())
+    {
+        PluginManager pluginManager;
+        for (const std::string& pluginPath : plugins)
+        {
+            std::string errorMessage;
+            if (!pluginManager.addPlugin(pluginPath, errorMessage))
+            {
+                QMessageBox::critical(this, tr("Error"),
+                    tr("Failed to load plugin: %1\n%2").arg(QString::fromStdString(pluginPath), QString::fromStdString(errorMessage)));
+                qDebug("Failed to load plugin: %s - %s", pluginPath.c_str(), errorMessage.c_str());
+                return;
+            }
+
+            const PluginInfo* pluginInfo = pluginManager.getPluginInfo(pluginPath);
+            if (!pluginInfo)
+            {
+                QMessageBox::critical(this, tr("Error"),
+                    tr("Failed to get plugin info for: %1").arg(QString::fromStdString(pluginPath)));
+                qDebug("Failed to get plugin info for: %s", pluginPath.c_str());
+                return;
+            }
+
+            // Get all modules for this plugin
+            std::vector<MPQDRAFTPLUGINMODULE> pluginModules = pluginManager.getPluginModules(pluginPath);
+            for (const auto& m : pluginModules)
+            {
+                modules.push_back(m);
+            }
+        }
+    }
+
+    // Convert MPQ paths to LPCSTR array
+    std::vector<std::string> mpqStdStrings;
+    std::vector<const char*> mpqPtrs;
+    for (const QString& mpq : mpqs)
+    {
+        mpqStdStrings.push_back(mpq.toStdString());
+    }
+    for (const std::string& mpq : mpqStdStrings)
+    {
+        mpqPtrs.push_back(mpq.c_str());
+    }
+
+    // Build flags
+    DWORD dwFlags = 0;
+    if (extendedRedir)
+        dwFlags |= MPQD_EXTENDED_REDIR;
+    if (noSpawning)
+        dwFlags |= MPQD_NO_SPAWNING;
+
+    // Build paths
+    std::string programPath = targetPath.toStdString();
+    std::string parametersStr = parameters.toStdString();
+
+    char szCommandLine[MAX_PATH * 2];
+    char szCurDir[MAX_PATH + 1];
+    char szStartDir[MAX_PATH + 1];
+
+    // Get the startup directory (directory of the target program)
+    strcpy(szStartDir, programPath.c_str());
+    PathRemoveFileSpecA(szStartDir);
+
+    // Get the current directory (directory of MPQDraft)
+    GetModuleFileNameA(NULL, szCurDir, MAX_PATH);
+    PathRemoveFileSpecA(szCurDir);
+
+    // Build the command line
+    wsprintfA(szCommandLine, "\"%s\" %s", programPath.c_str(), parametersStr.c_str());
+
+    // Get startup info
+    STARTUPINFOA si;
+    GetStartupInfoA(&si);
+
+    // Execute the patcher
+    qDebug("Calling MPQDraftPatcher with %d MPQs and %d modules", (int)mpqPtrs.size(), (int)modules.size());
+    BOOL bPatchSuccess = MPQDraftPatcher(
+        programPath.c_str(),       // Application name
+        szCommandLine,             // Command line
+        NULL,                      // Process attributes
+        NULL,                      // Thread attributes
+        FALSE,                     // Inherit handles
+        0,                         // Creation flags
+        NULL,                      // Environment
+        szStartDir,                // Current directory
+        &si,                       // Startup info
+        dwFlags,                   // Patching flags
+        szCurDir,                  // MPQDraft directory
+        programPath.c_str(),       // Spawn path (same as target)
+        (DWORD)shuntCount,         // Shunt count
+        (DWORD)mpqPtrs.size(),     // Number of MPQs
+        (DWORD)modules.size(),     // Number of modules
+        mpqPtrs.empty() ? NULL : const_cast<LPCSTR*>(&mpqPtrs[0]),  // MPQ array
+        modules.empty() ? NULL : const_cast<MPQDRAFTPLUGINMODULE*>(&modules[0])  // Module array
+    );
+
+    if (!bPatchSuccess)
+    {
+        QMessageBox::critical(this, tr("Error"), tr("MPQDraftPatcher failed"));
+        qDebug("MPQDraftPatcher failed");
+    }
+#endif
+}

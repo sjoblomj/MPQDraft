@@ -9,10 +9,13 @@
 // SEMPQCreator.cpp - SEMPQ creation implementation
 
 #include "SEMPQCreator.h"
+#include "../core/MPQDraftPlugin.h"
+
+#ifdef _WIN32
 #include "SEMPQData.h"
+#include "../core/PatcherFlags.h"
 #include "../common/QResource.h"
 #include "../app/resource_ids.h"
-#include "../core/MPQDraftPlugin.h"
 #include <windows.h>
 #include <stdio.h>
 #include <shlwapi.h>
@@ -195,15 +198,18 @@ bool SEMPQCreator::writePluginsToSEMPQ(
 	if (progressCallback)
 		progressCallback(WRITE_PLUGINS_INITIAL_PROGRESS, "Writing Plugins...\n");
 
-	// If no plugins, just skip this step
-	if (params.pluginModules.empty())
+	// First, extract the MPQDraft patcher DLL to a temporary file.
+	// This DLL is REQUIRED for the SEMPQ to function - the stub executable
+	// loads it to perform the actual patching.
+	char szPatcherDLLPath[MAX_PATH + 1];
+	if (!ExtractTempResource(NULL, MAKEINTRESOURCE(IDR_PATCHERDLL), "DLL", szPatcherDLLPath))
 	{
-		if (progressCallback)
-			progressCallback(WRITE_MPQ_INITIAL_PROGRESS, "Writing Plugins...\n");
-		return true;
+		errorMessage = "Unable to extract patcher DLL from resources";
+		return false;
 	}
 
-	// This is pretty straightforward: open, write the modules, close
+	// Open the EFS file for writing. We always need to create the EFS file
+	// because the patcher DLL must be embedded even if there are no user plugins.
 	EFSHANDLEFORWRITE hEFSFile = OpenEFSFileForWrite(params.outputPath.c_str(), 0);
 	if (!hEFSFile)
 	{
@@ -212,6 +218,22 @@ bool SEMPQCreator::writePluginsToSEMPQ(
 	}
 
 	bool bRetVal = false, bCancel = false;
+
+	// First, add the MPQDraft patcher DLL with the required component/module IDs.
+	// The stub executable looks for this specific DLL by these IDs.
+	// Note: bExecute (dwData) must be FALSE - the patcher DLL is not a plugin,
+	// it's loaded directly by the stub to perform patching.
+	if (!AddToEFSFile(hEFSFile, szPatcherDLLPath,
+		MPQDRAFT_COMPONENT,
+		MPQDRAFTDLL_MODULE,
+		FALSE, 0))  // bExecute=FALSE - not a plugin
+	{
+		errorMessage = "Unable to write patcher DLL to EFS file";
+		CloseEFSFileForWrite(hEFSFile);
+		return false;
+	}
+
+	// Now add any user-specified plugin modules
 	size_t iCurModule;
 	for (iCurModule = 0; iCurModule < params.pluginModules.size(); iCurModule++)
 	{
@@ -456,11 +478,11 @@ static STUBDATA* CreateStubDataFromParams(const SEMPQCreationParams& params, std
 
 	// Compute the offsets of the strings
 	DWORD nRegKeyOffset = sizeof(PATCHTARGETEX),
-			nRegValueOffset = nRegKeyOffset + cbRegKeyName,
-			nTargetPathOffset = nRegValueOffset + cbRegValueName,
+			nRegValueOffset   = nRegKeyOffset     + cbRegKeyName,
+			nTargetPathOffset = nRegValueOffset   + cbRegValueName,
 			nTargetFileOffset = nTargetPathOffset + cbTargetPathName,
-			nSpawnFileOffset = nTargetFileOffset + cbTargetFileName,
-			nArgsOffset = nSpawnFileOffset + cbSpawnFileName,
+			nSpawnFileOffset  = nTargetFileOffset + cbTargetFileName,
+			nArgsOffset       = nSpawnFileOffset  + cbSpawnFileName,
 			nStubSize = sizeof(STUBDATA) + nArgsOffset + cbArgs - nRegKeyOffset;
 
 	// It shouldn't be possible for this to happen, but who knows
@@ -488,12 +510,12 @@ static STUBDATA* CreateStubDataFromParams(const SEMPQCreationParams& params, std
 	// Set up the string pointers for the patch target
 	PATCHTARGETEX& patchTarget = pDataSEMPQ->patchTarget;
 
-	patchTarget.lpszRegistryKey = (LPCSTR)nRegKeyOffset;
-	patchTarget.lpszRegistryValue = (LPCSTR)nRegValueOffset;
+	patchTarget.lpszRegistryKey    = (LPCSTR)nRegKeyOffset;
+	patchTarget.lpszRegistryValue  = (LPCSTR)nRegValueOffset;
 
-	patchTarget.lpszTargetPath = (LPCSTR)nTargetPathOffset;
+	patchTarget.lpszTargetPath     = (LPCSTR)nTargetPathOffset;
 	patchTarget.lpszTargetFileName = (LPCSTR)nTargetFileOffset;
-	patchTarget.lpszSpawnFileName = (LPCSTR)nSpawnFileOffset;
+	patchTarget.lpszSpawnFileName  = (LPCSTR)nSpawnFileOffset;
 
 	patchTarget.lpszArguments = (LPCSTR)nArgsOffset;
 
@@ -502,16 +524,12 @@ static STUBDATA* CreateStubDataFromParams(const SEMPQCreationParams& params, std
 	{
 		pDataSEMPQ->patchTarget.bUseRegistry = TRUE;
 
-		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nRegKeyOffset,
-			   params.registryKey.c_str());
-		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nRegValueOffset,
-			   params.registryValue.c_str());
+		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nRegKeyOffset,     params.registryKey.c_str());
+		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nRegValueOffset,   params.registryValue.c_str());
 		pDataSEMPQ->patchTarget.bValueIsFileName = params.valueIsFullPath ? TRUE : FALSE;
 
-		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nSpawnFileOffset,
-			   params.spawnFileName.c_str());
-		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nTargetFileOffset,
-			   params.targetFileName.c_str());
+		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nSpawnFileOffset,  params.spawnFileName.c_str());
+		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nTargetFileOffset, params.targetFileName.c_str());
 
 		pDataSEMPQ->patchTarget.nShuntCount = params.shuntCount;
 	}
@@ -519,13 +537,10 @@ static STUBDATA* CreateStubDataFromParams(const SEMPQCreationParams& params, std
 	{
 		pDataSEMPQ->patchTarget.bUseRegistry = FALSE;
 
-		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nTargetPathOffset,
-			   szTargetPath);
+		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nTargetPathOffset, szTargetPath);
 
-		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nTargetFileOffset,
-			   targetFileNameToUse.c_str());
-		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nSpawnFileOffset,
-			   targetFileNameToUse.c_str());
+		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nTargetFileOffset, targetFileNameToUse.c_str());
+		strcpy((LPSTR)&pDataSEMPQ->patchTarget + nSpawnFileOffset,  targetFileNameToUse.c_str());
 
 		pDataSEMPQ->patchTarget.nShuntCount = 0;
 	}
@@ -534,3 +549,62 @@ static STUBDATA* CreateStubDataFromParams(const SEMPQCreationParams& params, std
 
 	return pDataSEMPQ;
 }
+
+#else
+
+// non-Windows stub implementation
+// SEMPQ creation is Windows-only functionality
+
+bool SEMPQCreator::createSEMPQ(
+	const SEMPQCreationParams& params,
+	ProgressCallback progressCallback,
+	CancellationCheck cancellationCheck,
+	std::string& errorMessage)
+{
+    (void)params;            // Suppress unused parameter warning
+    (void)progressCallback;  // Suppress unused parameter warning
+    (void)cancellationCheck; // Suppress unused parameter warning
+	errorMessage = "SEMPQ creation is only supported on Windows";
+	return false;
+}
+
+bool SEMPQCreator::writeStubToSEMPQ(
+	const SEMPQCreationParams& params,
+	ProgressCallback progressCallback,
+	CancellationCheck cancellationCheck,
+	std::string& errorMessage)
+{
+    (void)params;            // Suppress unused parameter warning
+    (void)progressCallback;  // Suppress unused parameter warning
+    (void)cancellationCheck; // Suppress unused parameter warning
+	errorMessage = "SEMPQ creation is only supported on Windows";
+	return false;
+}
+
+bool SEMPQCreator::writePluginsToSEMPQ(
+	const SEMPQCreationParams& params,
+	ProgressCallback progressCallback,
+	CancellationCheck cancellationCheck,
+	std::string& errorMessage)
+{
+    (void)params;            // Suppress unused parameter warning
+    (void)progressCallback;  // Suppress unused parameter warning
+    (void)cancellationCheck; // Suppress unused parameter warning
+	errorMessage = "SEMPQ creation is only supported on Windows";
+	return false;
+}
+
+bool SEMPQCreator::writeMPQToSEMPQ(
+	const SEMPQCreationParams& params,
+	ProgressCallback progressCallback,
+	CancellationCheck cancellationCheck,
+	std::string& errorMessage)
+{
+    (void)params;            // Suppress unused parameter warning
+    (void)progressCallback;  // Suppress unused parameter warning
+    (void)cancellationCheck; // Suppress unused parameter warning
+	errorMessage = "SEMPQ creation is only supported on Windows";
+	return false;
+}
+
+#endif // _WIN32

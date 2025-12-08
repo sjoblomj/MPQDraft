@@ -6,9 +6,10 @@
 	The Initial Developer of the Original Code is Justin Olbrantz. The Original Code Copyright (C) 2008 Justin Olbrantz. All Rights Reserved.
 */
 
-#include "stdafx_cli.h"
-#include "CommandParser.h"
+#include <windows.h>
+#include <string>
 #include <cstring>
+#include "CommandParser.h"
 
 void SkipWhitespace(const std::string& str, size_t& pos)
 {

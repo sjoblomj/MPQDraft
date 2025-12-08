@@ -6,19 +6,16 @@
 	The Initial Developer of the Original Code is Justin Olbrantz. The Original Code Copyright (C) 2008 Justin Olbrantz. All Rights Reserved.
 */
 
-// MPQDraft.h : main header file for the MPQDRAFT application
-//
-// This file provides the main entry point declarations.
-// The actual entry point is in MPQDraft.cpp which dispatches to:
-// - cli/main_cli.cpp for CLI mode
-// - gui/main.cpp for GUI mode
+// main_cli.h : CLI entry point declaration
 
-#if !defined(AFX_MPQDRAFT_H__E554FE73_9CB1_4CFC_8AAF_6299644E02A9__INCLUDED_)
-#define AFX_MPQDRAFT_H__E554FE73_9CB1_4CFC_8AAF_6299644E02A9__INCLUDED_
+#ifndef MAIN_CLI_H
+#define MAIN_CLI_H
 
-#pragma once
+// Entry point for the CLI
+// Called from the main entry point when CLI arguments are provided
+// lpCmdLine: Command line string (without the executable name)
+// Returns: 0 on success, non-zero on failure
+int runCli(const char* lpCmdLine);
 
-// Include game data definitions (used by both CLI and GUI)
-#include "../core/GameData.h"
+#endif // MAIN_CLI_H
 
-#endif // !defined(AFX_MPQDRAFT_H__E554FE73_9CB1_4CFC_8AAF_6299644E02A9__INCLUDED_)

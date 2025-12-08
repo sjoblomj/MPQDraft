@@ -6,14 +6,61 @@
 	The Initial Developer of the Original Code is Justin Olbrantz. The Original Code Copyright (C) 2008 Justin Olbrantz. All Rights Reserved.
 */
 
-// MPQDraft.cpp : Forwards to the actual implementation files
+// MPQDraft.cpp : Main entry point for MPQDraft
 //
-// This file now just includes the actual implementation:
-// - GameData.cpp for game definitions
-// - gui/main.cpp for GUI application class
+// This file contains the main entry point that dispatches to either:
+// - CLI mode (when command line arguments are provided)
+// - GUI mode (when no arguments are provided)
 
-#include "gui/stdafx_gui.h"
-#include "MPQDraft.h"
+#include <windows.h>
+#include "../common/QResource.h"
+#include "cli/main_cli.h"
+#include "gui/main_gui.h"
 
-// The actual implementation is now in gui/main.cpp
-// This file exists only for compatibility with the build system
+/////////////////////////////////////////////////////////////////////////////
+// Check if command line has CLI arguments
+// Returns true if we should run in CLI mode
+
+static bool hasCLIArguments(const char* lpCmdLine)
+{
+	if (!lpCmdLine)
+		return false;
+
+	// Skip leading whitespace
+	while (*lpCmdLine == ' ' || *lpCmdLine == '\t')
+		lpCmdLine++;
+
+	// If there's anything left, we have arguments
+	return *lpCmdLine != '\0';
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// Main entry point
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+	// Initialize QResource system (needed for both CLI and GUI)
+	QResourceInitialize();
+
+	int result;
+
+	if (hasCLIArguments(lpCmdLine))
+	{
+		// CLI mode - run command line interface
+		result = runCli(lpCmdLine);
+	}
+	else
+	{
+		// GUI mode - run Qt GUI
+		// Convert to argc/argv format for Qt
+		int argc = 1;
+		char* argv[] = { (char*)"MPQDraft", nullptr };
+		result = runQtGui(argc, argv);
+	}
+
+	// Clean up
+	DeleteTemporaryFiles();
+	QResourceDestroy();
+
+	return result;
+}

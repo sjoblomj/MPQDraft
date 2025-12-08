@@ -1,0 +1,40 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource>
+        <!-- Main window images -->
+        <file>images/main.png</file>
+        <file>images/PatchButtonUp.png</file>
+        <file>images/PatchButtonDown.png</file>
+        <file>images/SEMPQButtonUp.png</file>
+        <file>images/SEMPQButtonDown.png</file>
+
+        <!-- Wizard sidebar image -->
+        <file>images/wizard.png</file>
+
+        <!-- Game icons -->
+        <file>icons/blizzard/bnet.png</file>
+        <file>icons/blizzard/Diablo.ico</file>
+        <file>icons/blizzard/Diablo2.ico</file>
+        <file>icons/blizzard/Starcraft.ico</file>
+        <file>icons/blizzard/StarEdit.ico</file>
+        <file>icons/blizzard/War2BNE.ico</file>
+        <file>icons/blizzard/War2Edit.ico</file>
+        <file>icons/blizzard/War3.ico</file>
+        <file>icons/blizzard/War3Head.ico</file>
+        <file>icons/blizzard/War3Edit.ico</file>
+        <file>icons/blizzard/War3x.ico</file>
+        <file>icons/sierra/hellfire.ico</file>
+        <file>icons/sierra/lomse.ico</file>
+
+        <!-- Other icons -->
+        <file>icons/mpqdraft.ico</file>
+        <file>icons/mpqdraft.svg</file>
+        <file>icons/mpq.svg</file>
+        <file>icons/plugin.svg</file>
+        <file>icons/not-found.svg</file>
+        <file>icons/StarDraft.png</file>
+        <file>icons/paste.svg</file>
+        <file>icons/save.svg</file>
+        <file>icons/save-to-list.svg</file>
+    </qresource>
+</RCC>

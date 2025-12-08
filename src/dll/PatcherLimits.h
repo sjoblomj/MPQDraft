@@ -6,19 +6,15 @@
 	The Initial Developer of the Original Code is Justin Olbrantz. The Original Code Copyright (C) 2008 Justin Olbrantz. All Rights Reserved.
 */
 
-// MPQDraft.h : main header file for the MPQDRAFT application
-//
-// This file provides the main entry point declarations.
-// The actual entry point is in MPQDraft.cpp which dispatches to:
-// - cli/main_cli.cpp for CLI mode
-// - gui/main.cpp for GUI mode
+#if !defined(PATCHERLIMITS_H)
+#define PATCHERLIMITS_H
 
-#if !defined(AFX_MPQDRAFT_H__E554FE73_9CB1_4CFC_8AAF_6299644E02A9__INCLUDED_)
-#define AFX_MPQDRAFT_H__E554FE73_9CB1_4CFC_8AAF_6299644E02A9__INCLUDED_
+// These constants define the size of arrays used in the patching process.
+// It should be possible to remove these limitations by dynamically allocating
+// the memory for the arrays; I just haven't (though I'm generally wary of
+// allocating memory in target processes).
+#define MAX_PATCH_MPQS 8
+#define MAX_MPQDRAFT_PLUGINS 8
+#define MAX_AUXILIARY_MODULES 32
 
-#pragma once
-
-// Include game data definitions (used by both CLI and GUI)
-#include "../core/GameData.h"
-
-#endif // !defined(AFX_MPQDRAFT_H__E554FE73_9CB1_4CFC_8AAF_6299644E02A9__INCLUDED_)
+#endif
