@@ -40,16 +40,6 @@ void __cdecl DumphexToFile(void *Param, const char *pszFormat, ...)
 	ENCRYPT_END;
 }
 
-#pragma warning(disable:4035) // no return value
-LPVOID __declspec(naked) __stdcall GetCallerAddress(void)
-{
-	__asm {
-		pop eax
-		jmp eax
-	}
-}
-#pragma warning(default:4035) // no return value
-
 int __cdecl wsprintfcat(LPSTR lpszBuffer, LPCSTR lpszFormat, ...)
 {
 	va_list vlArgs;
@@ -248,10 +238,7 @@ LPCSTR GetExceptionName(DWORD dwExceptionCode)
 
 	default:
 		return "<unknown>";
-		
 	}
-
-	__assume(0);
 }
 
 int HandleException(DWORD dwExceptionCode, LPEXCEPTION_POINTERS lpExceptionPointers,
