@@ -100,8 +100,8 @@ void MainWindow::setupUI()
 
 void MainWindow::onPatchClicked()
 {
-    // Create and show the patch wizard
-    PatchWizard wizard(this);
+    // Create wizard without parent so it gets its own taskbar entry on Windows
+    PatchWizard wizard(nullptr);
 
     // Position wizard at main window location and hide main window
     wizard.move(this->pos());
@@ -115,8 +115,8 @@ void MainWindow::onPatchClicked()
 
 void MainWindow::onSEMPQClicked()
 {
-    // Create and show the SEMPQ wizard
-    SEMPQWizard wizard(this);
+    // Create wizard without parent so it gets its own taskbar entry on Windows
+    SEMPQWizard wizard(nullptr);
 
     // Position wizard at main window location and hide main window
     wizard.move(this->pos());
