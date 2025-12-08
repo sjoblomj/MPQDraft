@@ -4,11 +4,24 @@ project(MPQDraft VERSION 1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Generate version.h with current date
-string(TIMESTAMP MPQDRAFT_VERSION "%Y-%m-%d")
+# Generate version information from current date
+string(TIMESTAMP VER_MAJOR "%Y")
+string(TIMESTAMP VER_MINOR "%m")
+string(TIMESTAMP VER_PATCH "%d")
+set(VER_BUILD 1)
+set(MPQDRAFT_VERSION "${VER_MAJOR}-${VER_MINOR}-${VER_PATCH}")
+
+# Generate version.h for CLI
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/app/cli/version.h.in
     ${CMAKE_CURRENT_SOURCE_DIR}/app/cli/version.h
+    @ONLY
+)
+
+# Generate version_rc.h for resource files
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/version_rc.h.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/version_rc.h
     @ONLY
 )
 
