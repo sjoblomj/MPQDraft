@@ -103,7 +103,7 @@ SFileOpenPathAsArchivePtr SFileOpenPathAsArchive = NULL; // Constant
 // This is just a stub to call Skywing's exception dump code
 LONG WINAPI MyUnhandledExceptionFilter(IN _EXCEPTION_POINTERS *ExceptionInfo)
 {
-	return HandleException(ExceptionInfo->ExceptionRecord->ExceptionCode, ExceptionInfo, MyUnhandledExceptionFilter, TRUE);
+	return HandleException(ExceptionInfo->ExceptionRecord->ExceptionCode, ExceptionInfo, (LPVOID)MyUnhandledExceptionFilter, TRUE);
 }
 
 BOOL APIENTRY DllMain(IN HANDLE hInstDLL, IN DWORD fdwReason, IN LPVOID lpvReserved)

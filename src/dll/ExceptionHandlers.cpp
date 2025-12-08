@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <algorithm>
 
 // Code is based on Skywing's code, with slight tweaks. The license of this file is not precisely known at the moment.
 
@@ -110,7 +111,7 @@ bool GetLogicalAddress(LPVOID lpAddress, LPSTR lpszFileName, DWORD dwBufferSize,
 
 	for(dwIdx = 0; dwIdx < pNtHdr->FileHeader.NumberOfSections; dwIdx++, pSection++) {
 		dwSectionStart = pSection->VirtualAddress;
-		dwSectionEnd = dwSectionStart + max(pSection->SizeOfRawData, pSection->Misc.VirtualSize);
+		dwSectionEnd = dwSectionStart + (std::max)(pSection->SizeOfRawData, pSection->Misc.VirtualSize);
 
 		if(dwRVA >= dwSectionStart && dwRVA <= dwSectionEnd) {
 			*lpdwSection = dwIdx+1;
