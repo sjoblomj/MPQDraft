@@ -1842,11 +1842,9 @@ SEMPQProgressPage::SEMPQProgressPage(QWidget *parent)
     // Progress log
     progressLog = new QTextEdit(this);
     progressLog->setReadOnly(true);
-    progressLog->setMaximumHeight(150);
+    progressLog->setMinimumHeight(200);
     progressLog->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    layout->addWidget(progressLog);
-
-    layout->addStretch();
+    layout->addWidget(progressLog, 1);  // stretch factor 1 to expand
 }
 
 SEMPQProgressPage::~SEMPQProgressPage()
