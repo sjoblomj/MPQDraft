@@ -18,7 +18,7 @@ BOOL WINAPI QDebugCloseLogFileFn();
 
 BOOL WINAPI QDebugCloseDeleteLogFileFn();
 
-BOOL _cdecl QDebugWriteEntryFn(LPCSTR lpszFormat, va_list params);
+BOOL __cdecl QDebugWriteEntryFn(LPCSTR lpszFormat, va_list params);
 
 void WINAPIV QDebugOut(const TCHAR* fmt, ...);
 

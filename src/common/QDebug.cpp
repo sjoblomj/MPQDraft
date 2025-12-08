@@ -90,7 +90,7 @@ BOOL WINAPI QDebugCloseDeleteLogFileFn()
 	return TRUE;
 }
 
-BOOL _cdecl QDebugWriteEntryFn(LPCSTR lpszFormat, va_list params)
+BOOL __cdecl QDebugWriteEntryFn(LPCSTR lpszFormat, va_list params)
 {
 	assert(lpszFormat);
 

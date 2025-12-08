@@ -7,6 +7,7 @@
 */
 
 #include "QResource.h"
+#include <algorithm>
 #include <assert.h>
 
 BOOL AddTempFileToList(LPCSTR lpszFileName);
@@ -386,7 +387,7 @@ BOOL CheckEFSDirectoryAndFindInsertPoint(
 			continue;
 
 		// Find the insert point for the EFS file by finding the largest offset after all files in the EFS file
-		*lpnInsertPoint = max(*lpnInsertPoint,
+		*lpnInsertPoint = (std::max)(*lpnInsertPoint,
 			pDirectory[iCurDirEntry].dwOffset +
 			pDirectory[iCurDirEntry].dwSize);
 	}
@@ -677,7 +678,7 @@ BOOL AddUncompressedToEFSFile(
 
 	// The file size isn't 0, so we have to add it
 	// Allocate a read buffer
-	DWORD dwBufferSize = min(dwFileSize, 128 << 10);
+	DWORD dwBufferSize = (std::min)(dwFileSize, (DWORD)(128 << 10));
 	LPBYTE lpbyReadBuffer = (LPBYTE)malloc(dwBufferSize);
 
 	if (!lpbyReadBuffer)
@@ -691,7 +692,7 @@ BOOL AddUncompressedToEFSFile(
 	while (dwRemaining)
 	{
 		// Get the size of the next read to make
-		dwBlockSize = min(dwRemaining, dwBufferSize);
+		dwBlockSize = (std::min)(dwRemaining, dwBufferSize);
 
 		// Read it...
 		SetFilePointer(hFile, dwReadPtr, NULL, FILE_BEGIN);

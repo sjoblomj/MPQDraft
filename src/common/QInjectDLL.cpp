@@ -206,7 +206,7 @@ BOOL WINAPI InjectDLLIntoProcessV3(IN HANDLE hTargetProcess, IN HANDLE hTargetTh
 	LoaderParams.szDLLFilePath[MAX_PATH - 1] = '\0';
 
 	// Copy the loader function
-	LPCVOID lpvLoaderCode = GetTrueFunctionAddress(LoaderFunction);
+	LPCVOID lpvLoaderCode = GetTrueFunctionAddress((LPCVOID)LoaderFunction);
 	memcpy(&LoaderParams.fnLoaderFunction, lpvLoaderCode, LOADER_MAX_SIZE);
 
 	// Allocate the memory for the loader and patcher parameters
