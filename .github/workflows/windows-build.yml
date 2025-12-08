@@ -59,7 +59,7 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "BUILD_DATE=$date"
 
           # Copy Qt GUI executable with date in filename
-          Copy-Item -Path "build/Release/MPQDraftQt.exe" -Destination "artifacts/MPQDraft-$date.exe"
+          Copy-Item -Path "build/Release/MPQDraft.exe" -Destination "artifacts/MPQDraft-$date.exe"
 
           # Copy Qt DLLs needed for the application
           & windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw "artifacts/MPQDraft-$date.exe"

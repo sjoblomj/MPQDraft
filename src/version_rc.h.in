@@ -1,0 +1,11 @@
+// Auto-generated version information - do not edit manually
+// This file is configured by CMake at build time
+
+#define VER_MAJOR @VER_MAJOR@
+#define VER_MINOR @VER_MINOR@
+#define VER_PATCH @VER_PATCH@
+#define VER_BUILD @VER_BUILD@
+
+#define STRINGIFY2(x) #x
+#define STRINGIFY(x) STRINGIFY2(x)
+#define VER_STRING STRINGIFY(VER_MAJOR) ", " STRINGIFY(VER_MINOR) ", " STRINGIFY(VER_PATCH) ", " STRINGIFY(VER_BUILD)

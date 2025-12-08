@@ -1487,6 +1487,9 @@ PatchWizard::PatchWizard(QWidget *parent)
     // Enable the minimize and maximize buttons - use the Window flag instead of Dialog
     setWindowFlags(Qt::Window | Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint);
 
+    // Set window icon (needed after setWindowFlags resets it)
+    setWindowIcon(QIcon(":/icons/mpqdraft.ico"));
+
     // Set the wizard sidebar image with margin and frame
     QPixmap originalPixmap(":/images/wizard.png");
     int innerMargin = 10;  // Space between frame and image

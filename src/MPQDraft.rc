@@ -1,6 +1,7 @@
 // Microsoft Visual C++ generated resource script.
 //
 #include "app/resource_ids.h"
+#include "version_rc.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -59,8 +60,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2009,9,13,1
- PRODUCTVERSION 2009,9,13,1
+ FILEVERSION VER_MAJOR,VER_MINOR,VER_PATCH,VER_BUILD
+ PRODUCTVERSION VER_MAJOR,VER_MINOR,VER_PATCH,VER_BUILD
  FILEFLAGSMASK 0x1fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -75,14 +76,14 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName", "The Remnant and Campaign Creations"
-            VALUE "FileDescription", "MPQDraft for Windows"
-            VALUE "FileVersion", "2009, 9, 13, 1"
+            VALUE "CompanyName", "Team MoPaQ"
+            VALUE "FileDescription", "MPQDraft"
+            VALUE "FileVersion", VER_STRING
             VALUE "InternalName", "MPQDraft"
-            VALUE "LegalCopyright", "Copyright (c) 2009 Justin Olbrantz(Quantam)"
+            VALUE "LegalCopyright", "Copyright (c) 2009 Justin Olbrantz (Quantam)"
             VALUE "OriginalFilename", "MPQDraft.exe"
-            VALUE "ProductName", "MPQDraft for Windows"
-            VALUE "ProductVersion", "2009, 9, 13, 1"
+            VALUE "ProductName", "MPQDraft"
+            VALUE "ProductVersion", VER_STRING
         END
     END
     BLOCK "VarFileInfo"

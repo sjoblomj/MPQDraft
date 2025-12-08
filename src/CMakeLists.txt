@@ -4,11 +4,24 @@ project(MPQDraft VERSION 1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Generate version.h with current date
-string(TIMESTAMP MPQDRAFT_VERSION "%Y-%m-%d")
+# Generate version information from current date
+string(TIMESTAMP VER_MAJOR "%Y")
+string(TIMESTAMP VER_MINOR "%m")
+string(TIMESTAMP VER_PATCH "%d")
+set(VER_BUILD 1)
+set(MPQDRAFT_VERSION "${VER_MAJOR}-${VER_MINOR}-${VER_PATCH}")
+
+# Generate version.h for CLI
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/app/cli/version.h.in
     ${CMAKE_CURRENT_SOURCE_DIR}/app/cli/version.h
+    @ONLY
+)
+
+# Generate version_rc.h for resource files
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/version_rc.h.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/version_rc.h
     @ONLY
 )
 
@@ -190,21 +203,21 @@ else()
 endif()
 
 # Create main executable
-add_executable(MPQDraftQt WIN32
+add_executable(MPQDraft WIN32
     ${MAIN_SOURCES}
     ${QT_RESOURCES}
 )
 
 # Define MPQDRAFT_INTEGRATED_BUILD on Windows so main_gui.cpp doesn't define main()
 if(WIN32)
-    target_compile_definitions(MPQDraftQt PRIVATE
+    target_compile_definitions(MPQDraft PRIVATE
         MPQDRAFT_INTEGRATED_BUILD
         ${COMMON_DEFINITIONS}
     )
 endif()
 
 # Link Qt libraries
-target_link_libraries(MPQDraftQt PRIVATE
+target_link_libraries(MPQDraft PRIVATE
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::Svg
@@ -212,14 +225,14 @@ target_link_libraries(MPQDraftQt PRIVATE
 
 # Windows-specific libraries
 if(WIN32 OR MINGW)
-    target_link_libraries(MPQDraftQt PRIVATE
+    target_link_libraries(MPQDraft PRIVATE
         shlwapi
         psapi
     )
 endif()
 
 # Include directories
-target_include_directories(MPQDraftQt PRIVATE
+target_include_directories(MPQDraft PRIVATE
     ${COMMON_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/app
     ${CMAKE_CURRENT_SOURCE_DIR}/app/gui
@@ -229,23 +242,23 @@ target_include_directories(MPQDraftQt PRIVATE
 
 # Compiler flags for MinGW cross-compilation
 if(MINGW)
-    target_compile_definitions(MPQDraftQt PRIVATE
+    target_compile_definitions(MPQDraft PRIVATE
         UNICODE
         _UNICODE
     )
 
-    set_target_properties(MPQDraftQt PROPERTIES
+    set_target_properties(MPQDraft PROPERTIES
         WIN32_EXECUTABLE TRUE
     )
 endif()
 
-# On Windows, MPQDraftQt depends on DLL and Stub being built first (they're embedded via .rc)
+# On Windows, MPQDraft depends on DLL and Stub being built first (they're embedded via .rc)
 if(WIN32)
-    add_dependencies(MPQDraftQt MPQDraftDLL MPQStub)
+    add_dependencies(MPQDraft MPQDraftDLL MPQStub)
 endif()
 
 # Installation
-install(TARGETS MPQDraftQt
+install(TARGETS MPQDraft
     RUNTIME DESTINATION bin
 )
 
