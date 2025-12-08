@@ -67,6 +67,13 @@ bool SEMPQCreator::createSEMPQ(
 	if (!writeStubToSEMPQ(params, progressCallback, cancellationCheck, errorMessage))
 		return false;
 
+	// Step 1.5: Write custom icon to SEMPQ (if specified)
+	if (!params.iconPath.empty())
+	{
+		if (!writeIconToSEMPQ(params, progressCallback, cancellationCheck, errorMessage))
+			return false;
+	}
+
 	// Step 2: Write plugins to SEMPQ
 	if (!writePluginsToSEMPQ(params, progressCallback, cancellationCheck, errorMessage))
 		return false;
@@ -451,11 +458,11 @@ static STUBDATA* CreateStubDataFromParams(const SEMPQCreationParams& params, std
 			return nullptr;
 		}
 
-		cbRegKeyName = params.registryKey.length() + 1;
-		cbRegValueName = params.registryValue.length() + 1;
+		cbRegKeyName     = params.registryKey   .length() + 1;
+		cbRegValueName   = params.registryValue .length() + 1;
 
 		cbTargetFileName = params.targetFileName.length() + 1;
-		cbSpawnFileName = params.spawnFileName.length() + 1;
+		cbSpawnFileName  = params.spawnFileName .length() + 1;
 	}
 	else
 	{
@@ -550,6 +557,208 @@ static STUBDATA* CreateStubDataFromParams(const SEMPQCreationParams& params, std
 	return pDataSEMPQ;
 }
 
+/////////////////////////////////////////////////////////////////////////////
+// Icon file structures (for reading .ico files)
+/////////////////////////////////////////////////////////////////////////////
+
+#pragma pack(push, 1)
+
+// Icon file header
+typedef struct {
+	WORD idReserved;   // Reserved (must be 0)
+	WORD idType;       // Resource type (1 for icons)
+	WORD idCount;      // Number of images
+} ICONDIR;
+
+// Icon directory entry in .ico file
+typedef struct {
+	BYTE  bWidth;          // Width of image (0 means 256)
+	BYTE  bHeight;         // Height of image (0 means 256)
+	BYTE  bColorCount;     // Number of colors (0 if >= 8bpp)
+	BYTE  bReserved;       // Reserved (must be 0)
+	WORD  wPlanes;         // Color planes
+	WORD  wBitCount;       // Bits per pixel
+	DWORD dwBytesInRes;    // Size of image data
+	DWORD dwImageOffset;   // Offset to image data in file
+} ICONDIRENTRY;
+
+// Icon directory entry in RT_GROUP_ICON resource
+typedef struct {
+	BYTE  bWidth;
+	BYTE  bHeight;
+	BYTE  bColorCount;
+	BYTE  bReserved;
+	WORD  wPlanes;
+	WORD  wBitCount;
+	DWORD dwBytesInRes;
+	WORD  nId;             // Resource ID of the icon
+} GRPICONDIRENTRY;
+
+// Group icon directory header (for RT_GROUP_ICON resource)
+typedef struct {
+	WORD idReserved;
+	WORD idType;
+	WORD idCount;
+	// GRPICONDIRENTRY entries follow
+} GRPICONDIR;
+
+#pragma pack(pop)
+
+bool SEMPQCreator::writeIconToSEMPQ(
+	const SEMPQCreationParams& params,
+	ProgressCallback progressCallback,
+	CancellationCheck cancellationCheck,
+	std::string& errorMessage)
+{
+	if (cancellationCheck && cancellationCheck())
+	{
+		errorMessage = "Operation cancelled";
+		return false;
+	}
+
+	if (progressCallback)
+		progressCallback(WRITE_STUB_INITIAL_PROGRESS + 2, "Writing Custom Icon...\n");
+
+	// Check if icon file exists
+	DWORD dwAttrib = GetFileAttributes(params.iconPath.c_str());
+	if (dwAttrib == INVALID_FILE_ATTRIBUTES || (dwAttrib & FILE_ATTRIBUTE_DIRECTORY))
+	{
+		errorMessage = "The icon file does not exist: " + params.iconPath;
+		return false;
+	}
+
+	// Open and read the icon file
+	HANDLE hIconFile = CreateFile(params.iconPath.c_str(), GENERIC_READ,
+		FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+	if (hIconFile == INVALID_HANDLE_VALUE)
+	{
+		errorMessage = "Unable to open icon file: " + params.iconPath;
+		return false;
+	}
+
+	DWORD dwIconFileSize = GetFileSize(hIconFile, NULL);
+	if (dwIconFileSize < sizeof(ICONDIR))
+	{
+		CloseHandle(hIconFile);
+		errorMessage = "Invalid icon file (too small): " + params.iconPath;
+		return false;
+	}
+
+	// Read the entire icon file into memory
+	LPBYTE lpIconData = new BYTE[dwIconFileSize];
+	DWORD dwBytesRead;
+	if (!ReadFile(hIconFile, lpIconData, dwIconFileSize, &dwBytesRead, NULL) ||
+		dwBytesRead != dwIconFileSize)
+	{
+		delete[] lpIconData;
+		CloseHandle(hIconFile);
+		errorMessage = "Unable to read icon file: " + params.iconPath;
+		return false;
+	}
+	CloseHandle(hIconFile);
+
+	// Parse the icon file header
+	ICONDIR* pIconDir = (ICONDIR*)lpIconData;
+	if (pIconDir->idReserved != 0 || pIconDir->idType != 1 || pIconDir->idCount == 0)
+	{
+		delete[] lpIconData;
+		errorMessage = "Invalid icon file format: " + params.iconPath;
+		return false;
+	}
+
+	WORD nIconCount = pIconDir->idCount;
+	ICONDIRENTRY* pIconEntries = (ICONDIRENTRY*)(lpIconData + sizeof(ICONDIR));
+
+	// Begin updating resources in the SEMPQ file
+	HANDLE hUpdate = BeginUpdateResource(params.outputPath.c_str(), FALSE);
+	if (hUpdate == NULL)
+	{
+		delete[] lpIconData;
+		errorMessage = "Unable to begin resource update on: " + params.outputPath;
+		return false;
+	}
+
+	bool bSuccess = true;
+
+	// Create the GRPICONDIR structure for RT_GROUP_ICON
+	// Size = header + entries
+	DWORD dwGrpIconSize = sizeof(GRPICONDIR) + nIconCount * sizeof(GRPICONDIRENTRY);
+	LPBYTE lpGrpIconData = new BYTE[dwGrpIconSize];
+	GRPICONDIR* pGrpIconDir = (GRPICONDIR*)lpGrpIconData;
+	pGrpIconDir->idReserved = 0;
+	pGrpIconDir->idType = 1;
+	pGrpIconDir->idCount = nIconCount;
+
+	GRPICONDIRENTRY* pGrpEntries = (GRPICONDIRENTRY*)(lpGrpIconData + sizeof(GRPICONDIR));
+
+	// Add each icon image as a separate RT_ICON resource
+	// Use resource IDs starting from 1
+	for (WORD i = 0; i < nIconCount && bSuccess; i++)
+	{
+		ICONDIRENTRY* pEntry = &pIconEntries[i];
+		WORD nIconId = i + 1;  // Resource IDs start at 1
+
+		// Copy the icon image data
+		LPBYTE lpImageData = lpIconData + pEntry->dwImageOffset;
+		DWORD dwImageSize = pEntry->dwBytesInRes;
+
+		// Update the RT_ICON resource
+		if (!UpdateResource(hUpdate, RT_ICON, MAKEINTRESOURCE(nIconId),
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL),
+			lpImageData, dwImageSize))
+		{
+			bSuccess = false;
+			errorMessage = "Unable to update icon resource #" + std::to_string(nIconId);
+		}
+
+		// Fill in the GRPICONDIRENTRY
+		pGrpEntries[i].bWidth = pEntry->bWidth;
+		pGrpEntries[i].bHeight = pEntry->bHeight;
+		pGrpEntries[i].bColorCount = pEntry->bColorCount;
+		pGrpEntries[i].bReserved = pEntry->bReserved;
+		pGrpEntries[i].wPlanes = pEntry->wPlanes;
+		pGrpEntries[i].wBitCount = pEntry->wBitCount;
+		pGrpEntries[i].dwBytesInRes = pEntry->dwBytesInRes;
+		pGrpEntries[i].nId = nIconId;
+	}
+
+	// Update the RT_GROUP_ICON resource
+	// The stub uses IDI_MAINICON (105) as the icon resource ID
+	if (bSuccess)
+	{
+		// First, try to update the existing group icon (ID 105 = IDI_MAINICON from stub/resource.h)
+		// We use ID 1 as that's typically the main icon in Windows executables
+		if (!UpdateResource(hUpdate, RT_GROUP_ICON, MAKEINTRESOURCE(1),
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL),
+			lpGrpIconData, dwGrpIconSize))
+		{
+			// If ID 1 doesn't exist, try the stub's icon ID (105)
+			if (!UpdateResource(hUpdate, RT_GROUP_ICON, MAKEINTRESOURCE(105),
+				MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL),
+				lpGrpIconData, dwGrpIconSize))
+			{
+				bSuccess = false;
+				errorMessage = "Unable to update group icon resource";
+			}
+		}
+	}
+
+	delete[] lpGrpIconData;
+	delete[] lpIconData;
+
+	// Commit the resource updates
+	if (!EndUpdateResource(hUpdate, !bSuccess))
+	{
+		if (bSuccess)
+		{
+			errorMessage = "Unable to commit resource updates to: " + params.outputPath;
+			bSuccess = false;
+		}
+	}
+
+	return bSuccess;
+}
+
 #else
 
 // non-Windows stub implementation
@@ -595,6 +804,19 @@ bool SEMPQCreator::writePluginsToSEMPQ(
 }
 
 bool SEMPQCreator::writeMPQToSEMPQ(
+	const SEMPQCreationParams& params,
+	ProgressCallback progressCallback,
+	CancellationCheck cancellationCheck,
+	std::string& errorMessage)
+{
+    (void)params;            // Suppress unused parameter warning
+    (void)progressCallback;  // Suppress unused parameter warning
+    (void)cancellationCheck; // Suppress unused parameter warning
+	errorMessage = "SEMPQ creation is only supported on Windows";
+	return false;
+}
+
+bool SEMPQCreator::writeIconToSEMPQ(
 	const SEMPQCreationParams& params,
 	ProgressCallback progressCallback,
 	CancellationCheck cancellationCheck,
