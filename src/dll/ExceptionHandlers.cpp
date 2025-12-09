@@ -95,9 +95,9 @@ bool GetLogicalAddress(LPVOID lpAddress, LPSTR lpszFileName, DWORD dwBufferSize,
 		return false;
 
 	pDosHdr = (PIMAGE_DOS_HEADER)mbi.AllocationBase;
-	pNtHdr = (PIMAGE_NT_HEADERS)((DWORD)mbi.AllocationBase + pDosHdr->e_lfanew);
+	pNtHdr = (PIMAGE_NT_HEADERS)((LPBYTE)mbi.AllocationBase + pDosHdr->e_lfanew);
 	pSection = IMAGE_FIRST_SECTION(pNtHdr);
-	dwRVA = (DWORD)lpAddress - (DWORD)mbi.AllocationBase;
+	dwRVA = (DWORD)((LPBYTE)lpAddress - (LPBYTE)mbi.AllocationBase);
 
 	for(dwIdx = 0; dwIdx < pNtHdr->FileHeader.NumberOfSections; dwIdx++, pSection++) {
 		dwSectionStart = pSection->VirtualAddress;
@@ -310,7 +310,7 @@ int HandleException(DWORD dwExceptionCode, LPEXCEPTION_POINTERS lpExceptionPoint
 		lpdwPrevFrame = lpdwFrame;
 		lpdwFrame = (LPDWORD)lpdwFrame[0];
 
-		if((DWORD)lpdwFrame & 0x03)
+		if((UINT_PTR)lpdwFrame & (sizeof(DWORD) - 1))
 			break;						// Require DWORD alignment!
 
 		if(lpdwFrame <= lpdwPrevFrame)
