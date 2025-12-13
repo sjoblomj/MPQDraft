@@ -117,17 +117,21 @@ BOOL APIENTRY DllMain(IN HANDLE hInstDLL, IN DWORD fdwReason, IN LPVOID lpvReser
 			hMPQDraftDLL = (HMODULE)hInstDLL;
 
 			// Because of the method we use for patching, we're going to be called before the process start function establishes the default unhandled exception filter. Thus we need to set up our own frame, or things would break if an exception got thrown.
+#ifdef _MSC_VER
 			__try
 			{
+#endif
 				//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_CHECK_CRT_DF | _CRTDBG_LEAK_CHECK_DF);
 
 				InitializeCriticalSection(&g_csDataLock);
 
+#ifdef _MSC_VER
 			}
 			// Use our custom handler because it's more effective than the Windows one
 			__except(MyUnhandledExceptionFilter(GetExceptionInformation()))
 			{
 			}
+#endif
 
 			break;
 		}

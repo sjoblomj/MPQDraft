@@ -189,26 +189,30 @@ DWORD WINAPI PatchImportEntry(
 	assert(lpszModuleName);
 	assert(lpModuleSet);
 
-	// There are a lot of things that could go wrong, here. So lay down a 
+	// There are a lot of things that could go wrong, here. So lay down a
 	// blanked SEH frame, just in case.
+#ifdef _MSC_VER
 	__try
 	{
+#endif
 		// Look up the module that is being imported from. This seems really weird,
 		// but it was the most reliable way I could think of of checking whether a
 		// module being imported from is equal to a module that we've already
-		// patched, as there can be many file name forms in the import table (or 
+		// patched, as there can be many file name forms in the import table (or
 		// specified by the caller, for that matter).
 		HMODULE hExportModule = GetModuleHandle(lpszModuleName);
 		if (!hExportModule)
 			return (DWORD)-1;
 
 		// Do the patching itself
-		return PatchImportCore(hHostProgram, hExportModule, 
+		return PatchImportCore(hHostProgram, hExportModule,
 			pfnOldFunction, pfnNewFunction, bRecurse, lpModuleSet);
+#ifdef _MSC_VER
 	}
 	__except(EXCEPTION_EXECUTE_HANDLER)
 	{
 		// It fell down and went boom. Pick it up and kick it out the door.
 		return (DWORD)-1;
 	}
+#endif
 }
