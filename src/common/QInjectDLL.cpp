@@ -8,6 +8,7 @@
 
 #include "QInjectDLL.h"
 #include <assert.h>
+#include <stddef.h>  // for offsetof
 
 /*
 	The process is very straightforward: the injector writes an assembly loader function and the various patcher data to a block of memory in the target process allocated with VirtualAllocEx, and emulates a function call to the loader function in the target thread by setting up a stack frame and setting the instruction pointer. This loader function first calls LoadLibrary to load the DLL, then calls the target DLL function, if there is one. Finally, it returns to the target thread, which has no idea any of this has happened.
@@ -46,6 +47,7 @@ struct LOADERSTACKFRAME
 
 // The loader function that gets injected into the target process. This function cannot call any functions outside itself and the ones pointers are stored to in the loader data, as any external references will not be copied into the target process. The problem of dependencies is also the reason we must use hand-coded assembly for this function.
 // ** NOT 64-BIT COMPATIBLE **
+#ifdef _MSC_VER
 void __declspec(naked) __stdcall LoaderFunction(IN const LOADERFUNCTIONPARAMS *lpParams)
 {
 	__asm {
@@ -92,6 +94,65 @@ Done:
 		ret size LPCVOID	// Pop the parameter
 	};
 }
+#else
+// GCC version with AT&T syntax inline assembly
+void __attribute__((naked)) __attribute__((stdcall)) LoaderFunction(IN const LOADERFUNCTIONPARAMS *lpParams)
+{
+	__asm__ __volatile__ (
+		"pushl %%ebp\n\t"
+		"movl %%esp, %%ebp\n\t"
+		"pushal\n\t"
+
+		// Call LoadLibraryA to load DLL
+		"movl 8(%%ebp), %%ebx\n\t"  // lpParams is at [ebp+8]
+		"leal %c[szDLLFilePath](%%ebx), %%edx\n\t"
+		"pushl %%edx\n\t"
+		"call *%c[lpfnLoadLibraryA](%%ebx)\n\t"
+
+		"testl %%eax, %%eax\n\t"
+		"jne LibraryLoaded\n\t"
+
+	"KillProcess:\n\t"
+		// Couldn't load library. Call ExitProcess with GetLastError value
+		"call *%c[lpfnGetLastError](%%ebx)\n\t"
+		"pushl %%eax\n\t"
+		"call *%c[lpfnExitProcess](%%ebx)\n\t"
+
+	"LibraryLoaded:\n\t"
+		// Now call the patcher entry point, if applicable
+		"cmpl $0, %c[nPatcherOffset](%%ebx)\n\t"
+		"je Done\n\t"
+		"leal %c[byPatcherData](%%ebx), %%ecx\n\t"
+		"addl $%c[align_minus_1], %%ecx\n\t"  // Align the data on a 16 byte boundary
+		"andl $%c[align_mask], %%ecx\n\t"
+		"movl %c[nPatcherDataLen](%%ebx), %%edx\n\t"
+		"addl %c[nPatcherOffset](%%ebx), %%eax\n\t"
+		"pushl %%edx\n\t"
+		"pushl %%ecx\n\t"
+		"call *%%eax\n\t"
+
+		"testl %%eax, %%eax\n\t"
+		"je KillProcess\n\t"
+
+	"Done:\n\t"
+		// Return to the target thread
+		"popal\n\t"
+		"movl %%ebp, %%esp\n\t"
+		"popl %%ebp\n\t"
+		"ret $4\n\t"  // Pop the parameter (stdcall convention)
+		:
+		: [szDLLFilePath]    "i" (offsetof(LOADERFUNCTIONPARAMS, szDLLFilePath)),
+		  [lpfnLoadLibraryA] "i" (offsetof(LOADERFUNCTIONPARAMS, lpfnLoadLibraryA)),
+		  [lpfnGetLastError] "i" (offsetof(LOADERFUNCTIONPARAMS, lpfnGetLastError)),
+		  [lpfnExitProcess]  "i" (offsetof(LOADERFUNCTIONPARAMS, lpfnExitProcess)),
+		  [nPatcherOffset]   "i" (offsetof(LOADERFUNCTIONPARAMS, nPatcherOffset)),
+		  [byPatcherData]    "i" (offsetof(LOADERFUNCTIONPARAMS, byPatcherData)),
+		  [nPatcherDataLen]  "i" (offsetof(LOADERFUNCTIONPARAMS, nPatcherDataLen)),
+		  [align_minus_1]    "i" (PATCHER_DATA_ALIGNMENT - 1),
+		  [align_mask]       "i" (~(PATCHER_DATA_ALIGNMENT - 1))
+	);
+}
+#endif
 
 // This helper function attempts to find the true location of a given function. This is necessary because compilers will, in various circumstances, generate call stubs in place of the actual functions, and attempts to get a function address will actually get the address of the stub function. This can be easily demonstrated with incremental linking in VC++: the address returned by LoaderFunction will actually be to a JMP rel32 stub. Since we're injecting the loader function into a foreign process, we have to get the function, and not its call stub.
 // ** NOT 64-BIT COMPATIBLE **
@@ -134,7 +195,7 @@ BOOL GetContainingModule(IN LPCVOID lpFunc, OUT HMODULE *lphModule, OUT LPSTR lp
 
 	// Get the info for what should be the module containing the function
 	MEMORY_BASIC_INFORMATION memInfo;
-	if (!VirtualQuery(lpFunc, &memInfo, sizeof(memInfo)) 
+	if (!VirtualQuery(lpFunc, &memInfo, sizeof(memInfo))
 		|| memInfo.Type != MEM_IMAGE)
 		return FALSE;
 
@@ -150,7 +211,7 @@ BOOL GetContainingModule(IN LPCVOID lpFunc, OUT HMODULE *lphModule, OUT LPSTR lp
 
 // ** NOT 64-BIT COMPATIBLE **
 BOOL WINAPI InjectDLLIntoProcessV3(IN HANDLE hTargetProcess, IN HANDLE hTargetThread,
-	IN OPTIONAL LPCSTR lpDLLFileName, IN OPTIONAL LPPATCHERENTRYPOINT lpfnPatcher, 
+	IN OPTIONAL LPCSTR lpDLLFileName, IN OPTIONAL LPPATCHERENTRYPOINT lpfnPatcher,
 	IN OPTIONAL LPCVOID lpPatcherData, IN OPTIONAL DWORD nPatcherDataLen)
 {
 	// We're going to assert if the caller gives us any crap
@@ -197,7 +258,7 @@ BOOL WINAPI InjectDLLIntoProcessV3(IN HANDLE hTargetProcess, IN HANDLE hTargetTh
 	LoaderParams.lpfnGetLastError = GetProcAddress(hKernel, "GetLastError");
 	LoaderParams.lpfnExitProcess  = GetProcAddress(hKernel, "ExitProcess");
 
-	// Set the patcher entry point and param 
+	// Set the patcher entry point and param
 	LoaderParams.nPatcherOffset = nPatcherRVA;
 	LoaderParams.nPatcherDataLen = nPatcherDataLen;
 
@@ -233,9 +294,11 @@ BOOL WINAPI InjectDLLIntoProcessV3(IN HANDLE hTargetProcess, IN HANDLE hTargetTh
 		return FALSE;
 
 	// Write the stack frame
-	if (!WriteProcessMemory(hTargetProcess, (LPVOID)ctxTarget.Esp, 
+	if (!WriteProcessMemory(hTargetProcess, (LPVOID)ctxTarget.Esp,
 		&LoaderStack, sizeof(LoaderStack), NULL))
-	return FALSE;
-	
+	{
+		return FALSE;
+	}
+
 	return TRUE;
 }
