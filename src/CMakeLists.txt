@@ -44,7 +44,7 @@ set(COMMON_DEFINITIONS
 #############################################################################
 # MPQDraftDLL - The injection DLL (Windows only)
 #############################################################################
-if(WIN32)
+if(WIN32 OR MINGW)
     set(DLL_SOURCES
         dll/MPQDraftDLL.cpp
         dll/Patcher.cpp
@@ -76,9 +76,15 @@ if(WIN32)
     )
 
     # Use module definition file for exports
-    set_target_properties(MPQDraftDLL PROPERTIES
-        LINK_FLAGS "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/dll/MPQDraftDLL.def"
-    )
+    # MSVC uses /DEF: syntax, MinGW uses the .def file directly
+    if(MSVC)
+        set_target_properties(MPQDraftDLL PROPERTIES
+            LINK_FLAGS "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/dll/MPQDraftDLL.def"
+        )
+    else()
+        # For MinGW, add the .def file as a source
+        target_sources(MPQDraftDLL PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/dll/MPQDraftDLL.def)
+    endif()
 
     # Output to src directory for resource embedding
     set_target_properties(MPQDraftDLL PROPERTIES
@@ -91,7 +97,7 @@ endif()
 #############################################################################
 # MPQStub - The SEMPQ stub executable (Windows only)
 #############################################################################
-if(WIN32)
+if(WIN32 OR MINGW)
     set(STUB_SOURCES
         sempq/stub/MPQStub.cpp
         common/QDebug.cpp
@@ -184,7 +190,7 @@ set(QT_RESOURCES
 )
 
 # Determine which sources to include based on platform
-if(WIN32)
+if(WIN32 OR MINGW)
     # Windows: Include main entry point, CLI, common Windows utilities, and resources
     set(MAIN_SOURCES
         app/MPQDraft.cpp
@@ -209,7 +215,7 @@ add_executable(MPQDraft WIN32
 )
 
 # Define MPQDRAFT_INTEGRATED_BUILD on Windows so main_gui.cpp doesn't define main()
-if(WIN32)
+if(WIN32 OR MINGW)
     target_compile_definitions(MPQDraft PRIVATE
         MPQDRAFT_INTEGRATED_BUILD
         ${COMMON_DEFINITIONS}
@@ -253,7 +259,7 @@ if(MINGW)
 endif()
 
 # On Windows, MPQDraft depends on DLL and Stub being built first (they're embedded via .rc)
-if(WIN32)
+if(WIN32 OR MINGW)
     add_dependencies(MPQDraft MPQDraftDLL MPQStub)
 endif()
 
@@ -262,7 +268,7 @@ install(TARGETS MPQDraft
     RUNTIME DESTINATION bin
 )
 
-if(WIN32)
+if(WIN32 OR MINGW)
     install(TARGETS MPQDraftDLL MPQStub
         RUNTIME DESTINATION bin
     )
