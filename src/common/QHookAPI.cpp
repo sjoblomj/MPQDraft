@@ -109,7 +109,7 @@ DWORD PatchImportCore(
 	if (!VirtualQuery(pImportDesc, &mbi, sizeof(mbi)))
 		return (DWORD)-1;
 
-	if (mbi.State != MEM_COMMIT || !(mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE)))
+	if (mbi.State != MEM_COMMIT || !(mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)))
 		return (DWORD)-1;
 
 	// The import table entries will be arranged according to the module that
@@ -135,7 +135,7 @@ DWORD PatchImportCore(
 		if (!VirtualQuery(lpszImportName, &mbi, sizeof(mbi)))
 			continue;
 
-		if (mbi.State != MEM_COMMIT || !(mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE)))
+		if (mbi.State != MEM_COMMIT || !(mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)))
 			continue;
 
 		// Validate string length is reasonable
@@ -251,7 +251,7 @@ DWORD WINAPI PatchImportEntry(
 	if (!VirtualQuery(lpszModuleName, &mbi, sizeof(mbi)))
 		return (DWORD)-1;
 
-	if (mbi.State != MEM_COMMIT || !(mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE)))
+	if (mbi.State != MEM_COMMIT || !(mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)))
 		return (DWORD)-1;
 
 	// Check string length is reasonable (not too long, not empty)
