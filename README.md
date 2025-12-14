@@ -28,7 +28,69 @@ Required Visual Studio components:
 - Open Debug\MPQDraftD.exe
 
 ### Building under Linux
-Creating a workable Windows binary under Linux using MinGW-w64 is a goal that is not yet complete.
+
+MPQDraft can be cross-compiled for 32-bit Windows from Linux using MinGW-w64.
+
+#### Prerequisites
+
+Install the MinGW-w64 toolchain:
+
+```bash
+sudo apt install mingw-w64 g++-mingw-w64-i686-posix
+```
+
+#### Building without Qt (DLL and Stub only)
+
+To build just the DLL and Stub (no GUI):
+
+```bash
+./tools/build-mingw32.sh
+```
+
+Output files will be in `build-mingw32/`:
+- `MPQDraftDLL.dll` - The injection DLL
+- `MPQStub.exe` - The SEMPQ stub executable
+
+#### Building with Qt GUI (using MXE)
+
+To build the full application including the Qt GUI, you need Qt5 compiled for MinGW. The recommended approach is to use [MXE (M Cross Environment)](https://mxe.cc/).
+
+1. **Install MXE dependencies** (Ubuntu/Debian):
+
+```bash
+sudo apt install autoconf automake autopoint bash bison bzip2 flex \
+    g++ g++-multilib gettext git gperf intltool libc6-dev-i386 \
+    libgdk-pixbuf2.0-dev libltdl-dev libgl-dev libpcre3-dev libssl-dev \
+    libtool-bin libxml-parser-perl lzip make openssl p7zip-full patch \
+    perl python3 python3-mako python3-packaging python-is-python3 ruby \
+    sed unzip wget xz-utils
+```
+
+2. **Clone and build MXE with Qt5** (this takes 1-2 hours):
+
+```bash
+sudo git clone https://github.com/mxe/mxe.git /opt/mxe
+cd /opt/mxe
+make MXE_TARGETS='i686-w64-mingw32.static' qt5
+```
+
+3. **Build MPQDraft with Qt**:
+
+```bash
+MXE_ROOT=/opt/mxe ./tools/build-mingw32.sh
+```
+
+The resulting executables will be statically linked and won't require Qt DLLs to be distributed alongside the application.
+
+#### Alternative: Using a custom Qt installation
+
+If you have Qt for MinGW installed elsewhere (e.g., from the Qt installer), you can specify its path:
+
+```bash
+QT_MINGW32_PREFIX=/path/to/Qt/5.15.2/mingw81_32 ./tools/build-mingw32.sh
+```
+
+Note: This may have compatibility issues if the Qt installation uses a different MinGW version than your system's.
 
 Todo:
 - [x] GitHub Actions build-pipeline
@@ -40,14 +102,14 @@ Todo:
 - [x] Add `--help`, `-h`, `--version`, `-v` flags to CLI
 - [x] Add plugin readiness-check to CLI
 - [x] Replace MFC GUI with a cross-platform GUI framework
-- [ ] Correct `_cdecl`
-- [ ] Use std namespace for `min` and `max` and setup import
-- [ ] Correct casts
-- [ ] Remove Windows-specific dead code
-- [ ] Conditionally compile Windows-specific code
-- [ ] Set up a CMake build system
-- [ ] Handle Windows-specific Structured Exception Handling (SEH)
-- [ ] Handle inline Assembly code
+- [x] Correct `_cdecl`
+- [x] Use std namespace for `min` and `max` and setup import
+- [x] Correct casts
+- [x] Remove Windows-specific dead code
+- [x] Conditionally compile Windows-specific code
+- [x] Set up a CMake build system
+- [x] Handle Windows-specific Structured Exception Handling (SEH)
+- [x] Handle inline Assembly code
 
 ## Credits
 [Quantam, creator of MPQDraft](http://qstuff.blogspot.com/2010/01/bibliography-programming.html).

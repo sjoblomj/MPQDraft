@@ -40,3 +40,5 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libgcc -stat
 # Windows-specific definitions
 add_definitions(-DWIN32 -D_WIN32 -D__WIN32__ -DWINVER=0x0601 -D_WIN32_WINNT=0x0601)
 
+# Resource compiler flags - define _WIN32 for windres so .rc files compile correctly
+set(CMAKE_RC_FLAGS "${CMAKE_RC_FLAGS} -D_WIN32")

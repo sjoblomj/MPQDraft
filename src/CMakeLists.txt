@@ -9,21 +9,16 @@ string(TIMESTAMP VER_MAJOR "%Y")
 string(TIMESTAMP VER_MINOR "%m")
 string(TIMESTAMP VER_PATCH "%d")
 set(VER_BUILD 1)
+
+# Filename version keeps zero-padding (e.g., "2025-12-09")
 set(MPQDRAFT_VERSION "${VER_MAJOR}-${VER_MINOR}-${VER_PATCH}")
 
-# Generate version.h for CLI
-configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/app/cli/version.h.in
-    ${CMAKE_CURRENT_SOURCE_DIR}/app/cli/version.h
-    @ONLY
-)
+# Strip leading zeros for C/C++ macros to avoid octal interpretation (e.g., "09" -> "9")
+math(EXPR VER_MINOR "${VER_MINOR}")
+math(EXPR VER_PATCH "${VER_PATCH}")
 
-# Generate version_rc.h for resource files
-configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/version_rc.h.in
-    ${CMAKE_CURRENT_SOURCE_DIR}/version_rc.h
-    @ONLY
-)
+configure_file(app/cli/version.h.in ${CMAKE_CURRENT_SOURCE_DIR}/app/cli/version.h @ONLY)
+configure_file(version_rc.h.in ${CMAKE_CURRENT_SOURCE_DIR}/version_rc.h @ONLY)
 
 # Common include directories used by multiple targets
 set(COMMON_INCLUDE_DIRS
@@ -38,23 +33,32 @@ set(COMMON_INCLUDE_DIRS
 # Note: We explicitly undefine UNICODE and _UNICODE to use ANSI versions of
 # Windows API functions (char* instead of wchar_t*). MXE enables UNICODE by
 # default, which would break the existing codebase.
-set(COMMON_DEFINITIONS
-    WIN32
-    _WINDOWS
-    _CRT_SECURE_NO_WARNINGS
-    _MBCS
-)
+set(COMMON_DEFINITIONS WIN32 _WINDOWS _CRT_SECURE_NO_WARNINGS _MBCS)
 
 # Ensure UNICODE is not defined (use ANSI APIs)
-# We use -U flags to undefine these macros, as MXE's toolchain may define them.
 if(MINGW)
     add_compile_options(-UUNICODE -U_UNICODE)
 endif()
 
+# Helper function to configure Windows targets with common settings
+function(configure_windows_target target)
+    target_include_directories(${target} PRIVATE ${COMMON_INCLUDE_DIRS})
+    target_compile_definitions(${target} PRIVATE ${COMMON_DEFINITIONS})
+    target_link_libraries(${target} PRIVATE shlwapi psapi)
+    if(MSVC)
+        set_target_properties(${target} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}
+            RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}
+        )
+    endif()
+endfunction()
+
 #############################################################################
-# MPQDraftDLL - The injection DLL (Windows only)
+# Windows-only targets: MPQDraftDLL and MPQStub
 #############################################################################
 if(WIN32 OR MINGW)
+    # MPQDraftDLL - The injection DLL
     set(DLL_SOURCES
         dll/MPQDraftDLL.cpp
         dll/Patcher.cpp
@@ -66,107 +70,46 @@ if(WIN32 OR MINGW)
         core/GameDetection.cpp
         core/GameData.cpp
     )
-
-    # The .rc file is empty (no actual resources) but MSVC handles it fine.
-    # MinGW's windres fails on empty resource files, so only include it for MSVC.
     if(MSVC)
         list(APPEND DLL_SOURCES dll/MPQDraftDLL.rc)
     endif()
 
-    add_library(MPQDraftDLL SHARED
-        ${DLL_SOURCES}
-    )
+    add_library(MPQDraftDLL SHARED ${DLL_SOURCES})
+    configure_windows_target(MPQDraftDLL)
+    target_compile_definitions(MPQDraftDLL PRIVATE _USRDLL MPQDRAFTDLL_EXPORTS)
+    set_target_properties(MPQDraftDLL PROPERTIES PREFIX "")
 
-    target_include_directories(MPQDraftDLL PRIVATE ${COMMON_INCLUDE_DIRS})
-
-    target_compile_definitions(MPQDraftDLL PRIVATE
-        ${COMMON_DEFINITIONS}
-        _USRDLL
-        MPQDRAFTDLL_EXPORTS
-    )
-
-    target_link_libraries(MPQDraftDLL PRIVATE
-        shlwapi
-        psapi
-    )
-
-    # Use module definition file for exports
-    # MSVC uses /DEF: syntax, MinGW uses the .def file directly
+    # Module definition file for exports
     if(MSVC)
         set_target_properties(MPQDraftDLL PROPERTIES
             LINK_FLAGS "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/dll/MPQDraftDLL.def"
         )
     else()
-        # For MinGW, add the .def file as a source and enable stdcall fixup
-        # The fixup is needed because the .def exports undecorated names but
-        # __stdcall functions have @N decorated names in 32-bit builds
         target_sources(MPQDraftDLL PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/dll/MPQDraftDLL.def)
         target_link_options(MPQDraftDLL PRIVATE "-Wl,--enable-stdcall-fixup")
     endif()
 
-    # Set PREFIX to empty to avoid "lib" prefix on MinGW
-    set_target_properties(MPQDraftDLL PROPERTIES
-        PREFIX ""
-    )
-
-    # Output to src directory for resource embedding (MSVC only, for IDE integration)
-    if(MSVC)
-        set_target_properties(MPQDraftDLL PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}
-            RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}
-        )
-    endif()
-endif()
-
-#############################################################################
-# MPQStub - The SEMPQ stub executable (Windows only)
-#############################################################################
-if(WIN32 OR MINGW)
-    set(STUB_SOURCES
+    # MPQStub - The SEMPQ stub executable
+    add_executable(MPQStub WIN32
         sempq/stub/MPQStub.cpp
+        sempq/stub/Stub.rc
         common/QDebug.cpp
         common/QInjectDLL.cpp
         common/QResource.cpp
         core/GameDetection.cpp
         core/GameData.cpp
     )
-
-    add_executable(MPQStub WIN32
-        ${STUB_SOURCES}
-        sempq/stub/Stub.rc
-    )
-
-    target_include_directories(MPQStub PRIVATE ${COMMON_INCLUDE_DIRS})
-
-    target_compile_definitions(MPQStub PRIVATE ${COMMON_DEFINITIONS})
-
-    target_link_libraries(MPQStub PRIVATE
-        shlwapi
-        psapi
-    )
-
-    # Output to src directory for resource embedding (MSVC only, for IDE integration)
-    if(MSVC)
-        set_target_properties(MPQStub PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}
-            RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}
-        )
-    endif()
-
-    # MPQStub depends on MPQDraftDLL being built first (it embeds it)
+    configure_windows_target(MPQStub)
     add_dependencies(MPQStub MPQDraftDLL)
+
+    install(TARGETS MPQDraftDLL MPQStub RUNTIME DESTINATION bin)
 endif()
 
 #############################################################################
 # MPQDraft - The main Qt GUI application (optional, requires Qt)
 #############################################################################
-
-# Option to build without Qt (useful for cross-compilation when Qt is not available)
 option(BUILD_GUI "Build the Qt GUI application" ON)
 
-# Qt configuration
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
@@ -175,16 +118,13 @@ set(CMAKE_AUTOUIC ON)
 find_package(Qt6 QUIET COMPONENTS Core Widgets Svg)
 if(Qt6_FOUND)
     set(QT_VERSION_MAJOR 6)
-    set(QT_FOUND TRUE)
     message(STATUS "Using Qt6")
 else()
     find_package(Qt5 QUIET COMPONENTS Core Widgets Svg)
     if(Qt5_FOUND)
         set(QT_VERSION_MAJOR 5)
-        set(QT_FOUND TRUE)
         message(STATUS "Using Qt5")
     else()
-        set(QT_FOUND FALSE)
         if(BUILD_GUI)
             message(WARNING "Qt not found. GUI will not be built. Set -DBUILD_GUI=OFF to suppress this warning.")
             set(BUILD_GUI OFF)
@@ -192,8 +132,7 @@ else()
     endif()
 endif()
 
-if(BUILD_GUI AND QT_FOUND)
-    # Source files - GUI
+if(BUILD_GUI)
     set(GUI_SOURCES
         app/gui/main_gui.cpp
         app/gui/mainwindow.cpp
@@ -203,7 +142,6 @@ if(BUILD_GUI AND QT_FOUND)
         app/gui/helpers/sempqparamsbuilder.cpp
     )
 
-    # Source files - Core (shared between GUI and CLI)
     set(CORE_SOURCES
         sempq/SEMPQCreator.cpp
         core/PluginManager.cpp
@@ -211,74 +149,25 @@ if(BUILD_GUI AND QT_FOUND)
         core/GameDetection.cpp
     )
 
-    # Source files - CLI (Windows only)
-    set(CLI_SOURCES
-        app/cli/main_cli.cpp
-        app/cli/MPQDraftCLI.cpp
-        app/cli/CommandParser.cpp
-    )
-
-    # Source files - Common Windows utilities
-    set(COMMON_SOURCES
-        common/QDebug.cpp
-        common/QResource.cpp
-        common/QInjectDLL.cpp
-    )
-
-    # Resource files
-    set(QT_RESOURCES
-        app/gui/resources/mpqdraft.qrc
-    )
-
-    # Determine which sources to include based on platform
     if(WIN32 OR MINGW)
-        # Windows: Include main entry point, CLI, common Windows utilities, and resources
         set(MAIN_SOURCES
             app/MPQDraft.cpp
             ${GUI_SOURCES}
             ${CORE_SOURCES}
-            ${CLI_SOURCES}
-            ${COMMON_SOURCES}
+            app/cli/main_cli.cpp
+            app/cli/MPQDraftCLI.cpp
+            app/cli/CommandParser.cpp
+            common/QDebug.cpp
+            common/QResource.cpp
+            common/QInjectDLL.cpp
             MPQDraft.rc
         )
     else()
-        # Linux/other: GUI only with standalone main()
-        set(MAIN_SOURCES
-            ${GUI_SOURCES}
-            ${CORE_SOURCES}
-        )
+        set(MAIN_SOURCES ${GUI_SOURCES} ${CORE_SOURCES})
     endif()
 
-    # Create main executable
-    add_executable(MPQDraft WIN32
-        ${MAIN_SOURCES}
-        ${QT_RESOURCES}
-    )
+    add_executable(MPQDraft WIN32 ${MAIN_SOURCES} app/gui/resources/mpqdraft.qrc)
 
-    # Define MPQDRAFT_INTEGRATED_BUILD on Windows so main_gui.cpp doesn't define main()
-    if(WIN32 OR MINGW)
-        target_compile_definitions(MPQDraft PRIVATE
-            MPQDRAFT_INTEGRATED_BUILD
-            ${COMMON_DEFINITIONS}
-        )
-    endif()
-
-    # Link Qt libraries
-    target_link_libraries(MPQDraft PRIVATE
-        Qt${QT_VERSION_MAJOR}::Core
-        Qt${QT_VERSION_MAJOR}::Widgets
-        Qt${QT_VERSION_MAJOR}::Svg
-    )
-
-    # Windows-specific libraries
-    if(WIN32 OR MINGW)
-        target_link_libraries(MPQDraft PRIVATE
-            shlwapi
-            psapi
-        )
-    endif()
-
-    # Include directories
     target_include_directories(MPQDraft PRIVATE
         ${COMMON_INCLUDE_DIRS}
         ${CMAKE_CURRENT_SOURCE_DIR}/app
@@ -287,37 +176,24 @@ if(BUILD_GUI AND QT_FOUND)
         ${CMAKE_CURRENT_SOURCE_DIR}/app/cli
     )
 
-    # Set output name to MPQDraft-<date>.exe
-    set_target_properties(MPQDraft PROPERTIES
-        OUTPUT_NAME "MPQDraft-${MPQDRAFT_VERSION}"
+    target_link_libraries(MPQDraft PRIVATE
+        Qt${QT_VERSION_MAJOR}::Core
+        Qt${QT_VERSION_MAJOR}::Widgets
+        Qt${QT_VERSION_MAJOR}::Svg
     )
 
-    # Compiler flags for MinGW cross-compilation
-    if(MINGW)
-        target_compile_definitions(MPQDraft PRIVATE
-            UNICODE
-            _UNICODE
-        )
+    set_target_properties(MPQDraft PROPERTIES OUTPUT_NAME "MPQDraft-${MPQDRAFT_VERSION}")
 
-        set_target_properties(MPQDraft PROPERTIES
-            WIN32_EXECUTABLE TRUE
-        )
-    endif()
-
-    # On Windows, MPQDraft depends on DLL and Stub being built first (they're embedded via .rc)
     if(WIN32 OR MINGW)
+        target_compile_definitions(MPQDraft PRIVATE MPQDRAFT_INTEGRATED_BUILD ${COMMON_DEFINITIONS})
+        target_link_libraries(MPQDraft PRIVATE shlwapi psapi)
         add_dependencies(MPQDraft MPQDraftDLL MPQStub)
     endif()
 
-    # Installation for GUI
-    install(TARGETS MPQDraft
-        RUNTIME DESTINATION bin
-    )
-endif()
+    if(MINGW)
+        target_compile_definitions(MPQDraft PRIVATE UNICODE _UNICODE)
+        set_target_properties(MPQDraft PROPERTIES WIN32_EXECUTABLE TRUE)
+    endif()
 
-# Installation for DLL and Stub (always on Windows)
-if(WIN32 OR MINGW)
-    install(TARGETS MPQDraftDLL MPQStub
-        RUNTIME DESTINATION bin
-    )
+    install(TARGETS MPQDraft RUNTIME DESTINATION bin)
 endif()
