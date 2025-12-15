@@ -116,18 +116,41 @@ BOOL APIENTRY DllMain(IN HANDLE hInstDLL, IN DWORD fdwReason, IN LPVOID lpvReser
 		{
 			hMPQDraftDLL = (HMODULE)hInstDLL;
 
-			// Because of the method we use for patching, we're going to be called before the process start function establishes the default unhandled exception filter. Thus we need to set up our own frame, or things would break if an exception got thrown.
+			// Validate that we have a valid DLL handle before proceeding
+			if (!hInstDLL)
+			{
+				QDebugWriteEntry("DllMain: Invalid DLL handle");
+				return FALSE;
+			}
+
+			// Validate that the critical section structure is in valid memory
+			MEMORY_BASIC_INFORMATION mbi;
+			if (!VirtualQuery(&g_csDataLock, &mbi, sizeof(mbi)) || mbi.State != MEM_COMMIT)
+			{
+				QDebugWriteEntry("DllMain: Critical section memory is invalid");
+				return FALSE;
+			}
+
+			// Because of the method we use for patching, we're going to be called before the process
+			// start function establishes the default unhandled exception filter. Thus we need to set
+			// up our own frame, or things would break if an exception got thrown.
+#ifdef _MSC_VER
 			__try
 			{
+#endif
 				//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_CHECK_CRT_DF | _CRTDBG_LEAK_CHECK_DF);
 
 				InitializeCriticalSection(&g_csDataLock);
 
+#ifdef _MSC_VER
 			}
 			// Use our custom handler because it's more effective than the Windows one
 			__except(MyUnhandledExceptionFilter(GetExceptionInformation()))
 			{
+				QDebugWriteEntry("DllMain: Exception during critical section initialization");
+				return FALSE;
 			}
+#endif
 
 			break;
 		}
@@ -149,9 +172,9 @@ BOOL APIENTRY DllMain(IN HANDLE hInstDLL, IN DWORD fdwReason, IN LPVOID lpvReser
 		case DLL_THREAD_DETACH:
 			QDebugWriteEntry("DllMain() : DLL_THREAD_DETACH, thread %d", GetCurrentThreadId());
 			break;
-    }
+	}
 
-    return TRUE;
+	return TRUE;
 }
 
 // SFileOpenArchive: the first of the Storm MPQ functions we need to patch. Really, we're not interested in changing the way this function operates, as opening MPQs (or closing them, for that matter), doesn't affect how MPQDraft works. We hook it, however, because we need to know when the first MPQ is opened, so that we can open our MPQs. The reason for this is historical. Using the injection method MPQDraft does, on Windows 9x, it's possible that the patching function will get called before any of the DllMains get called. If Storm's DllMain hasn't been called and we call SFileOpenArchive, that would be bad. That one was a major pain to debug (in fact, as I couldn't get it to reproduce on any computer I had access to, I had to have the one person who had this problem debug it themselves), and it wasn't until years later that I learned the exact mechanism of this occurring (or rather, of DllMain not occurring); I think I posted this information on my blog at one point.
@@ -179,7 +202,7 @@ BOOL WINAPI PatchOpenArchive(IN LPCSTR lpFileName, IN DWORD dwMPQPriority, IN DW
 	}
 
 	bRetVal = SFileOpenArchive(lpFileName, dwMPQPriority, dwFlags, lphMPQ);
-	
+
 	if (bRetVal)
 		nOpenHostMPQs++;
 	QDebugWriteEntry("PatchOpenArchive : SFileOpenArchive returned %d, handle 0x%X; %d MPQs open", bRetVal, *lphMPQ, nOpenHostMPQs);
@@ -277,7 +300,7 @@ BOOL WINAPI PatchOpenFileAsArchive(IN OPTIONAL HANDLE hMPQ, IN LPCSTR lpszFileNa
 	if (lpPatchContext->dwFlags & MPQD_EXTENDED_REDIR)
 		hMPQ = NULL;	// Search open MPQs
 	bRetVal = SFileOpenFileAsArchive(hMPQ, lpszFileName, dwPriority, dwFlags, lphMPQ);
-	
+
 	if (bRetVal)
 		nOpenHostMPQs++;
 	QDebugWriteEntry("PatchOpenFileAsArchive : SFileOpenFileAsArchive returned %d, handle 0x%X; %d MPQs open", bRetVal, *lphMPQ, nOpenHostMPQs);
@@ -307,15 +330,15 @@ BOOL WINAPI PatchOpenPathAsArchive(IN HANDLE hParentMPQ, IN LPCSTR lpszPath, IN 
 
 // Patch function which hooks the CreateProcessA call. This is necessary because we will usually want to inject the MPQDraft DLL into the child process as well.
 BOOL WINAPI PatchCreateProcessA(
-  LPCSTR lpApplicationName,                 // name of executable module
-  LPSTR lpszCommandLine,                      // command line string
+  LPCSTR lpApplicationName,				 // name of executable module
+  LPSTR lpszCommandLine,					  // command line string
   LPSECURITY_ATTRIBUTES lpProcessAttributes, // SD
   LPSECURITY_ATTRIBUTES lpThreadAttributes,  // SD
-  BOOL bInheritHandles,                      // handle inheritance option
-  DWORD dwCreationFlags,                     // creation flags
-  LPVOID lpEnvironment,                      // new environment block
-  LPCSTR lpCurrentDirectory,                // current directory name
-  LPSTARTUPINFO lpStartupInfo,               // startup information
+  BOOL bInheritHandles,					  // handle inheritance option
+  DWORD dwCreationFlags,					 // creation flags
+  LPVOID lpEnvironment,					  // new environment block
+  LPCSTR lpCurrentDirectory,				// current directory name
+  LPSTARTUPINFO lpStartupInfo,			   // startup information
   LPPROCESS_INFORMATION lpProcessInformation // process information
 )
 {
@@ -348,8 +371,8 @@ void WINAPI PatchExitProcess(IN DWORD nExitCode)
 
 	/* Unloading plugins turned out to be a huge can of poorly-thought-out worms, and there still isn't really a good solution to the problem. There are several problems contributing to a huge mess, here. The way MPQDraft plugins were originally intended to work was that MPQDraft would call TerminatePlugin and unload the plugins when it received DLL_PROCESS_DETACH. This turned out to be a very poor idea for a couple reasons. First, there's no way we can ensure that DLL_PROCESS_DETACH will be sent to the MPQDraft DLL before it reaches plugin DLLs, meaning we might try to unload some plugin DLLs twice; that's bad. Second, it's always a bad idea to do too much in DllMain, due to the loader lock.
 	However, that's just the start of the problem, which turned out to be much larger. The problem is that we're patching things in other modules: hooking functions, etc. That means that there's always the possibility that functions in plugins could get called after the plugins have terminated.
-	While in theory we could avoid this problem by having TerminatePlugin unpatch the modules (as I initially envisioned), this idea is also flawed due to the possibility of multithreading: it's always possible that another thread could read our hook's address, get preempted, then get later call the hooked function, after the plugin has "removed" the hook. 
-	This can be mitigated by some careful behavior: once TerminatePlugin is called, all hook functions must behave as if they were the original functions that are hooked. They will also need to be able to handle calls arriving AFTER the DLL has been "unloaded" by DLL_PROCESS_DETACH, as that will eventually get called in an indeterminate order. The plugin DLLs themselves, however, can never be unloaded, as an instant crash would result if a hooked function that is no longer in memory gets called. 
+	While in theory we could avoid this problem by having TerminatePlugin unpatch the modules (as I initially envisioned), this idea is also flawed due to the possibility of multithreading: it's always possible that another thread could read our hook's address, get preempted, then get later call the hooked function, after the plugin has "removed" the hook.
+	This can be mitigated by some careful behavior: once TerminatePlugin is called, all hook functions must behave as if they were the original functions that are hooked. They will also need to be able to handle calls arriving AFTER the DLL has been "unloaded" by DLL_PROCESS_DETACH, as that will eventually get called in an indeterminate order. The plugin DLLs themselves, however, can never be unloaded, as an instant crash would result if a hooked function that is no longer in memory gets called.
 	As ANY code in a DLL executing after DLL_PROCESS_DETACH has been called is a bad thing, this is clearly not an ideal solution. It's merely the best of the available options. The problem with it is that it requires very delicate behavior by both the MPQDraft DLL and the plugins themselves, and I have no idea how many plugins would survive such a process (ThunderGraft sure doesn't ATM). Consequently, we currently take the ostrich approach and ignore the problem and hope nothing bad happens.
 	// Unload the plugins and modules in reverse order
 	UnloadPlugins(); */
@@ -430,7 +453,7 @@ FARPROC WINAPI PatchGetProcAddress(IN HMODULE hModule, IN LPCSTR lpProcName)
 		if (!_stricmp(lpProcName, "GetProcAddress"))
 			return (FARPROC)PatchGetProcAddress;
 	}
-	
+
 	// Answer E: none of the above
 	FARPROC pfnProc = GetProcAddress(hModule, lpProcName);
 	//QDebugWriteEntry("PatchLoadLibrary : GetProcAddress returned 0x%X", pfnProc);
@@ -525,14 +548,14 @@ BOOL LoadContext()
 	QDebugWriteEntry("LoadContext()");
 
 	// Log the general stuff
-	QDebugWriteEntry("LoadContext : Context flags 0x%X, %d MPQs, %d modules", 
+	QDebugWriteEntry("LoadContext : Context flags 0x%X, %d MPQs, %d modules",
 		lpPatchContext->dwFlags, lpPatchContext->nPatchMPQs, lpPatchContext->nModules);
 	QDebugWriteEntry("LoadContext : Patch target path \"%s\", MPQDraft directory \"%s\"", lpPatchContext->szTargetPath, lpPatchContext->szMPQDraftDir);
 
 	// Log the MPQs to load
 	for (DWORD iCurMPQ = 0; iCurMPQ < lpPatchContext->nPatchMPQs; iCurMPQ++)
 	{
-		LPCSTR lpszPatchMPQ = (LPCSTR)lpPatchContext + 
+		LPCSTR lpszPatchMPQ = (LPCSTR)lpPatchContext +
 			lpPatchContext->dwMPQNamesOffset + iCurMPQ * MPQDRAFT_MAX_PATH;
 		QDebugWriteEntry("LoadContext : MPQ slot %d path \"%s\"", iCurMPQ, lpszPatchMPQ);
 	}
@@ -542,9 +565,9 @@ BOOL LoadContext()
 		((LPBYTE)lpPatchContext + lpPatchContext->dwModulesOffset);
 	for (DWORD iCurModule = 0; iCurModule < lpPatchContext->nModules; iCurModule++)
 	{
-		QDebugWriteEntry("LoadContext : Module slot %d plugin ID 0x%X, module ID 0x%X, path \"%s\", execute %d", 
-			iCurModule, pModules[iCurModule].dwComponentID, 
-			pModules[iCurModule].dwModuleID, 
+		QDebugWriteEntry("LoadContext : Module slot %d plugin ID 0x%X, module ID 0x%X, path \"%s\", execute %d",
+			iCurModule, pModules[iCurModule].dwComponentID,
+			pModules[iCurModule].dwModuleID,
 			pModules[iCurModule].szModuleFileName,
 			pModules[iCurModule].bExecute);
 	}
@@ -581,7 +604,7 @@ BOOL IsPatchTarget()
 		return FALSE;
 
 	// This is the correct executable. However, we still don't want to activate if we still need to shunt. Only activate if shunt count or shunts remaining is 0
-	QDebugWriteEntry("IsPatchTarget : Shunt count: %d, shunts remaining: %d", 
+	QDebugWriteEntry("IsPatchTarget : Shunt count: %d, shunts remaining: %d",
 		lpPatchContext->nShuntCount, nShuntRemaining);
 
 	return (lpPatchContext->nShuntCount == 0 || nShuntRemaining == 0);
@@ -718,7 +741,7 @@ BOOL PatchModuleFunctions(IN HMODULE hModule)
 		fnGetProcAddress = GetProcAddress(hKernel32, "GetProcAddress"),
 		fnCreateProcessA = GetProcAddress(hKernel32, "CreateProcessA"),
 		fnExitProcess = GetProcAddress(hKernel32, "ExitProcess");
-	
+
 	if (!fnLoadLibraryA || !fnGetProcAddress || !fnCreateProcessA || !fnExitProcess)
 		return FALSE;
 
@@ -833,7 +856,7 @@ BOOL LoadPlugins()
 				FreeLibrary(hDLLModule);
 				return FALSE;
 			}
-			
+
 			bRetVal = pGetMPQDraftPlugin(&pPlugin);
 			QDebugWriteEntry("LoadPlugins : GetMPQDraftPlugin returned %d", bRetVal);
 
@@ -842,7 +865,7 @@ BOOL LoadPlugins()
 				FreeLibrary(hDLLModule);
 				return FALSE;
 			}
-			
+
 			// Finally, initialize the plugin to allow it to do any patching of the host it needs to, then add it to our list of plugins
 			bRetVal = pPlugin->InitializePlugin(&PluginServer);
 			QDebugWriteEntry("LoadPlugins : InitializePlugin returned %d", bRetVal);
@@ -972,7 +995,7 @@ extern "C" BOOL WINAPI MPQDraftPatcher(
 	IN OPTIONAL DWORD nPatchMPQs,
 	IN OPTIONAL DWORD nAuxModules,
 
-	IN OPTIONAL LPCSTR *lplpszMPQNames, 
+	IN OPTIONAL LPCSTR *lplpszMPQNames,
 	IN OPTIONAL const MPQDRAFTPLUGINMODULE *lpAuxModules
 )
 {

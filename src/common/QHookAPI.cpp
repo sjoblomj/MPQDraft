@@ -17,9 +17,9 @@ BOOL FindDataDirectoryEntry(
 	// The module to find the desired data directory in
 	IN HMODULE hModule,
 	// The index of the desired data directory. See winnt.h for the list.
-	IN DWORD iEntryIndex, 
+	IN DWORD iEntryIndex,
 	// The pointer to the data directory
-	OUT PVOID *lplpDirEntry, 
+	OUT PVOID *lplpDirEntry,
 	// The size of the data directory
 	OUT OPTIONAL LPDWORD lpnEntrySize)
 {
@@ -29,7 +29,7 @@ BOOL FindDataDirectoryEntry(
 	// The HMODULE is actually a pointer to the image's IMAGE_DOS_HEADER
 	PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)hModule;
 
-	// Check if it looks like a DOS header, and pass up the DOS header to 
+	// Check if it looks like a DOS header, and pass up the DOS header to
 	// get to the Win32 (PE) header
 	if (pDosHeader->e_magic != IMAGE_DOS_SIGNATURE
 		|| pDosHeader->e_lfanew == 0)
@@ -65,15 +65,15 @@ BOOL FindDataDirectoryEntry(
 // Does the actual patching. The public functions merely set up some of the more peculiar parameters to this function before calling it. Also, this function may execute recursively, depending on whether we want to patch the import entry in all modules, or just a specific one. In the case of the former, we expect to have this function called for the EXE itself, and any DLLs that get loaded; this should account for all modules in the process. Returns the number of import table entries replaced, or (DWORD)-1 on failure.
 DWORD PatchImportCore(
 	// The module whose imports we are patching
-	IN HMODULE hHostProgram, 
+	IN HMODULE hHostProgram,
 	// The module exporting the function we are replacing in the import table. The reason this is needed is that there are many forms the module name may appear as in the import table, and we want to catch all of them that refer to the module exporting the function we're going to patch. So I figured why not just call GetModuleHandle on the string in the import table, and let Windows do the comparison for us?
-	IN HMODULE hExportModule, 
+	IN HMODULE hExportModule,
 	// The function we're going to patch in the import table
-	IN FARPROC pfnOldFunction, 
+	IN FARPROC pfnOldFunction,
 	// The new function we're going to redirect the target to
-	IN FARPROC pfnNewFunction, 
+	IN FARPROC pfnNewFunction,
 	// Whether or not this function should call itself recursively to patch all modules imported by the one it was originally supposed to patch
-	IN BOOL bRecurse, 
+	IN BOOL bRecurse,
 	// A set of modules to exclude from patching. If the target module is in this list, this function immediately returns success. If not, the module is added to this list. If this is NULL (not recommended), all modules are patched.
 	IN OUT OPTIONAL ModuleSet *pModules
 	)
@@ -104,6 +104,14 @@ DWORD PatchImportCore(
 	if (!FindDataDirectoryEntry(hHostProgram, IMAGE_DIRECTORY_ENTRY_IMPORT, (PVOID *)&pImportDesc, &nImportSize))
 		return 0;
 
+	// Validate that the import descriptor is in valid memory
+	MEMORY_BASIC_INFORMATION mbi;
+	if (!VirtualQuery(pImportDesc, &mbi, sizeof(mbi)))
+		return (DWORD)-1;
+
+	if (mbi.State != MEM_COMMIT || !(mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)))
+		return (DWORD)-1;
+
 	// The import table entries will be arranged according to the module that
 	// they're imported from. So first we need to find the right module in the
 	// import table.
@@ -112,8 +120,29 @@ DWORD PatchImportCore(
 
 	for (DWORD iDescIndex = 0; pImportDesc[iDescIndex].Name; iDescIndex++)
 	{
+		// Validate we're still within the import table bounds
+		if ((iDescIndex + 1) * sizeof(IMAGE_IMPORT_DESCRIPTOR) > nImportSize)
+			break;
+
+		// Validate the Name RVA is reasonable (not NULL, within module bounds)
+		if (pImportDesc[iDescIndex].Name == 0)
+			break;
+
 		LPCSTR lpszImportName = (LPCSTR)
 			((LPBYTE)hHostProgram + pImportDesc[iDescIndex].Name);
+
+		// Validate the import name string is in valid memory
+		if (!VirtualQuery(lpszImportName, &mbi, sizeof(mbi)))
+			continue;
+
+		if (mbi.State != MEM_COMMIT || !(mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)))
+			continue;
+
+		// Validate string length is reasonable
+		size_t importNameLen = strnlen(lpszImportName, MAX_PATH + 1);
+		if (importNameLen == 0 || importNameLen > MAX_PATH)
+			continue;
+
 		HMODULE hChildModule = GetModuleHandle(lpszImportName);
 
 		// Is this the module we're looking for?
@@ -123,11 +152,11 @@ DWORD PatchImportCore(
 			// this module, as well.
 			if (bRecurse)
 			{
-				DWORD nPatchesMade = PatchImportCore(hChildModule, hExportModule, 
+				DWORD nPatchesMade = PatchImportCore(hChildModule, hExportModule,
 					pfnOldFunction, pfnNewFunction, bRecurse, pModules);
 				if (nPatchesMade == (DWORD)-1)
 					return (DWORD)-1;
-				
+
 				nPatchCount += nPatchesMade;
 			}
 
@@ -135,17 +164,40 @@ DWORD PatchImportCore(
 		}
 
 		// Now that we've found the right module, there will be a table of straight
-		// pointers to each of the functions imported from the module. 
-		// Technically these are IMAGE_THUNK_DATA entries, but for the purpose 
+		// pointers to each of the functions imported from the module.
+		// Technically these are IMAGE_THUNK_DATA entries, but for the purpose
 		// of maintaining a single code branch for both 32-bit and 64-bit address
 		// spaces, considering it a table of FARPROCs works much better.
 		DWORD iThunkIndex = 0;
+
+		// Validate FirstThunk RVA is reasonable
+		if (pImportDesc[iDescIndex].FirstThunk == 0)
+			continue;
+
 		FARPROC *pThunk = (FARPROC *)
 			((LPBYTE)hHostProgram + pImportDesc[iDescIndex].FirstThunk);
+
+		// Validate the thunk table is in valid memory before accessing it
+		if (!VirtualQuery(pThunk, &mbi, sizeof(mbi)))
+			continue;
+
+		if (mbi.State != MEM_COMMIT)
+			continue;
 
 		// Search through the whole table of imported functions
 		for (DWORD iThunkIndex = 0; pThunk[iThunkIndex]; iThunkIndex++)
 		{
+			// Sanity check: don't iterate forever if the table is corrupted
+			if (iThunkIndex > 10000)
+				break;
+
+			// Validate each thunk entry before accessing it
+			if (!VirtualQuery(&pThunk[iThunkIndex], &mbi, sizeof(mbi)))
+				break;
+
+			if (mbi.State != MEM_COMMIT)
+				break;
+
 			// See if this is the function we're looking for
 			if (pThunk[iThunkIndex] != pfnOldFunction)
 				continue;	// Nope
@@ -167,7 +219,7 @@ DWORD PatchImportCore(
 			// While a module cannot link to the same function in an imported
 			// module twice, there are two occasions when we might see the same
 			// function address twice: when two or more exports are aliases to
-			// the same function, and when something else has already hooked 
+			// the same function, and when something else has already hooked
 			// some of the functions. In either case, we can't stop here.
 		}
 	}
@@ -175,40 +227,78 @@ DWORD PatchImportCore(
 	return nPatchCount;
 }
 
-// This is actually just a thin wrapper around PatchImportCore. All it does is 
-// set up an SEH frame, get the HMODULE from the exporting module name, and 
+// This is actually just a thin wrapper around PatchImportCore. All it does is
+// set up an SEH frame, get the HMODULE from the exporting module name, and
 // then call PatchImportCore.
 DWORD WINAPI PatchImportEntry(
-	IN HMODULE hHostProgram, 
-	IN LPCSTR lpszModuleName, 
-	IN FARPROC pfnOldFunction, 
-	IN FARPROC pfnNewFunction, 
-	IN OUT ModuleSet *lpModuleSet, 
+	IN HMODULE hHostProgram,
+	IN LPCSTR lpszModuleName,
+	IN FARPROC pfnOldFunction,
+	IN FARPROC pfnNewFunction,
+	IN OUT ModuleSet *lpModuleSet,
 	IN BOOL bRecurse)
 {
 	assert(lpszModuleName);
 	assert(lpModuleSet);
 
-	// There are a lot of things that could go wrong, here. So lay down a 
-	// blanked SEH frame, just in case.
+	// Validate all input parameters before doing anything dangerous
+	if (!hHostProgram || !lpszModuleName || !pfnOldFunction || !pfnNewFunction || !lpModuleSet)
+		return (DWORD)-1;
+
+	// Validate module name string - check it's readable and has reasonable length
+	// We need to be careful here as the string might be in invalid memory
+	MEMORY_BASIC_INFORMATION mbi;
+	if (!VirtualQuery(lpszModuleName, &mbi, sizeof(mbi)))
+		return (DWORD)-1;
+
+	if (mbi.State != MEM_COMMIT || !(mbi.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)))
+		return (DWORD)-1;
+
+	// Check string length is reasonable (not too long, not empty)
+	size_t nameLen = strnlen(lpszModuleName, MAX_PATH + 1);
+	if (nameLen == 0 || nameLen > MAX_PATH)
+		return (DWORD)-1;
+
+	// Validate hHostProgram points to valid committed memory
+	if (!VirtualQuery(hHostProgram, &mbi, sizeof(mbi)))
+		return (DWORD)-1;
+
+	if (mbi.State != MEM_COMMIT)
+		return (DWORD)-1;
+
+	// There are a lot of things that could go wrong, here. So lay down a
+	// blanked SEH frame, just in case. The validation above should catch most
+	// issues, but SEH provides a safety net for edge cases.
+
+#ifdef _MSC_VER
 	__try
 	{
+#endif
 		// Look up the module that is being imported from. This seems really weird,
 		// but it was the most reliable way I could think of of checking whether a
 		// module being imported from is equal to a module that we've already
-		// patched, as there can be many file name forms in the import table (or 
+		// patched, as there can be many file name forms in the import table (or
 		// specified by the caller, for that matter).
 		HMODULE hExportModule = GetModuleHandle(lpszModuleName);
 		if (!hExportModule)
 			return (DWORD)-1;
 
+		// Validate the export module handle before passing it on
+		if (!VirtualQuery(hExportModule, &mbi, sizeof(mbi)))
+			return (DWORD)-1;
+
+		if (mbi.State != MEM_COMMIT)
+			return (DWORD)-1;
+
 		// Do the patching itself
-		return PatchImportCore(hHostProgram, hExportModule, 
+		return PatchImportCore(hHostProgram, hExportModule,
 			pfnOldFunction, pfnNewFunction, bRecurse, lpModuleSet);
+#ifdef _MSC_VER
 	}
 	__except(EXCEPTION_EXECUTE_HANDLER)
 	{
 		// It fell down and went boom. Pick it up and kick it out the door.
 		return (DWORD)-1;
 	}
+#endif
 }
