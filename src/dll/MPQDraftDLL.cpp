@@ -386,7 +386,7 @@ FARPROC WINAPI PatchGetProcAddress(IN HMODULE hModule, IN LPCSTR lpProcName)
 	/*QDebugWriteEntry("PatchGetProcAddress(0x%X, \"%s\"/0x%X)", hModule,
 		((DWORD)lpProcName > 64 << 10) ? lpProcName : "NaN", lpProcName);*/
 
-	DWORD dwOrdinal = (DWORD)lpProcName;
+	UINT_PTR dwOrdinal = (UINT_PTR)lpProcName;
 
 	// If we're not supposed to load MPQs, we don't really care if they use our MPQ functions or not
 	if (bLoadMPQs)
@@ -500,7 +500,7 @@ extern "C" BOOL WINAPI MPQDraftInitialize(IN MPQDRAFTPATCHERDATA *pData, IN DWOR
 	if (bLoadPlugins)
 	{
 		// If we're supposed to load modules in this process, notify the plugin server and load the plugins
-		MPQDRAFTPLUGINMODULE *lpModules = (MPQDRAFTPLUGINMODULE *)((DWORD)lpPatchContext + lpPatchContext->dwModulesOffset);
+		MPQDRAFTPLUGINMODULE *lpModules = (MPQDRAFTPLUGINMODULE *)((LPBYTE)lpPatchContext + lpPatchContext->dwModulesOffset);
 
 		PluginServer.SetModules(lpModules, lpPatchContext->nModules);
 
@@ -539,7 +539,7 @@ BOOL LoadContext()
 
 	// Log the plugins to load
 	MPQDRAFTPLUGINMODULE *pModules = (MPQDRAFTPLUGINMODULE *)
-		((DWORD)lpPatchContext + lpPatchContext->dwModulesOffset);
+		((LPBYTE)lpPatchContext + lpPatchContext->dwModulesOffset);
 	for (DWORD iCurModule = 0; iCurModule < lpPatchContext->nModules; iCurModule++)
 	{
 		QDebugWriteEntry("LoadContext : Module slot %d plugin ID 0x%X, module ID 0x%X, path \"%s\", execute %d", 
@@ -804,7 +804,7 @@ BOOL LoadPlugins()
 	QDebugWriteEntry("LoadPlugins()");
 
 	// Plugins are treated exactly the same as any other auxilliary module, save that they're marked for execute. Only load modules having that flag
-	MPQDRAFTPLUGINMODULE *lpModules = (MPQDRAFTPLUGINMODULE *)((DWORD)lpPatchContext + lpPatchContext->dwModulesOffset);
+	MPQDRAFTPLUGINMODULE *lpModules = (MPQDRAFTPLUGINMODULE *)((LPBYTE)lpPatchContext + lpPatchContext->dwModulesOffset);
 	for (DWORD iCurAuxModule = 0; iCurAuxModule < lpPatchContext->nModules; iCurAuxModule++)
 	{
 		QDebugWriteEntry("LoadPlugins : Module slot %d, execute %d", iCurAuxModule, lpModules[iCurAuxModule].bExecute);

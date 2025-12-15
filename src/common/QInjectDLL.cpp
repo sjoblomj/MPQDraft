@@ -179,8 +179,8 @@ BOOL WINAPI InjectDLLIntoProcessV3(IN HANDLE hTargetProcess, IN HANDLE hTargetTh
 	LOADERSTACKFRAME LoaderStack;	// Local copy of the stack frame
 	LOADERFUNCTIONPARAMS LoaderParams; // Local copy of the parameters
 
-	ZeroMemory(&ctxTarget, sizeof(ctxTarget));
-	ZeroMemory(&LoaderStack, sizeof(LoaderStack));
+	ZeroMemory(&ctxTarget,    sizeof(ctxTarget));
+	ZeroMemory(&LoaderStack,  sizeof(LoaderStack));
 	ZeroMemory(&LoaderParams, sizeof(LoaderParams));
 
 	// Retrieve the CPU registers of the target thread
@@ -194,8 +194,8 @@ BOOL WINAPI InjectDLLIntoProcessV3(IN HANDLE hTargetProcess, IN HANDLE hTargetTh
 	HMODULE hKernel = GetModuleHandle("kernel32");
 
 	LoaderParams.lpfnLoadLibraryA = GetProcAddress(hKernel, "LoadLibraryA");
-	LoaderParams.lpfnGetLastError = GetProcAddress(hKernel, "GetProcAddress");
-	LoaderParams.lpfnExitProcess = GetProcAddress(hKernel, "ExitProcess");
+	LoaderParams.lpfnGetLastError = GetProcAddress(hKernel, "GetLastError");
+	LoaderParams.lpfnExitProcess  = GetProcAddress(hKernel, "ExitProcess");
 
 	// Set the patcher entry point and param 
 	LoaderParams.nPatcherOffset = nPatcherRVA;
