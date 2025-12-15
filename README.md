@@ -16,16 +16,13 @@ MPQDraft plugins can optionally have configuration dialogs. The CLI contains no 
 
 
 ## Development
-Required Visual Studio components:
-
-* C++ MFC for v142 build tools
-* C++ ATL for v141 build tools
-* C++ MFC for v141 build tools
 
 ### Building in Visual Studio
-- Open MPQDraft\MPQDraft.sln in Visual Studio 2019
+- Open src\CMakeLists.txt in Visual Studio
 - Build->Build Solution
-- Open Debug\MPQDraftD.exe
+
+### Building with GitHub Actions
+The .github/workflows/windows-build.yml file contains a build pipeline that will produce an executable. Clone the repo and push on any branch to have the build automatically run.
 
 ### Building under Linux
 
@@ -71,7 +68,7 @@ sudo apt install autoconf automake autopoint bash bison bzip2 flex \
 ```bash
 sudo git clone https://github.com/mxe/mxe.git /opt/mxe
 cd /opt/mxe
-make MXE_TARGETS='i686-w64-mingw32.static' qt5
+sudo make MXE_TARGETS='i686-w64-mingw32.static' qt5
 ```
 
 3. **Build MPQDraft with Qt**:
@@ -92,27 +89,11 @@ QT_MINGW32_PREFIX=/path/to/Qt/5.15.2/mingw81_32 ./tools/build-mingw32.sh
 
 Note: This may have compatibility issues if the Qt installation uses a different MinGW version than your system's.
 
-Todo:
-- [x] GitHub Actions build-pipeline
-- [x] Case-sensitive file paths
-- [x] Remove obsolete `#if _MSC_VER > 1000  #pragma once  #endif // _MSC_VER > 1000`
-- [x] Refactor CLI into its own directory
-- [x] Refactor GUI into its own directory
-- [x] Remove MFC from CLI tool
-- [x] Add `--help`, `-h`, `--version`, `-v` flags to CLI
-- [x] Add plugin readiness-check to CLI
-- [x] Replace MFC GUI with a cross-platform GUI framework
-- [x] Correct `_cdecl`
-- [x] Use std namespace for `min` and `max` and setup import
-- [x] Correct casts
-- [x] Remove Windows-specific dead code
-- [x] Conditionally compile Windows-specific code
-- [x] Set up a CMake build system
-- [x] Handle Windows-specific Structured Exception Handling (SEH)
-- [x] Handle inline Assembly code
 
 ## Credits
-[Quantam, creator of MPQDraft](http://qstuff.blogspot.com/2010/01/bibliography-programming.html).
+- [Justin Olbrantz (Quantam), creator of MPQDraft](http://qstuff.blogspot.com/2010/01/bibliography-programming.html).
+- [milestone-dev, for adding CLI and doing a little modernising](https://github.com/milestone-dev/MPQDraft)
+- [Johan Sjöblom (Ojan), for new GUI, major modernisation and refactoring, and cross-compilation support](https://github.com/sjoblomj/MPQDraft)
 
 ### Application
 MPQDraft is licensed under CDDL.
@@ -122,5 +103,5 @@ MPQDraft is licensed under CDDL.
 - **src/app/gui/resources/images**: These were created by Joel Steudler for use in MPQDraft. Not for commercial use.
 - **src/app/gui/resources/icons/blizzard**: These are from the games they represent, and owned by Blizzard Entertainment. Not for commercial use.
 - **src/app/gui/resources/icons/sierra**: These are from the games they represent, and owned by Sierra Entertainment. Not for commercial use.
-- **src/app/gui/resources/icons/StarDraft.{png,ico}**: This was taken from StarDraft, a predecessor of MPQDraft, written by separate authors, where it was used as the icon for Self-Executing CWADs (a precursor to Self-Executing MPQs). To be honest, I don't know where this icon originated from, or who created it. Best not used commercially.
+- **src/app/gui/resources/icons/StarDraft.{png,ico}**: This was taken from StarDraft, a predecessor of MPQDraft, written by separate authors, where it was used as the icon for Self-Executing CWADs (a precursor to Self-Executing MPQs). To be honest, it is unclear where this icon originated from, or who created it. Best not used commercially.
 - **src/app/gui/resources/icons/***: Public domain icons
