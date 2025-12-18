@@ -299,6 +299,37 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
     advancedLayout->addLayout(extendedRedirLayout);
     advancedLayout->addSpacing(10);
 
+    // No Spawning flag
+    QHBoxLayout *noSpawningLayout = new QHBoxLayout();
+
+    customNoSpawningCheck = new QCheckBox("Do not inject into child processes", advancedWidget);
+    customNoSpawningCheck->setChecked(false);  // Default to unchecked
+    noSpawningLayout->addWidget(customNoSpawningCheck);
+
+    QLabel *noSpawningHelp = new QLabel(advancedWidget);
+    noSpawningHelp->setText(" ? ");
+    noSpawningHelp->setStyleSheet(
+        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
+        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
+        "max-width: 16px; min-height: 16px; max-height: 16px; "
+        "qproperty-alignment: AlignCenter; }");
+    noSpawningHelp->setToolTip(
+        "<b>Do Not Inject Into Child Processes (MPQD_NO_SPAWNING)</b><br><br>"
+        "By default, MPQDraft injects itself into any child processes created by the game. "
+        "This ensures that patches work even if the game launches additional executables.<br><br>"
+        "<b>When to enable:</b> Some games launch helper processes (updaters, launchers, "
+        "crash reporters) that don't need patching and may cause issues if MPQDraft injects "
+        "into them. Enable this flag to prevent injection into child processes.<br><br>"
+        "<b>When to disable (default):</b> Most games work fine with child process injection, "
+        "and some games require it for patches to work correctly.");
+    noSpawningHelp->setCursor(Qt::WhatsThisCursor);
+    noSpawningLayout->addWidget(noSpawningHelp);
+
+    noSpawningLayout->addStretch();
+    advancedLayout->addLayout(noSpawningLayout);
+
+    advancedLayout->addSpacing(10);
+
     // Shunt Count
     QHBoxLayout *shuntCountLabelLayout = new QHBoxLayout();
     QLabel *shuntCountLabel = new QLabel("<b>Shunt Count:</b>", advancedWidget);
@@ -330,37 +361,6 @@ TargetSelectionPage::TargetSelectionPage(QWidget *parent)
     customShuntCountSpinBox->setMaximum(INT_MAX);
     customShuntCountSpinBox->setValue(0);
     advancedLayout->addWidget(customShuntCountSpinBox);
-
-    advancedLayout->addSpacing(10);
-
-    // No Spawning flag
-    QHBoxLayout *noSpawningLayout = new QHBoxLayout();
-
-    customNoSpawningCheck = new QCheckBox("Do not inject into child processes", advancedWidget);
-    customNoSpawningCheck->setChecked(false);  // Default to unchecked
-    noSpawningLayout->addWidget(customNoSpawningCheck);
-
-    QLabel *noSpawningHelp = new QLabel(advancedWidget);
-    noSpawningHelp->setText(" ? ");
-    noSpawningHelp->setStyleSheet(
-        "QLabel { background-color: #0079ff; color: white; border-radius: 10px; "
-        "font-weight: bold; font-size: 12px; padding: 2px; min-width: 16px; "
-        "max-width: 16px; min-height: 16px; max-height: 16px; "
-        "qproperty-alignment: AlignCenter; }");
-    noSpawningHelp->setToolTip(
-        "<b>Do Not Inject Into Child Processes (MPQD_NO_SPAWNING)</b><br><br>"
-        "By default, MPQDraft injects itself into any child processes created by the game. "
-        "This ensures that patches work even if the game launches additional executables.<br><br>"
-        "<b>When to enable:</b> Some games launch helper processes (updaters, launchers, "
-        "crash reporters) that don't need patching and may cause issues if MPQDraft injects "
-        "into them. Enable this flag to prevent injection into child processes.<br><br>"
-        "<b>When to disable (default):</b> Most games work fine with child process injection, "
-        "and some games require it for patches to work correctly.");
-    noSpawningHelp->setCursor(Qt::WhatsThisCursor);
-    noSpawningLayout->addWidget(noSpawningHelp);
-
-    noSpawningLayout->addStretch();
-    advancedLayout->addLayout(noSpawningLayout);
 
     customLayout->addWidget(advancedWidget);
     customLayout->addSpacing(15);
