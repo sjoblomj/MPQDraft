@@ -13,9 +13,10 @@
 
 // Entry point for the CLI
 // Called from the main entry point when CLI arguments are provided
-// lpCmdLine: Command line string (without the executable name)
+// argc: Number of command line arguments
+// argv: Array of command line argument strings
 // Returns: 0 on success, non-zero on failure
-int runCli(const char* lpCmdLine);
+int runCli(int argc, char** argv);
 
 #endif // MAIN_CLI_H
 

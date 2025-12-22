@@ -19,6 +19,7 @@ std::vector<SupportedGame> getSupportedGames() {
         comp.iconPath = ":/icons/blizzard/Diablo.ico";
         comp.extendedRedir = true;
         comp.flags = 0;
+        comp.aliases = {"diablo", "diablo1", "d1"};
         game.components.push_back(comp);
 
         games.push_back(game);
@@ -40,6 +41,7 @@ std::vector<SupportedGame> getSupportedGames() {
         comp.iconPath = ":/icons/sierra/hellfire.ico";
         comp.extendedRedir = true;
         comp.flags = 0;
+        comp.aliases = {"hellfire", "d1e"};
         game.components.push_back(comp);
 
         games.push_back(game);
@@ -61,6 +63,7 @@ std::vector<SupportedGame> getSupportedGames() {
         comp.iconPath = ":/icons/blizzard/Diablo2.ico";
         comp.extendedRedir = false;
         comp.flags = 0;
+        comp.aliases = {"diablo2", "d2"};
         game.components.push_back(comp);
 
         games.push_back(game);
@@ -82,6 +85,7 @@ std::vector<SupportedGame> getSupportedGames() {
         comp1.iconPath = ":/icons/blizzard/Starcraft.ico";
         comp1.extendedRedir = true;
         comp1.flags = 0;
+        comp1.aliases = {"starcraft", "sc", "starcraft1", "sc1"};
         game.components.push_back(comp1);
 
         GameComponent comp2;
@@ -92,6 +96,7 @@ std::vector<SupportedGame> getSupportedGames() {
         comp2.iconPath = ":/icons/blizzard/StarEdit.ico";
         comp2.extendedRedir = true;
         comp2.flags = 0;
+        comp2.aliases = {"staredit"};
         game.components.push_back(comp2);
 
         games.push_back(game);
@@ -113,6 +118,7 @@ std::vector<SupportedGame> getSupportedGames() {
         comp.iconPath = ":/icons/blizzard/War2BNE.ico";
         comp.extendedRedir = true;
         comp.flags = 0;
+        comp.aliases = {"warcraft2", "war2", "war2bne", "wc2", "wc2bne"};
         game.components.push_back(comp);
 
         games.push_back(game);
@@ -134,6 +140,7 @@ std::vector<SupportedGame> getSupportedGames() {
         comp1.iconPath = ":/icons/blizzard/War3.ico";
         comp1.extendedRedir = true;
         comp1.flags = 0;
+        comp1.aliases = {"warcraft3", "war3", "wc3", "war3roc", "wc3roc", "roc"};
         game.components.push_back(comp1);
 
         GameComponent comp2;
@@ -144,6 +151,7 @@ std::vector<SupportedGame> getSupportedGames() {
         comp2.iconPath = ":/icons/blizzard/War3x.ico";
         comp2.extendedRedir = true;
         comp2.flags = 0;
+        comp2.aliases = {"frozenthrone", "war3tft", "wc3tft", "war3e", "wc3e", "tft"};
         game.components.push_back(comp2);
 
         GameComponent comp3;
@@ -154,6 +162,7 @@ std::vector<SupportedGame> getSupportedGames() {
         comp3.iconPath = ":/icons/blizzard/War3Edit.ico";
         comp3.extendedRedir = true;
         comp3.flags = 0;
+        comp3.aliases = {"worldeditor", "worldedit"};
         game.components.push_back(comp3);
 
         games.push_back(game);
@@ -175,6 +184,7 @@ std::vector<SupportedGame> getSupportedGames() {
         comp.iconPath = ":/icons/sierra/lomse.ico";
         comp.extendedRedir = true;
         comp.flags = 0;
+        comp.aliases = {"lordsofmagic", "lordsofmagicse", "lomse"};
         game.components.push_back(comp);
 
         games.push_back(game);

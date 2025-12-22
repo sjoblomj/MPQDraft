@@ -13,6 +13,7 @@ struct GameComponent {
     std::string iconPath;           // Internal resource path to icon (e.g., ":/icons/Starcraft.ico")
     bool extendedRedir;             // MPQD_EXTENDED_REDIR flag
     unsigned int flags;             // Additional flags
+    std::vector<std::string> aliases;  // Aliases for this component
 };
 
 // Structure for a supported game

@@ -18,6 +18,7 @@
 #include <vector>
 #include <string>
 #include "../../core/PatcherApi.h"
+#include "CommandParser.h"
 
 /////////////////////////////////////////////////////////////////////////////
 /*	CMPQDraftCLI
@@ -25,19 +26,18 @@
 	encapsulates all CLI-specific functionality, including argument parsing,
 	MPQ/plugin loading, and launching the patched executable. */
 
-void PrintVersion();
-void PrintHelp();
-
 class CMPQDraftCLI
 {
 public:
-	// Main entry point for CLI operations
-	// Returns FALSE to indicate the application should exit
-	BOOL Execute(
-		IN LPCSTR lpszTarget,
-		IN const std::vector<std::string>& mpqs,
-		IN const std::vector<std::string>& plugins,
+	// Execute patch command - patch and launch a game
+	BOOL ExecutePatch(
+		IN const PatchCommand& cmd,
 		IN LPCSTR lpszPatcherDLLPath
+	);
+
+	// Execute SEMPQ command - create a Self-Executing MPQ
+	BOOL ExecuteSEMPQ(
+		IN const SEMPQCommand& cmd
 	);
 
 private:
@@ -53,6 +53,7 @@ private:
 		IN LPCSTR lpszProgramPath,
 		IN LPCSTR lpszParameters,
 		IN DWORD dwFlags,
+		IN int shuntCount,
 		IN const std::vector<const char*>& mpqs,
 		IN const std::vector<MPQDRAFTPLUGINMODULE>& modules
 	);

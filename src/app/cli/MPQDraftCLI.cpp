@@ -14,99 +14,96 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include "../../common/QDebug.h"
 #include "MPQDraftCLI.h"
 #include "CommandParser.h"
 #include "../../core/PluginManager.h"
+#include "../../core/GameData.h"
+#include "../../core/PatcherFlags.h"
+#include "../../sempq/SEMPQCreator.h"
 #include "../resource_ids.h"
 #include "version.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // Helper functions
 
-void PrintVersion()
-{
-	printf("MPQDraft %s\n", MPQDRAFT_VERSION);
-	printf("  By Quantam (Justin Olbrantz)\n");
-	printf("  Updated by milestone-dev and Ojan (Johan Sjöblom)\n");
+// Helper for case-insensitive string comparison
+static std::string toLower(const std::string& str) {
+	std::string result = str;
+	std::transform(result.begin(), result.end(), result.begin(), ::tolower);
+	return result;
 }
 
-void PrintHelp()
-{
-	printf("MPQDraft CLI - Command-line interface for MPQDraft\n\n");
-	printf("Usage: MPQDraft.exe --target <exePath> [--mpq <mpqFile>]... [--plugin <pluginFile>]...\n\n");
-	printf("Options:\n");
-	printf("  -t, --target <exe>    Target executable to patch and launch\n");
-	printf("  -m, --mpq <mpq>       MPQ archive to load (can be specified multiple times)\n");
-	printf("  -p, --plugin <qdp>    Plugin to load (can be specified multiple times)\n");
-	printf("  -h, --help            Show this help message\n");
-	printf("  -v, --version         Show version information\n");
-	printf("\nAt least one MPQ or plugin must be specified.\n");
-	printf("\nExamples:\n");
-	printf("  MPQDraft.exe --target \"C:\\Starcraft\\StarCraft.exe\" --mpq \"C:\\Mod\\my_mod_1.mpq\" --mpq \"C:\\Mod\\my_mod_2.mpq\" --plugin \"C:\\Mod\\my_plugin_1.qdp\" --plugin \"C:\\Mod\\my_plugin_2.qdp\"\n");
-}
+// Static storage for persistent game data (needed for returning pointers)
+static std::vector<SupportedGame> s_persistentGames;
+static bool s_gamesInitialized = false;
 
-// Trim whitespace from both ends of a string
-static std::string TrimWhitespace(const std::string& str)
-{
-	size_t first = str.find_first_not_of(" \t\r\n");
-	if (first == std::string::npos)
-		return "";
+// Find a game component by alias (case-insensitive)
+static bool findGameByAlias(const std::string& alias,
+                            const SupportedGame** outGame,
+                            const GameComponent** outComponent) {
+	if (!s_gamesInitialized) {
+		s_persistentGames = getSupportedGames();
+		s_gamesInitialized = true;
+	}
 
-	size_t last = str.find_last_not_of(" \t\r\n");
-	return str.substr(first, last - first + 1);
+	std::string lowerAlias = toLower(alias);
+
+	for (const auto& game : s_persistentGames) {
+		for (const auto& comp : game.components) {
+			for (const auto& compAlias : comp.aliases) {
+				if (toLower(compAlias) == lowerAlias) {
+					*outGame = &game;
+					*outComponent = &comp;
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
 }
 
 /////////////////////////////////////////////////////////////////////////////
 // CMPQDraftCLI implementation
 
-BOOL CMPQDraftCLI::Execute(
-	IN LPCSTR lpszTarget,
-	IN const std::vector<std::string>& mpqs,
-	IN const std::vector<std::string>& plugins,
+BOOL CMPQDraftCLI::ExecutePatch(
+	IN const PatchCommand& cmd,
 	IN LPCSTR lpszPatcherDLLPath
 )
 {
-	printf("MPQDraft CLI\n");
-	QDebugOut("MPQDraft CLI");
+	printf("MPQDraft CLI - Patch Mode\n");
+	QDebugOut("MPQDraft CLI - Patch Mode");
 
-	// Validate arguments - need target and at least one MPQ or plugin
-	if (!lpszTarget || lpszTarget[0] == '\0' || (mpqs.empty() && plugins.empty()))
+	// Print configuration
+	printf("Target executable: %s\n", cmd.target.c_str());
+	if (!cmd.parameters.empty())
+		printf("Parameters: %s\n", cmd.parameters.c_str());
+	printf("Extended redirection: %s\n", cmd.extendedRedir ? "enabled" : "disabled");
+	printf("No spawning: %s\n", cmd.noSpawning ? "enabled" : "disabled");
+	printf("Shunt count: %d\n", cmd.shuntCount);
+
+	printf("MPQ files (%d):\n", (int)cmd.mpqs.size());
+	for (size_t i = 0; i < cmd.mpqs.size(); i++)
 	{
-		if (mpqs.empty() && plugins.empty())
-		{
-			QDebugOut("Error: At least one MPQ or plugin must be specified");
-			printf("Error: At least one MPQ or plugin must be specified\n\n");
-		}
-		else {
-			QDebugOut("Error: No target executable specified");
-			printf("Error: No target executable specified\n\n");
-		}
-		PrintHelp();
-		return FALSE;
+		printf("  [%d] %s\n", (int)i, cmd.mpqs[i].c_str());
+	}
+	printf("Plugin files (%d):\n", (int)cmd.plugins.size());
+	for (size_t i = 0; i < cmd.plugins.size(); i++)
+	{
+		printf("  [%d] %s\n", (int)i, cmd.plugins[i].c_str());
 	}
 
-	printf("Target executable: %s\n", lpszTarget);
-	printf("MPQ files (%d):\n", (int)mpqs.size());
-	for (size_t i = 0; i < mpqs.size(); i++)
-	{
-		printf("  [%d] %s\n", (int)i, mpqs[i].c_str());
-	}
-	printf("Plugin files (%d):\n", (int)plugins.size());
-	for (size_t i = 0; i < plugins.size(); i++)
-	{
-		printf("  [%d] %s\n", (int)i, plugins[i].c_str());
-	}
-
-	QDebugOut("Target = %s", lpszTarget);
-	QDebugOut("MPQs = %d", (int)mpqs.size());
-	QDebugOut("Plugins = %d", (int)plugins.size());
+	QDebugOut("Target = %s", cmd.target.c_str());
+	QDebugOut("MPQs = %d", (int)cmd.mpqs.size());
+	QDebugOut("Plugins = %d", (int)cmd.plugins.size());
 
 	// Load plugin modules
 	std::vector<MPQDRAFTPLUGINMODULE> modules;
-	if (!plugins.empty())
+	if (!cmd.plugins.empty())
 	{
-		if (!LoadPluginModules(plugins, modules))
+		if (!LoadPluginModules(cmd.plugins, modules))
 		{
 			printf("Failed to load plugin modules\n");
 			QDebugOut("Failed to load plugin modules");
@@ -120,22 +117,26 @@ BOOL CMPQDraftCLI::Execute(
 
 	// Convert MPQ paths to LPCSTR array
 	std::vector<const char*> mpqPtrs;
-	for (size_t i = 0; i < mpqs.size(); i++)
+	for (size_t i = 0; i < cmd.mpqs.size(); i++)
 	{
-		mpqPtrs.push_back(mpqs[i].c_str());
+		mpqPtrs.push_back(cmd.mpqs[i].c_str());
 	}
 
 	// Compile the flags
 	DWORD dwFlags = 0;
-	dwFlags |= MPQD_EXTENDED_REDIR;
+	if (cmd.extendedRedir)
+		dwFlags |= MPQD_EXTENDED_REDIR;
+	if (cmd.noSpawning)
+		dwFlags |= MPQD_NO_SPAWNING;
 
 	// Execute the patcher
 	QDebugOut("About to call ExecutePatcher with %d MPQs and %d modules", (int)mpqPtrs.size(), (int)modules.size());
 	BOOL bSuccess = ExecutePatcher(
 		lpszPatcherDLLPath,
-		lpszTarget,
-		"",  // No additional parameters
+		cmd.target.c_str(),
+		cmd.parameters.c_str(),
 		dwFlags,
+		cmd.shuntCount,
 		mpqPtrs,
 		modules
 	);
@@ -146,7 +147,7 @@ BOOL CMPQDraftCLI::Execute(
 		printf("MPQDraftPatcher failed\n");
 	}
 
-	return FALSE;  // Always return FALSE to exit the application
+	return bSuccess;
 }
 
 
@@ -221,6 +222,7 @@ BOOL CMPQDraftCLI::ExecutePatcher(
 	IN LPCSTR lpszProgramPath,
 	IN LPCSTR lpszParameters,
 	IN DWORD dwFlags,
+	IN int shuntCount,
 	IN const std::vector<const char*>& mpqs,
 	IN const std::vector<MPQDRAFTPLUGINMODULE>& modules
 )
@@ -284,7 +286,7 @@ BOOL CMPQDraftCLI::ExecutePatcher(
 		dwFlags,                   // Patching flags
 		szCurDir,                  // MPQDraft directory
 		lpszProgramPath,           // Spawn path (same as target)
-		0,                         // Shunt count
+		(DWORD)shuntCount,         // Shunt count
 		(DWORD)mpqs.size(),        // Number of MPQs
 		(DWORD)modules.size(),     // Number of modules
 		mpqs.empty() ? NULL : const_cast<LPCSTR*>(&mpqs[0]),  // MPQ array
@@ -292,4 +294,159 @@ BOOL CMPQDraftCLI::ExecutePatcher(
 	);
 
 	return bPatchSuccess;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// ExecuteSEMPQ - Create a Self-Executing MPQ
+
+BOOL CMPQDraftCLI::ExecuteSEMPQ(IN const SEMPQCommand& cmd)
+{
+	printf("MPQDraft CLI - SEMPQ Creation Mode\n");
+	QDebugOut("MPQDraft CLI - SEMPQ Creation Mode");
+
+	// Print configuration
+	printf("Output: %s\n", cmd.outputPath.c_str());
+	printf("Name: %s\n", cmd.sempqName.c_str());
+	printf("MPQ: %s\n", cmd.mpqPath.c_str());
+
+	switch (cmd.mode)
+	{
+		case SEMPQTargetMode::SupportedGame:
+			printf("Mode: Supported Game\n");
+			printf("  Game alias: %s\n", cmd.gameName.c_str());
+			break;
+
+		case SEMPQTargetMode::CustomRegistry:
+			printf("Mode: Custom Registry\n");
+			printf("  Registry Key: %s\n", cmd.registryKey.c_str());
+			printf("  Registry Value: %s\n", cmd.registryValue.c_str());
+			printf("  Full Path: %s\n", cmd.fullPath ? "yes" : "no");
+			if (!cmd.fullPath)
+			{
+				printf("  Exe File: %s\n", cmd.exeFileName.c_str());
+				printf("  Target File: %s\n", cmd.targetFileName.c_str());
+			}
+			break;
+
+		case SEMPQTargetMode::CustomTarget:
+			printf("Mode: Custom Target\n");
+			printf("  Target: %s\n", cmd.targetPath.c_str());
+			break;
+	}
+
+	if (!cmd.parameters.empty())
+		printf("Parameters: %s\n", cmd.parameters.c_str());
+	printf("Extended redirection: %s\n", cmd.extendedRedir ? "enabled" : "disabled");
+	printf("No spawning: %s\n", cmd.noSpawning ? "enabled" : "disabled");
+	printf("Shunt count: %d\n", cmd.shuntCount);
+	if (!cmd.iconPath.empty())
+		printf("Icon: %s\n", cmd.iconPath.c_str());
+
+	printf("Plugin files (%d):\n", (int)cmd.plugins.size());
+	for (size_t i = 0; i < cmd.plugins.size(); i++)
+	{
+		printf("  [%d] %s\n", (int)i, cmd.plugins[i].c_str());
+	}
+
+	// Build SEMPQCreationParams
+	SEMPQCreationParams params;
+	params.outputPath = cmd.outputPath;
+	params.sempqName  = cmd.sempqName;
+	params.mpqPath    = cmd.mpqPath;
+	params.iconPath   = cmd.iconPath;
+	params.parameters = cmd.parameters;
+	params.shuntCount = cmd.shuntCount;
+
+	// Build flags
+	params.flags = 0;
+	if (cmd.extendedRedir)
+		params.flags |= MPQD_EXTENDED_REDIR;
+	if (cmd.noSpawning)
+		params.flags |= MPQD_NO_SPAWNING;
+
+	// Set up target based on mode
+	switch (cmd.mode)
+	{
+		case SEMPQTargetMode::SupportedGame:
+		{
+			// Find the game by alias
+			const SupportedGame* game = nullptr;
+			const GameComponent* comp = nullptr;
+
+			if (!findGameByAlias(cmd.gameName, &game, &comp))
+			{
+				printf("ERROR: Game alias '%s' not found\n", cmd.gameName.c_str());
+				return FALSE;
+			}
+
+			params.useRegistry = true;
+			params.registryKey = game->registryKey;
+			params.registryValue = game->registryValue;
+			params.valueIsFullPath = false;
+			params.spawnFileName = comp->fileName;
+			params.targetFileName = comp->targetFileName;
+			params.shuntCount = comp->shuntCount;
+
+			// Apply component's default flags if not overridden
+			if (comp->extendedRedir && !cmd.extendedRedir)
+			{
+				// User explicitly disabled, keep disabled
+			}
+			else if (comp->extendedRedir)
+			{
+				params.flags |= MPQD_EXTENDED_REDIR;
+			}
+			break;
+		}
+
+		case SEMPQTargetMode::CustomRegistry:
+			params.useRegistry = true;
+			params.registryKey = cmd.registryKey;
+			params.registryValue = cmd.registryValue;
+			params.valueIsFullPath = cmd.fullPath;
+			params.spawnFileName = cmd.exeFileName;
+			params.targetFileName = cmd.targetFileName;
+			break;
+
+		case SEMPQTargetMode::CustomTarget:
+			params.useRegistry = false;
+			params.targetPath = cmd.targetPath;
+			break;
+	}
+
+	// Load plugins
+	if (!cmd.plugins.empty())
+	{
+		if (!LoadPluginModules(cmd.plugins, params.pluginModules))
+		{
+			printf("Failed to load plugin modules\n");
+			QDebugOut("Failed to load plugin modules");
+			return FALSE;
+		}
+	}
+
+	// Progress callback
+	auto progressCallback = [](int progress, const std::string& status) {
+		printf("[%3d%%] %s", progress, status.c_str());
+	};
+
+	// Cancellation check (always return false - no cancellation in CLI)
+	auto cancellationCheck = []() { return false; };
+
+	// Create the SEMPQ
+	SEMPQCreator creator;
+	std::string errorMessage;
+
+	printf("\nCreating SEMPQ...\n");
+	bool success = creator.createSEMPQ(params, progressCallback, cancellationCheck, errorMessage);
+
+	if (!success)
+	{
+		printf("\nERROR: Failed to create SEMPQ: %s\n", errorMessage.c_str());
+		QDebugOut("Failed to create SEMPQ: %s", errorMessage.c_str());
+		return FALSE;
+	}
+
+	printf("\nSEMPQ created successfully: %s\n", cmd.outputPath.c_str());
+	return TRUE;
 }

@@ -7,39 +7,92 @@
 */
 
 #pragma once
-#include <windows.h>
 #include <vector>
 #include <string>
+
+// Command types
+enum class CommandType {
+	None,           // No command (help/version requested or error)
+	Patch,          // Patch and launch a game
+	SEMPQ,          // Create a Self-Executing MPQ
+	ListGames       // List supported games
+};
+
+// SEMPQ target mode
+enum class SEMPQTargetMode {
+	SupportedGame,  // Use a supported game from the list
+	CustomRegistry, // Custom registry key/value
+	CustomTarget    // Direct path to executable
+};
+
+// Parsed command line data for patch command
+struct PatchCommand {
+	std::string target;                 // Target executable path
+	std::string parameters;             // Command-line parameters for target
+	std::vector<std::string> mpqs;      // MPQ files to load
+	std::vector<std::string> plugins;   // Plugin files to load
+	bool extendedRedir = true;          // MPQD_EXTENDED_REDIR flag
+	bool noSpawning = false;            // MPQD_NO_SPAWNING flag
+	int shuntCount = 0;                 // Shunt count
+};
+
+// Parsed command line data for SEMPQ command
+struct SEMPQCommand {
+	SEMPQTargetMode mode = SEMPQTargetMode::SupportedGame;
+
+	// Output
+	std::string outputPath;             // Output SEMPQ file path
+	std::string sempqName;              // Display name for the SEMPQ
+
+	// Supported game mode
+	std::string gameName;               // Game alias (e.g., "Starcraft", "StarEdit")
+
+	// Custom registry mode
+	std::string registryKey;            // Registry key
+	std::string registryValue;          // Registry value name
+	std::string exeFileName;            // Executable filename (spawn file)
+	std::string targetFileName;         // Target filename for patching
+	bool fullPath = false;              // Registry value is full path (MPQD_FULL_PATH)
+
+	// Custom target mode
+	std::string targetPath;             // Direct path to executable
+
+	// Common options
+	std::string mpqPath;                // MPQ file to embed
+	std::vector<std::string> plugins;   // Plugin files to embed
+	std::string parameters;             // Command-line parameters
+	bool extendedRedir = true;          // MPQD_EXTENDED_REDIR flag
+	bool noSpawning = false;            // MPQD_NO_SPAWNING flag
+	int shuntCount = 0;                 // Shunt count
+	std::string iconPath;               // Custom icon path
+};
 
 class CommandParser
 {
 public:
 	// Parse command line arguments
 	// Returns true on success, false on error
-	bool ParseCommandLine(const char* lpCmdLine);
+	bool ParseCommandLine(int argc, char** argv);
 
-	// Get parsed results
-	const std::string& GetTarget() const { return m_target; }
-	const std::vector<std::string>& GetMPQs() const { return m_mpqs; }
-	const std::vector<std::string>& GetPlugins() const { return m_plugins; }
+	// Get the command type
+	CommandType GetCommandType() const { return m_commandType; }
 
-	// Check if target was specified
-	bool HasTarget() const { return !m_target.empty(); }
+	// Get parsed command data
+	const PatchCommand& GetPatchCommand() const { return m_patchCommand; }
+	const SEMPQCommand& GetSEMPQCommand() const { return m_sempqCommand; }
 
-	// Check if help was requested
+	// Check status flags
 	bool IsHelpRequested() const { return m_helpRequested; }
-
-	// Check if version was requested
 	bool IsVersionRequested() const { return m_versionRequested; }
 
-	// Get error message if parsing failed
-	const std::string& GetErrorMessage() const { return m_errorMessage; }
+	// Get error/help message
+	const std::string& GetMessage() const { return m_message; }
 
 private:
-	std::string m_target;
-	std::vector<std::string> m_mpqs;
-	std::vector<std::string> m_plugins;
-	std::string m_errorMessage;
-	bool m_helpRequested;
-	bool m_versionRequested;
+	CommandType m_commandType = CommandType::None;
+	PatchCommand m_patchCommand;
+	SEMPQCommand m_sempqCommand;
+	std::string m_message;
+	bool m_helpRequested = false;
+	bool m_versionRequested = false;
 };

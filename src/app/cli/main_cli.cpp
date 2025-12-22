@@ -39,53 +39,65 @@ static BOOL GetPatcherDLLPath(char* szPatcherPath, DWORD dwBufferSize)
 /////////////////////////////////////////////////////////////////////////////
 // CLI entry point - called from main entry point
 
-int runCli(const char* lpCmdLine)
+int runCli(int argc, char** argv)
 {
 	// Parse command line
 	CommandParser cmdParser;
-	bool parseStatus = cmdParser.ParseCommandLine(lpCmdLine);
+	bool parseStatus = cmdParser.ParseCommandLine(argc, argv);
 
-	if (cmdParser.IsVersionRequested())
+	// Handle help/version/list-games - these print messages and exit
+	if (cmdParser.IsHelpRequested() || cmdParser.IsVersionRequested() ||
+	    cmdParser.GetCommandType() == CommandType::ListGames)
 	{
-		PrintVersion();
+		printf("%s\n", cmdParser.GetMessage().c_str());
 		return 0;
 	}
 
-	if (!parseStatus || !cmdParser.HasTarget() || cmdParser.IsHelpRequested())
+	// Handle parse errors
+	if (!parseStatus)
 	{
-		if (!parseStatus)
-		{
-			// Parsing failed - show error and exit
-			const std::string& errorMsg = cmdParser.GetErrorMessage();
-			printf("Command line parsing error: %s\n\n", errorMsg.c_str());
-			QDebugOut("Command line parsing error: %s", errorMsg.c_str());
-		}
-		if (!cmdParser.HasTarget() && !cmdParser.IsHelpRequested())
-		{
-			printf("No target executable specified\n\n");
-		}
-		PrintHelp();
-
-		return cmdParser.IsHelpRequested() ? 0 : 1;
-	}
-
-	// Get command line parameters
-	const std::string& target = cmdParser.GetTarget();
-	const std::vector<std::string>& mpqs = cmdParser.GetMPQs();
-	const std::vector<std::string>& plugins = cmdParser.GetPlugins();
-
-	// Get patcher DLL path
-	char szPatcherPath[MAX_PATH + 1];
-	if (!GetPatcherDLLPath(szPatcherPath, sizeof(szPatcherPath)))
-	{
-		printf("Failed to get patcher DLL path\n");
-		QDebugOut("Failed to get patcher DLL path");
+		printf("%s\n", cmdParser.GetMessage().c_str());
+		QDebugOut("Command line parsing error");
 		return 1;
 	}
 
-	// Create CLI handler and execute
-	CMPQDraftCLI cli;
-	BOOL bSuccess = cli.Execute(target.c_str(), mpqs, plugins, szPatcherPath);
+	// Handle commands
+	switch (cmdParser.GetCommandType())
+	{
+		case CommandType::Patch:
+		{
+			const PatchCommand& cmd = cmdParser.GetPatchCommand();
 
-	return bSuccess ? 0 : 1;
+			// Get patcher DLL path
+			char szPatcherPath[MAX_PATH + 1];
+			if (!GetPatcherDLLPath(szPatcherPath, sizeof(szPatcherPath)))
+			{
+				printf("Failed to get patcher DLL path\n");
+				QDebugOut("Failed to get patcher DLL path");
+				return 1;
+			}
+
+			// Create CLI handler and execute
+			CMPQDraftCLI cli;
+			BOOL bSuccess = cli.ExecutePatch(cmd, szPatcherPath);
+			return bSuccess ? 0 : 1;
+		}
+
+		case CommandType::SEMPQ:
+		{
+			const SEMPQCommand& cmd = cmdParser.GetSEMPQCommand();
+
+			// Create CLI handler and execute
+			CMPQDraftCLI cli;
+			BOOL bSuccess = cli.ExecuteSEMPQ(cmd);
+			return bSuccess ? 0 : 1;
+		}
+
+		case CommandType::None:
+		case CommandType::ListGames:
+		default:
+			// Should not reach here
+			printf("No command specified. Use --help for usage information.\n");
+			return 1;
+	}
 }
