@@ -33,7 +33,7 @@ MPQDraft comes with a GUI written in Qt. To start it, simply run the MPQDraft ex
 To run a mod on the target you specify, use the `patch` command:
 
 ```
-Usage: MPQDraft.exe patch --target <exePath> --mpq <mpqFile> --plugin <qdpFile>
+MPQDraft.exe patch --target <exePath> --mpq <mpqFile> --plugin <qdpFile>
 ```
 
 Example:
@@ -52,12 +52,12 @@ To create a SEMPQ (Self-Executing MPQ), use the `sempq` command. Three modes are
 #### Supported Game Mode
 
 ```
-Usage: MPQDraft.exe sempq --output <sempqFile> --name <sempqName> --icon <iconFile> --mpq <mpqFile> --plugin <qdpFile> --game <game>
+MPQDraft.exe sempq --output <sempqFile> --name <sempqName> --icon <iconFile> --mpq <mpqFile> --plugin <qdpFile> --game <game>
 ```
 
 Example:
 ```
-Usage: MPQDraft.exe sempq --output starwars_tc.exe --name "Star Wars TC" --icon starwars.ico --mpq sctc.mpq --plugin "C:\Mod\my_plugin_1.qdp" --game starcraft
+MPQDraft.exe sempq --output starwars_tc.exe --name "Star Wars TC" --icon starwars.ico --mpq sctc.mpq --plugin "C:\Mod\my_plugin_1.qdp" --game starcraft
 ```
 
 For the `game` parameter, use `list-games` to see a list of supported games and their aliases (use any alias at your convenience to specify the game).
@@ -65,23 +65,23 @@ For the `game` parameter, use `list-games` to see a list of supported games and 
 #### Custom Registry Mode
 
 ```
-Usage: MPQDraft.exe sempq --output <sempqFile> --name <sempqName> --icon <iconFile> --mpq <mpqFile> --plugin <qdpFile> --reg-key <regKey> --reg-value <regValue> [--exe-file <exeFile>] [--target-file <targetFile>] [--full-path]
+MPQDraft.exe sempq --output <sempqFile> --name <sempqName> --icon <iconFile> --mpq <mpqFile> --plugin <qdpFile> --reg-key <regKey> --reg-value <regValue> [--exe-file <exeFile>] [--target-file <targetFile>] [--full-path]
 ```
 
 Example:
 ```
-Usage: MPQDraft.exe sempq --output starwars_tc.exe --name "Star Wars TC" --icon starwars.ico --mpq sctc.mpq --plugin "C:\Mod\my_plugin_1.qdp" --reg-key "SOFTWARE\Blizzard Entertainment\SomeGame" --reg-value "InstallPath" --exe-file "SomeGame.exe" --target-file "SomeGame.exe"
+ MPQDraft.exe sempq --output starwars_tc.exe --name "Star Wars TC" --icon starwars.ico --mpq sctc.mpq --plugin "C:\Mod\my_plugin_1.qdp" --reg-key "SOFTWARE\Blizzard Entertainment\SomeGame" --reg-value "InstallPath" --exe-file "SomeGame.exe" --target-file "SomeGame.exe"
 ```
 
 #### Custom Target Mode
 
 ```
-Usage: MPQDraft.exe sempq --output <sempqFile> --name <sempqName> --icon <iconFile> --mpq <mpqFile> --plugin <qdpFile> --target <targetPath>
+MPQDraft.exe sempq --output <sempqFile> --name <sempqName> --icon <iconFile> --mpq <mpqFile> --plugin <qdpFile> --target <targetPath>
 ```
 
 Example:
 ```
-Usage: MPQDraft.exe sempq --output starwars_tc.exe --name "Star Wars TC" --icon starwars.ico --mpq sctc.mpq --plugin "C:\Mod\my_plugin_1.qdp" --target "C:\SomeGame.exe"
+MPQDraft.exe sempq --output starwars_tc.exe --name "Star Wars TC" --icon starwars.ico --mpq sctc.mpq --plugin "C:\Mod\my_plugin_1.qdp" --target "C:\SomeGame.exe"
 ```
 
 ### Patching Options
