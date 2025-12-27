@@ -172,6 +172,20 @@ QT_MINGW32_PREFIX=/path/to/Qt/5.15.2/mingw81_32 ./tools/build-mingw32.sh
 Note: This may have compatibility issues if the Qt installation uses a different MinGW version than your system's.
 
 
+## Structure
+
+- **tools**: Build tools and scripts.
+- **src**: Source code
+  - **app**: The user-facing parts of MPQDraft.
+    - **cli**: Command-line interface
+    - **gui**: Graphical user interface
+  - **common**: Common utility functions
+  - **core**: Core functionality, including plugin management and game detection
+  - **dll**: The MPQDraft patcher DLL. The DLL is the heart of MPQDraft, and does all the work inside the process being patched, including the patching itself.
+  - **sempq**: Self-Executing MPQ (SEMPQ) creation logic.
+    - **stub**: This is the SEMPQ stub code which launches the target process and initiates patching (though the patching itself is performed by the patcher DLL).
+
+
 ## Credits and License
 - [Justin Olbrantz (Quantam), creator of MPQDraft](http://qstuff.blogspot.com/2010/01/bibliography-programming.html).
 - [milestone-dev, for adding CLI and doing a little modernising](https://github.com/milestone-dev/MPQDraft)
