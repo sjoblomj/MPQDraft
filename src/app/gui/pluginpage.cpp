@@ -24,8 +24,8 @@ PluginPage::PluginPage(QWidget *parent)
     : QWizardPage(parent),
       pluginManager(new PluginManager())
 {
-    setTitle("Select Plugins");
-    setSubTitle("Choose plugins to load. Plugins can add custom patching functionality.");
+    setTitle(tr("Select Plugins"));
+    setSubTitle(tr("Choose plugins to load. Plugins can add custom patching functionality."));
     setPixmap(
             QWizard::LogoPixmap,
             QPixmap(":/icons/plugin.svg").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)
@@ -51,9 +51,9 @@ PluginPage::PluginPage(QWidget *parent)
 
     // Buttons
     QVBoxLayout *buttonLayout = new QVBoxLayout();
-    browseButton = new QPushButton("Add &Plugin...", this);
-    removeButton = new QPushButton("&Remove", this);
-    configureButton = new QPushButton("&Configure", this);
+    browseButton = new QPushButton(tr("Add &Plugin..."), this);
+    removeButton = new QPushButton(tr("&Remove"), this);
+    configureButton = new QPushButton(tr("&Configure"), this);
     removeButton->setEnabled(false);
     configureButton->setEnabled(false);
 
@@ -122,10 +122,10 @@ void PluginPage::initializePage()
     if (windowTitle.contains("SEMPQ")) {
         // SEMPQ Wizard - this is NOT the last page (the progress page follows),
         // so change Next button to "Create SEMPQ"
-        wizard()->setButtonText(QWizard::NextButton, "Create &SEMPQ");
+        wizard()->setButtonText(QWizard::NextButton, tr("Create &SEMPQ"));
     } else if (windowTitle.contains("Patch")) {
         // Patch Wizard - this IS the last page, so change Finish button to "Launch"
-        wizard()->setButtonText(QWizard::FinishButton, "&Launch");
+        wizard()->setButtonText(QWizard::FinishButton, tr("&Launch"));
     }
 
     QWizardPage::initializePage();
@@ -265,7 +265,7 @@ bool PluginPage::addPlugin(const QString &path, bool showMessages)
 
     if (!success) {
         // Plugin failed to load - add to list in red, but make it non-checkable
-        QString displayName = QFileInfo(path).fileName() + " (failed to load)";
+        QString displayName = QFileInfo(path).fileName() + tr(" (failed to load)");
         QListWidgetItem *item = new QListWidgetItem(displayName, pluginListWidget);
         // Remove the checkable flag so the checkbox cannot be enabled
         item->setFlags(item->flags() & ~Qt::ItemIsUserCheckable);
@@ -274,8 +274,8 @@ bool PluginPage::addPlugin(const QString &path, bool showMessages)
         item->setIcon(QIcon(":/icons/plugin.svg"));
 
         if (showMessages) {
-            QMessageBox::warning(this, "Failed to Load Plugin",
-                               QString("Failed to load plugin from:\n%1\n\n%2")
+            QMessageBox::warning(this, tr("Failed to Load Plugin"),
+                               tr("Failed to load plugin from:\n%1\n\n%2")
                                .arg(path)
                                .arg(QString::fromStdString(errorMessage)));
         }
@@ -296,8 +296,8 @@ bool PluginPage::addPlugin(const QString &path, bool showMessages)
 #ifndef _WIN32
     // On non-Windows, show an informational message on the first manual add
     if (showMessages) {
-        QMessageBox::information(this, "Plugin Loading Not Available",
-                                QString("Plugin loading is only available on Windows.\n\n"
+        QMessageBox::information(this, tr("Plugin Loading Not Available"),
+                                tr("Plugin loading is only available on Windows.\n\n"
                                        "The plugin will be added to the list, but cannot be "
                                        "configured or validated.\n\n"
                                        "File: %1")
@@ -305,7 +305,7 @@ bool PluginPage::addPlugin(const QString &path, bool showMessages)
     }
     // Mark dummy entries as not loaded
     if (!info->pPlugin) {
-        displayName += " (not loaded)";
+        displayName += tr(" (not loaded)");
     }
 #endif
 
@@ -329,9 +329,9 @@ void PluginPage::onBrowseClicked()
 
     QStringList fileNames = QFileDialog::getOpenFileNames(
         this,
-        "Select Plugin Files",
+        tr("Select Plugin Files"),
         startDir,
-        "MPQDraft Plugins (*.qdp *.dll);;All Files (*.*)"
+        tr("MPQDraft Plugins (*.qdp *.dll);;All Files (*.*)")
     );
 
     // Save the directory for next time
@@ -380,12 +380,12 @@ void PluginPage::onConfigureClicked()
 
     // Delegate to PluginManager
     if (!pluginManager->configurePlugin(pluginPath.toStdString(), hwnd)) {
-        QMessageBox::warning(this, "Configuration Failed",
-                           "Failed to configure the plugin.");
+        QMessageBox::warning(this, tr("Configuration Failed"),
+                           tr("Failed to configure the plugin."));
     }
 #else
-    QMessageBox::information(this, "Not Available",
-                            "Plugin configuration is only available on Windows.");
+    QMessageBox::information(this, tr("Not Available"),
+                            tr("Plugin configuration is only available on Windows."));
 #endif
 }
 

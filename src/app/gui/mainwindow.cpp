@@ -38,7 +38,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
 
 void MainWindow::setupUI()
 {
-    setWindowTitle("MPQDraft");
+    setWindowTitle(tr("MPQDraft"));
     setFixedSize(420, 273);
 
     // Create central widget with background image
@@ -66,9 +66,9 @@ void MainWindow::setupUI()
     sempqButton->setIconSize(QSize(162, 33));
 
     // Accessibility improvements
-    sempqButton->setAccessibleName("Create SEMPQ");
-    sempqButton->setAccessibleDescription("Create a Self-Executing MPQ file");
-    sempqButton->setToolTip("Create a Self-Executing MPQ file");
+    sempqButton->setAccessibleName(tr("Create SEMPQ"));
+    sempqButton->setAccessibleDescription(tr("Create a Self-Executing MPQ file"));
+    sempqButton->setToolTip(tr("Create a Self-Executing MPQ file"));
 
     connect(sempqButton, &QPushButton::clicked, this, &MainWindow::onSEMPQClicked);
 
@@ -86,9 +86,9 @@ void MainWindow::setupUI()
     patchButton->setIconSize(QSize(162, 33));
 
     // Accessibility improvements
-    patchButton->setAccessibleName("Load MPQ Patch");
-    patchButton->setAccessibleDescription("Launch a game with MPQ patches or plugins");
-    patchButton->setToolTip("Launch a game with MPQ patches or plugins");
+    patchButton->setAccessibleName(tr("Load MPQ Patch"));
+    patchButton->setAccessibleDescription(tr("Launch a game with MPQ patches or plugins"));
+    patchButton->setToolTip(tr("Launch a game with MPQ patches or plugins"));
 
     connect(patchButton, &QPushButton::clicked, this, &MainWindow::onPatchClicked);
 
