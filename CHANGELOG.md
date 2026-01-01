@@ -2,6 +2,21 @@
 
 All notable changes to this project from 2009 and onwards will be documented in this file. Listed are a number of old releases (between 2002-05-25 and 2008-08-21) - but that list is not comprehensive. It is unknown what was changed in those releases.
 
+## 2026-01-01
+
+### Added
+- Completely rewritten GUI in Qt. It has a few more features than the old and is more structured.
+- More help for the user, with texts that explain what things do.
+- Ability to patch games without built-in support.
+- CLI that can do all that the GUI can (except configure plugins, which for technical reasons is not feasible from the terminal in a pretty way - if you want to configure a plugin, use the GUI once and then the plugins in the CLI should have the same settings)
+- Support for adding custom icons to SEMPQs.
+- Cross-compilation is now possible. Using MinGW-w64, one can now compile the code from a Linux machine (Mac too presumably). MPQDraft itself is still very much a Windows 32-bit only program though, but at least you no longer need a Windows machine to build it.
+
+### Removed
+- MFC dependency from the 1990s. The GUI is now based on Qt, and the application is now cross-compilable
+
+
+
 ## 2025-11-18
 
 ### Added
