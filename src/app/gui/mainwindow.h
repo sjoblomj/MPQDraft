@@ -11,6 +11,8 @@
 
 #include <QMainWindow>
 #include <QPushButton>
+#include <QIcon>
+#include <QString>
 
 class MainWindow : public QMainWindow
 {
@@ -28,6 +30,7 @@ private slots:
 
 private:
     void setupUI();
+    QIcon createButtonIcon(const QString &imagePath, const QString &text);
 
     // UI components
     QPushButton *patchButton;

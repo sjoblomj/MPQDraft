@@ -13,7 +13,9 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPixmap>
+#include <QPainter>
 #include <QFont>
+#include <QFontMetrics>
 #include <QMessageBox>
 #include <QKeyEvent>
 
@@ -34,6 +36,56 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
     } else {
         QMainWindow::keyPressEvent(event);
     }
+}
+
+// Renders the button caption onto a copy of the (textless) button bitmap,
+// mimicking the engraved-metal look of the original hand-drawn artwork:
+// a bold condensed uppercase caption with a soft highlight sitting just
+// beneath it. Text color flips to white for the pressed/active states,
+// matching how the original bitmaps distinguished up vs. down.
+QIcon MainWindow::createButtonIcon(const QString &imagePath, const QString &text)
+{
+    const QPixmap base(imagePath);
+    const QString label = text.toUpper();
+
+    QFont font("Arial");
+    font.setBold(true);
+    font.setStretch(QFont::SemiCondensed);
+    font.setPointSizeF(12.0);
+
+    // Shrink the caption until it fits the bitmap, so longer translations
+    // don't overflow the button.
+    const int maxTextWidth = base.width() - 12;
+    QFontMetrics metrics(font);
+    while (metrics.horizontalAdvance(label) > maxTextWidth && font.pointSizeF() > 6.0) {
+        font.setPointSizeF(font.pointSizeF() - 0.5);
+        metrics = QFontMetrics(font);
+    }
+
+    auto renderState = [&](const QColor &textColor) {
+        QPixmap pixmap = base;
+        QPainter painter(&pixmap);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setRenderHint(QPainter::TextAntialiasing);
+        painter.setFont(font);
+
+        const QRect rect = pixmap.rect();
+
+        // Soft engraved highlight beneath the glyphs
+        painter.setPen(QColor(226, 226, 226));
+        painter.drawText(rect.translated(0, 2), Qt::AlignCenter, label);
+
+        painter.setPen(textColor);
+        painter.drawText(rect, Qt::AlignCenter, label);
+        return pixmap;
+    };
+
+    QIcon icon;
+    icon.addPixmap(renderState(QColor(14, 14, 14)), QIcon::Normal);
+    const QPixmap pressed = renderState(Qt::white);
+    icon.addPixmap(pressed, QIcon::Active);
+    icon.addPixmap(pressed, QIcon::Selected);
+    return icon;
 }
 
 void MainWindow::setupUI()
@@ -57,11 +109,8 @@ void MainWindow::setupUI()
     sempqButton->setFlat(true);
     sempqButton->setStyleSheet("QPushButton { border: none; background: transparent; }");
 
-    // Load button images
-    QIcon sempqIcon;
-    sempqIcon.addPixmap(QPixmap(":/images/SEMPQButtonUp.png"), QIcon::Normal);
-    sempqIcon.addPixmap(QPixmap(":/images/SEMPQButtonDown.png"), QIcon::Active);
-    sempqIcon.addPixmap(QPixmap(":/images/SEMPQButtonDown.png"), QIcon::Selected);
+    // Load button image and draw its caption on top from the translations
+    QIcon sempqIcon = createButtonIcon(":/images/SEMPQButton.png", tr("Create SEMPQ"));
     sempqButton->setIcon(sempqIcon);
     sempqButton->setIconSize(QSize(162, 33));
 
@@ -78,10 +127,7 @@ void MainWindow::setupUI()
     patchButton->setFlat(true);
     patchButton->setStyleSheet("QPushButton { border: none; background: transparent; }");
 
-    QIcon patchIcon;
-    patchIcon.addPixmap(QPixmap(":/images/PatchButtonUp.png"), QIcon::Normal);
-    patchIcon.addPixmap(QPixmap(":/images/PatchButtonDown.png"), QIcon::Active);
-    patchIcon.addPixmap(QPixmap(":/images/PatchButtonDown.png"), QIcon::Selected);
+    QIcon patchIcon = createButtonIcon(":/images/PatchButton.png", tr("Load MPQ Patch"));
     patchButton->setIcon(patchIcon);
     patchButton->setIconSize(QSize(162, 33));
 
