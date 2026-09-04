@@ -9,10 +9,18 @@
 set(CMAKE_SYSTEM_NAME Windows)
 set(CMAKE_SYSTEM_PROCESSOR i686)
 
-# Specify the cross-compiler
-# Use the -posix variant for better C++11/14/17 threading support
-set(CMAKE_C_COMPILER i686-w64-mingw32-gcc-posix)
-set(CMAKE_CXX_COMPILER i686-w64-mingw32-g++-posix)
+# Specify the cross-compiler.
+#
+# Debian/Ubuntu package posix and win32 threading variants side by side and
+# select between them via update-alternatives, exposing the posix variant
+# under a "-posix" suffixed name (preferred here for better C++11/14/17
+# threading support). Arch's mingw-w64-gcc only ships one (posix-threaded)
+# variant, under the plain, unsuffixed name. Prefer the "-posix" binaries
+# when present, and fall back to the plain names otherwise.
+find_program(MINGW32_GCC NAMES i686-w64-mingw32-gcc-posix i686-w64-mingw32-gcc)
+find_program(MINGW32_GXX NAMES i686-w64-mingw32-g++-posix i686-w64-mingw32-g++)
+set(CMAKE_C_COMPILER ${MINGW32_GCC})
+set(CMAKE_CXX_COMPILER ${MINGW32_GXX})
 set(CMAKE_RC_COMPILER i686-w64-mingw32-windres)
 
 # Where to look for the target environment

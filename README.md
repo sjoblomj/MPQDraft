@@ -112,10 +112,17 @@ MPQDraft can be cross-compiled for 32-bit Windows from Linux using MinGW-w64.
 
 #### Prerequisites
 
-Install the MinGW-w64 toolchain:
+Install the MinGW-w64 toolchain.
+
+Debian / Ubuntu:
 
 ```bash
 sudo apt install mingw-w64 g++-mingw-w64-i686-posix
+```
+
+Arch:
+```bash
+sudo pacman -S mingw-w64-gcc
 ```
 
 #### Building without Qt (DLL and Stub only)
@@ -134,7 +141,8 @@ Output files will be in `build-mingw32/`:
 
 To build the full application including the Qt GUI, you need Qt5 compiled for MinGW. The recommended approach is to use [MXE (M Cross Environment)](https://mxe.cc/).
 
-1. **Install MXE dependencies** (Ubuntu/Debian):
+1. **Install MXE dependencies**
+(Ubuntu/Debian):
 
 ```bash
 sudo apt install autoconf automake autopoint bash bison bzip2 flex \
@@ -145,12 +153,26 @@ sudo apt install autoconf automake autopoint bash bison bzip2 flex \
     sed unzip wget xz-utils
 ```
 
+Arch:
+```bash
+sudo pacman -S autoconf automake gettext git gperf intltool libtool \
+    libxml2 make openssl patch perl python python-mako \
+    python-packaging ruby sed unzip wget xz p7zip bison flex \
+    glib2-devel bzip2 lzip bash
+```
+
 2. **Clone and build MXE with Qt5** (this takes 1-2 hours):
 
 ```bash
 sudo git clone https://github.com/mxe/mxe.git /opt/mxe
-cd /opt/mxe
-sudo make MXE_TARGETS='i686-w64-mingw32.static' qt5
+sudo make -C /opt/mxe MXE_TARGETS='i686-w64-mingw32.static' qt5
+```
+
+If this fails, it could be because your compiler is too new. Try running this, and then the `make` command above again:
+
+```bash
+sudo sed -i '/--enable-libstdcxx-time \\$/a\
+          CXXFLAGS='"'"'-g -O2 -std=gnu++11'"'"' \\' /opt/mxe/src/gcc.mk
 ```
 
 3. **Build MPQDraft with Qt**:

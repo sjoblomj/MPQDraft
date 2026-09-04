@@ -71,15 +71,23 @@ if [ "$1" = "clean" ]; then
     exit 0
 fi
 
-# Check for MinGW-w64 compiler
-if ! command -v i686-w64-mingw32-g++-posix &> /dev/null; then
-    echo -e "${RED}Error: i686-w64-mingw32-g++-posix not found.${NC}"
-    echo "Please install MinGW-w64:"
-    echo "  sudo apt install mingw-w64 g++-mingw-w64-i686-posix"
+# Check for MinGW-w64 compiler. Debian/Ubuntu package the posix-threading
+# variant under a "-posix" suffixed name (selectable via update-alternatives,
+# since they also offer a "win32" threading variant). Arch's mingw-w64-gcc
+# only ships one (posix-threaded) variant, under the plain name.
+if command -v i686-w64-mingw32-g++-posix &> /dev/null; then
+    MINGW_CXX=i686-w64-mingw32-g++-posix
+elif command -v i686-w64-mingw32-g++ &> /dev/null; then
+    MINGW_CXX=i686-w64-mingw32-g++
+else
+    echo -e "${RED}Error: i686-w64-mingw32-g++ not found.${NC}"
+    echo "Please install MinGW-w64, e.g.:"
+    echo "  Debian/Ubuntu: sudo apt install mingw-w64 g++-mingw-w64-i686-posix"
+    echo "  Arch:          sudo pacman -S mingw-w64-gcc"
     exit 1
 fi
 
-echo "Using compiler: $(i686-w64-mingw32-g++-posix --version | head -1)"
+echo "Using compiler: $($MINGW_CXX --version | head -1)"
 echo ""
 
 # Create build directory
