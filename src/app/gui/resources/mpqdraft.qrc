@@ -3,8 +3,7 @@
     <qresource>
         <!-- Main window images -->
         <file>images/main.png</file>
-        <file>images/PatchButton.png</file>
-        <file>images/SEMPQButton.png</file>
+        <file>icons/globe.svg</file>
 
         <!-- Wizard sidebar image -->
         <file>images/wizard.png</file>
