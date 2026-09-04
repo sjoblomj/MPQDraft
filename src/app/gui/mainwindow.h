@@ -14,6 +14,7 @@
 #include <QIcon>
 #include <QString>
 #include <QSize>
+#include <QTranslator>
 
 class MainWindow : public QMainWindow
 {
@@ -28,16 +29,27 @@ protected:
 private slots:
     void onPatchClicked();
     void onSEMPQClicked();
+    void onLanguageClicked();
 
 private:
     void setupUI();
     QIcon createButtonIcon(const QString &text, const QSize &size);
     QIcon createSvgButtonIcon(const QString &svgPath, int size, int bottomPadding);
 
+    // Language handling
+    void initLanguage();
+    bool loadLanguage(const QString &code);
+    void retranslateUI();
+
     // UI components
     QPushButton *patchButton;
     QPushButton *sempqButton;
     QPushButton *languageButton;
+
+    // Currently installed MPQDraft/Qt translators, and the language code they were loaded for
+    QTranslator appTranslator;
+    QTranslator qtTranslator;
+    QString currentLanguageCode;
 };
 
 #endif // MAINWINDOW_H
