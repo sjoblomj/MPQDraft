@@ -61,12 +61,10 @@ jobs:
           # Copy Qt GUI executable with date in filename
           Copy-Item -Path "build/Release/MPQDraft-*.exe" -Destination "artifacts/MPQDraft-$date.exe"
 
-          # Copy Qt DLLs needed for the application
+          # Copy Qt DLLs needed for the application (including Qt's own
+          # translations, e.g. for standard dialog buttons; MPQDraft's own
+          # translations are embedded in the executable itself)
           & windeployqt --release --no-system-d3d-compiler --no-opengl-sw "artifacts/MPQDraft-$date.exe"
-
-          # Copy MPQDraft's own translation files
-          New-Item -ItemType Directory -Force -Path "artifacts/translations"
-          Copy-Item -Path "build/translations/*.qm" -Destination "artifacts/translations/" -ErrorAction SilentlyContinue
 
       # =========================================================================
       # Enigma Virtual Box - bundles all DLLs into a single executable
@@ -79,8 +77,6 @@ jobs:
           winget install --id Enigma.VirtualBox -e --accept-source-agreements --accept-package-agreements --silent
           if ($LASTEXITCODE -ne 0) {
             Write-Host "winget failed, trying direct download as fallback..."
-            $evbUrl = "https://enigmaprotector.com/en/downloads.html"
-            # Try alternate direct URL
             $altUrl = "https://enigmaprotector.com/assets/files/enigmavb.exe"
             $maxRetries = 3
             for ($i = 1; $i -le $maxRetries; $i++) {

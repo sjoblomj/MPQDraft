@@ -205,25 +205,6 @@ if(BUILD_GUI)
     # Install translation files
     install(FILES ${QM_FILES} DESTINATION translations)
 
-    # Copy Qt's built-in translations for GUI controls (QWizard buttons, etc.)
-    if(Qt6_FOUND)
-        set(QT_TRANSLATIONS_DIR ${Qt6Core_DIR}/../../../translations)
-    else()
-        set(QT_TRANSLATIONS_DIR ${Qt5Core_DIR}/../../../translations)
-    endif()
-    set(QT_QM_FILES
-        ${QT_TRANSLATIONS_DIR}/qt_zh_CN.qm
-        ${QT_TRANSLATIONS_DIR}/qt_ko_KR.qm
-        ${QT_TRANSLATIONS_DIR}/qt_sv_SE.qm
-    )
-    foreach(QT_QM ${QT_QM_FILES})
-        if(EXISTS ${QT_QM})
-            get_filename_component(QT_QM_NAME ${QT_QM} NAME)
-            configure_file(${QT_QM} ${CMAKE_CURRENT_BINARY_DIR}/translations/${QT_QM_NAME} COPYONLY)
-            install(FILES ${QT_QM} DESTINATION translations)
-        endif()
-    endforeach()
-
     target_include_directories(MPQDraft PRIVATE
         ${COMMON_INCLUDE_DIRS}
         ${CMAKE_CURRENT_SOURCE_DIR}/app
