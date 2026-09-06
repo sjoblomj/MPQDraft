@@ -82,6 +82,10 @@
         <source>Launch a game with MPQ patches or plugins</source>
         <translation>Starta ett spel med MPQ-patchar eller insticksmoduler</translation>
     </message>
+    <message>
+        <source>Select Language</source>
+        <translation>Välj språk</translation>
+    </message>
 </context>
 <context>
     <name>PatchIntroPage</name>

@@ -82,6 +82,10 @@
         <source>Launch a game with MPQ patches or plugins</source>
         <translation>MPQ 패치 또는 플러그인을 사용하여 게임 실행</translation>
     </message>
+    <message>
+        <source>Select Language</source>
+        <translation>언어 선택</translation>
+    </message>
 </context>
 <context>
     <name>PatchIntroPage</name>

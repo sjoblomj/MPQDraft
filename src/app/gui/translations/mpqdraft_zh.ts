@@ -82,6 +82,10 @@
         <source>Launch a game with MPQ patches or plugins</source>
         <translation>使用 MPQ 或插件启动游戏</translation>
     </message>
+    <message>
+        <source>Select Language</source>
+        <translation>选择语言</translation>
+    </message>
 </context>
 <context>
     <name>PatchIntroPage</name>
