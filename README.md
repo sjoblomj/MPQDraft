@@ -214,7 +214,7 @@ The GUI has translations under `src/app/gui/translations`. Feel free to add your
 
 ### Using a translation
 
-Make sure the language you want to use has a generated .qm-file next to the executable. Then siply specify the language and the path to the executable, e.g.: `LANGUAGE=sv ./build/MPQDraft-2026-02-04`
+Translations are embedded into the executable at build time, so no extra files need to be shipped alongside it. Click the globe/language button on the main window to pick a language from the menu; the choice is remembered for next launch. On first launch, MPQDraft picks a language automatically based on your system locale, falling back to English if no matching translation is available.
 
 ### Updating a translation
 
