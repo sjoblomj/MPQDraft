@@ -2,6 +2,24 @@
 
 All notable changes to this project from 2009 and onwards will be documented in this file. Listed are a number of old releases (between 2002-05-25 and 2008-08-21) - but that list is not comprehensive. It is unknown what was changed in those releases.
 
+## 2026-09-13
+
+### Added
+- Chinese (Simplified) translation -- thanks to @jzy-chitong56.
+- Language menu, so the UI language can be switched at runtime instead of only following the OS locale.
+- Documentation and tooling for building MPQDraft on Arch Linux.
+
+### Changed
+- Translations are now embedded directly into the executable as a Qt resource, instead of being shipped as loose `.qm` files - simplifying both the build and the release artifacts.
+- Qt's own built-in translations (e.g. standard dialog buttons) are now bundled and loaded automatically, so dialogs are no longer stuck in English when another language is selected.
+- The main window's buttons are now translated as well.
+- Made the Windows CI build pipeline more reliable: Enigma Virtual Box is now fetched via winget with a retry/fallback, and a couple of build script bugs were fixed.
+
+### Fixed
+- Translations not taking effect due to the translator object being destroyed right after being installed.
+
+
+
 ## 2026-02-04
 
 ### Added
