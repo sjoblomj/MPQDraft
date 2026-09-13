@@ -8,6 +8,8 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -29,23 +31,30 @@ jobs:
       - name: Set artifact name
         shell: pwsh
         run: |
-          # For pull_request events the branch is in GITHUB_HEAD_REF; otherwise extract from GITHUB_REF
-          if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
-            $branch = $env:GITHUB_HEAD_REF
+          # Tags (e.g. "2026-09-13") are releases; refs/heads/main is a rolling
+          # release build; everything else (branches, PRs) is a beta build.
+          if ($env:GITHUB_REF -like 'refs/tags/*') {
+            $tag = $env:GITHUB_REF -replace 'refs/tags/', ''
+            Add-Content -Path $env:GITHUB_ENV -Value "ARTIFACT_NAME=MPQDraft-release-$tag"
           } else {
-            $ref = $env:GITHUB_REF
-            $branch = $ref -replace 'refs/heads/', ''
-          }
+            # For pull_request events the branch is in GITHUB_HEAD_REF; otherwise extract from GITHUB_REF
+            if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
+              $branch = $env:GITHUB_HEAD_REF
+            } else {
+              $ref = $env:GITHUB_REF
+              $branch = $ref -replace 'refs/heads/', ''
+            }
 
-          # sanitize branch name (no slashes)
-          $branch = $branch -replace '/', '-'
+            # sanitize branch name (no slashes)
+            $branch = $branch -replace '/', '-'
 
-          if ($branch -eq 'main') {
-            $timestamp = (Get-Date).ToString('yyyy-MM-dd')
-            Add-Content -Path $env:GITHUB_ENV -Value "ARTIFACT_NAME=MPQDraft-release-$timestamp"
-          } else {
-            $timestamp = (Get-Date).ToString('yyyy-MM-dd-HH-mm-ss')
-            Add-Content -Path $env:GITHUB_ENV -Value "ARTIFACT_NAME=MPQDraft-beta-$branch-$timestamp"
+            if ($branch -eq 'main') {
+              $timestamp = (Get-Date).ToString('yyyy-MM-dd')
+              Add-Content -Path $env:GITHUB_ENV -Value "ARTIFACT_NAME=MPQDraft-release-$timestamp"
+            } else {
+              $timestamp = (Get-Date).ToString('yyyy-MM-dd-HH-mm-ss')
+              Add-Content -Path $env:GITHUB_ENV -Value "ARTIFACT_NAME=MPQDraft-beta-$branch-$timestamp"
+            }
           }
 
       - name: Prepare artifacts
@@ -118,3 +127,42 @@ jobs:
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: artifacts/*
+
+      # =========================================================================
+      # When the pushed ref is a tag (e.g. "2026-09-13"), publish a GitHub
+      # Release for it and attach the built exe as a release asset. The
+      # release notes are pulled straight from the matching CHANGELOG.md
+      # section (the "## <tag>" heading).
+      # =========================================================================
+      - name: Extract release notes from CHANGELOG.md
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF -replace 'refs/tags/', ''
+          $lines = Get-Content "CHANGELOG.md"
+          $capture = $false
+          $notes = @()
+          foreach ($line in $lines) {
+            if ($line -match "^## $([regex]::Escape($tag))\s*$") {
+              $capture = $true
+              continue
+            } elseif ($capture -and $line -match '^## ') {
+              break
+            } elseif ($capture) {
+              $notes += $line
+            }
+          }
+          if ($notes.Count -eq 0) {
+            Write-Host "No CHANGELOG.md section found for tag $tag, leaving release notes empty."
+          }
+          $notes -join "`n" | Set-Content -Path "release_notes.md"
+
+      - name: Create/update GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body_path: release_notes.md
+          files: artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
